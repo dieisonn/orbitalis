@@ -1,0 +1,40 @@
+import { cookies } from 'next/headers'
+
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
+
+async function getToken(): Promise<string | undefined> {
+  const store = await cookies()
+  return store.get('orbitalis_token')?.value
+}
+
+async function apiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token = await getToken()
+  const res = await fetch(`${BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+    cache: 'no-store',
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.message ?? `API error ${res.status}`)
+  }
+
+  return res.json() as Promise<T>
+}
+
+export const api = {
+  get: <T>(path: string) => apiFetch<T>(path),
+  post: <T>(path: string, body: unknown) =>
+    apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  patch: <T>(path: string, body: unknown) =>
+    apiFetch<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  delete: <T>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
+}

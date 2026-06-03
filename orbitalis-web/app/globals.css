@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* ── Tokens de cor Orbitalis (blueprint §2) ─────────────────────────────── */
+@theme {
+  --color-primary:     #480058; /* Roxo Escuro — sidebar, headers, tipografia */
+  --color-action:      #4B75FF; /* Azul Orbital — botões primários, OPERANDO  */
+  --color-destructive: #B71247; /* Carmesim — ações destrutivas, CRÍTICO       */
+  --color-warning:     #EDD82A; /* Amarelo — ATENÇÃO / EM ANDAMENTO            */
+  --color-scheduled:   #FF997E; /* Salmão — AGENDADO                           */
+  --color-surface:     #f8f5fa; /* Fundo claro levemente roxo                  */
+  --color-border:      #e5dde8;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: #1a1a2e;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Scrollbar fina no sidebar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: #480058; border-radius: 2px; }

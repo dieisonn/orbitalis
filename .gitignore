@@ -1,0 +1,38 @@
+# Node
+node_modules/
+.npm
+
+# Next.js
+orbitalis-web/.next/
+orbitalis-web/out/
+
+# NestJS build
+orbitalis-api/dist/
+
+# Prisma generated client (regenerado com prisma generate)
+orbitalis-api/node_modules/
+
+# Env — nunca versionar
+.env
+.env.local
+.env.*.local
+
+# Expo / React Native
+orbitalis-mobile/.expo/
+orbitalis-mobile/node_modules/
+orbitalis-mobile/android/
+orbitalis-mobile/ios/
+*.apk
+*.ipa
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Playwright
+test-results/
+playwright-report/

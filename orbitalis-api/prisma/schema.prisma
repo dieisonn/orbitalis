@@ -1,0 +1,213 @@
+// schema.prisma — Plataforma Orbitalis
+// Derivado 1:1 de schema_blueprint.md §4
+// Gerador: Prisma Client (TypeScript)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// ENUMs
+// ─────────────────────────────────────────
+
+enum UsuarioTipo {
+  admin
+  tecnico
+  cliente
+}
+
+enum OsStatus {
+  aberta
+  agendada
+  em_andamento
+  concluida
+  cancelada
+}
+
+enum OsOrigem {
+  manual_admin
+  preventiva_automatica
+  portal_cliente
+}
+
+enum OsItemStatus {
+  pendente
+  concluido
+}
+
+// ─────────────────────────────────────────
+// usuarios
+// ─────────────────────────────────────────
+model Usuario {
+  id           String      @id @default(uuid()) @db.Uuid
+  email        String      @unique @db.VarChar(255)
+  senhaHash    String      @map("senha_hash") @db.VarChar(255)
+  tipo         UsuarioTipo
+  dataCriacao  DateTime    @default(now()) @map("data_criacao")
+
+  cliente              Cliente?
+  ordensComoTecnico    OrdemServico[]    @relation("TecnicoOrdens")
+  planosComoTecnico    PlanoManutencao[] @relation("TecnicoPlanos")
+
+  @@map("usuarios")
+}
+
+// ─────────────────────────────────────────
+// clientes  (soft delete via deletedAt)
+// ─────────────────────────────────────────
+model Cliente {
+  id           String    @id @default(uuid()) @db.Uuid
+  usuarioId    String?   @unique @map("usuario_id") @db.Uuid
+  documento    String    @unique @db.VarChar(14)
+  razaoSocial  String    @map("razao_social") @db.VarChar(255)
+  nomeFantasia String?   @map("nome_fantasia") @db.VarChar(255)
+  endereco     String    @db.Text
+  deletedAt    DateTime? @map("deleted_at")
+
+  usuario  Usuario?   @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  ambientes Ambiente[]
+
+  @@map("clientes")
+}
+
+// ─────────────────────────────────────────
+// ambientes  (soft delete via deletedAt)
+// ─────────────────────────────────────────
+model Ambiente {
+  id                 String    @id @default(uuid()) @db.Uuid
+  clienteId          String    @map("cliente_id") @db.Uuid
+  nome               String    @db.VarChar(100)
+  metrosQuadrados    Decimal   @map("metros_quadrados") @db.Decimal(10, 2)
+  capacidadeTermica  String    @map("capacidade_termica") @db.VarChar(50)
+  localizacaoInterna String    @map("localizacao_interna") @db.Text
+  deletedAt          DateTime? @map("deleted_at")
+
+  cliente         Cliente           @relation(fields: [clienteId], references: [id])
+  equipamentos    Equipamento[]
+  ordensServico   OrdemServico[]
+  planosManutencao PlanoManutencao[]
+
+  @@map("ambientes")
+}
+
+// ─────────────────────────────────────────
+// equipamentos  (soft delete via deletedAt)
+// ─────────────────────────────────────────
+model Equipamento {
+  id              String    @id @default(uuid()) @db.Uuid
+  ambienteId      String    @map("ambiente_id") @db.Uuid
+  codigoQr        String    @unique @map("codigo_qr") @db.VarChar(50)
+  nome            String    @db.VarChar(100)
+  marca           String    @db.VarChar(100)
+  modelo          String    @db.VarChar(100)
+  numeroSerie     String    @map("numero_serie") @db.VarChar(100)
+  tipoEquipamento String    @map("tipo_equipamento") @db.VarChar(100)
+  deletedAt       DateTime? @map("deleted_at")
+
+  ambiente Ambiente             @relation(fields: [ambienteId], references: [id])
+  itensOs  OrdemServicoItem[]
+
+  @@index([codigoQr])
+  @@map("equipamentos")
+}
+
+// ─────────────────────────────────────────
+// modelos_checklist
+// itens: JSONB — estrutura livre definida pelo Admin (§US04)
+// ─────────────────────────────────────────
+model ModeloChecklist {
+  id    String @id @default(uuid()) @db.Uuid
+  nome  String @db.VarChar(150)
+  itens Json
+
+  planos PlanoManutencao[]
+
+  @@map("modelos_checklist")
+}
+
+// ─────────────────────────────────────────
+// planos_manutencao  (§US05)
+// Vincula um ambiente a um ciclo de manutenção preventiva.
+// O Cron (00:00:01) lê WHERE ativo = true AND proxima_geracao <= NOW()
+// e gera uma O.S. com origem = 'preventiva_automatica'.
+// ─────────────────────────────────────────
+model PlanoManutencao {
+  id                String    @id @default(uuid()) @db.Uuid
+  ambienteId        String    @map("ambiente_id") @db.Uuid
+  tecnicoId         String?   @map("tecnico_id") @db.Uuid
+  modeloChecklistId String?   @map("modelo_checklist_id") @db.Uuid
+  frequenciaDias    Int       @map("frequencia_dias")
+  ativo             Boolean   @default(true)
+  proximaGeracao    DateTime  @map("proxima_geracao")
+  ultimaGeracao     DateTime? @map("ultima_geracao")
+
+  ambiente        Ambiente         @relation(fields: [ambienteId], references: [id])
+  tecnico         Usuario?         @relation("TecnicoPlanos", fields: [tecnicoId], references: [id])
+  modeloChecklist ModeloChecklist? @relation(fields: [modeloChecklistId], references: [id])
+
+  @@index([proximaGeracao, ativo])
+  @@map("planos_manutencao")
+}
+
+// ─────────────────────────────────────────
+// ordens_servico  (tabela pai da O.S.)
+// ─────────────────────────────────────────
+model OrdemServico {
+  id                String    @id @default(uuid()) @db.Uuid
+  ambienteId        String    @map("ambiente_id") @db.Uuid
+  tecnicoId         String?   @map("tecnico_id") @db.Uuid
+  status            OsStatus
+  origem            OsOrigem
+  assinaturaUrl     String?   @map("assinatura_url") @db.VarChar(512)
+  observacoesGerais String?   @map("observacoes_gerais") @db.Text
+  dataAgendamento   DateTime  @map("data_agendamento")
+  dataInicio        DateTime? @map("data_inicio")
+  dataConclusao     DateTime? @map("data_conclusao")
+
+  ambiente  Ambiente           @relation(fields: [ambienteId], references: [id])
+  tecnico   Usuario?           @relation("TecnicoOrdens", fields: [tecnicoId], references: [id])
+  itens     OrdemServicoItem[]
+  conflitos AuditoriaConflitoSincronizacao[]
+
+  @@index([status])
+  @@map("ordens_servico")
+}
+
+// ─────────────────────────────────────────
+// ordem_servico_itens  (1 por equipamento do ambiente)
+// checklist_snapshot: deep copy do modelo no momento da abertura (§6.2)
+// ─────────────────────────────────────────
+model OrdemServicoItem {
+  id                  String       @id @default(uuid()) @db.Uuid
+  ordemServicoId      String       @map("ordem_servico_id") @db.Uuid
+  equipamentoId       String       @map("equipamento_id") @db.Uuid
+  statusItem          OsItemStatus @default(pendente) @map("status_item")
+  checklistSnapshot   Json         @map("checklist_snapshot")
+  observacoesTecnicas String?      @map("observacoes_tecnicas") @db.Text
+
+  ordemServico OrdemServico @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  equipamento  Equipamento  @relation(fields: [equipamentoId], references: [id])
+
+  @@map("ordem_servico_itens")
+}
+
+// ─────────────────────────────────────────
+// auditoria_conflitos_sincronizacao  (§6.4)
+// Estrutura mínima derivada da narrativa do blueprint.
+// payloadRejeitado: lote completo enviado pelo técnico offline.
+// ─────────────────────────────────────────
+model AuditoriaConflitoSincronizacao {
+  id                String   @id @default(uuid()) @db.Uuid
+  ordemServicoId    String   @map("ordem_servico_id") @db.Uuid
+  payloadRejeitado  Json     @map("payload_rejeitado")
+  criadoEm         DateTime @default(now()) @map("criado_em")
+
+  ordemServico OrdemServico @relation(fields: [ordemServicoId], references: [id])
+
+  @@map("auditoria_conflitos_sincronizacao")
+}
