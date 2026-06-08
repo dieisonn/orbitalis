@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
+import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
 import { ClientesModule } from './modules/clientes/clientes.module';
 import { AmbientesModule } from './modules/ambientes/ambientes.module';
@@ -10,6 +11,7 @@ import { PlanosManutencaoModule } from './modules/planos-manutencao/planos-manut
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 
 @Module({
+  controllers: [HealthController],
   imports: [
     PrismaModule,
     AuthModule,
