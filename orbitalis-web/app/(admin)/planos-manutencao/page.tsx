@@ -28,6 +28,12 @@ export default async function PlanosPage() {
             Motor Cron executa diariamente às 00:00:01
           </p>
         </div>
+        <a
+          href="/planos-manutencao/novo"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors"
+        >
+          + Novo Plano
+        </a>
       </div>
 
       {planos.length === 0 ? (
