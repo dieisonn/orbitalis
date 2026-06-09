@@ -49,7 +49,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
       })
     : allOrdens
 
-  const aguardandoTriagem = ordens.filter((o) => o.status === 'agendada').length
+  const aguardandoTriagem = ordens.filter((o) => o.status === 'aberta').length
 
   return (
     <div>

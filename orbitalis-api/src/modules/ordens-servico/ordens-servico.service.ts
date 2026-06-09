@@ -190,14 +190,14 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id/triar — Admin despacha a O.S. para o técnico (§US07)
-  // Transição válida: agendada → aberta
+  // Transição válida: aberta → agendada
   async triar(id: string, dto: TriarOsDto) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
 
-    if (os.status !== 'agendada') {
+    if (os.status !== 'aberta') {
       throw new BadRequestException(
-        `Triagem só é permitida em O.S. com status "agendada". Status atual: "${os.status}"`,
+        `Triagem só é permitida em O.S. com status "aberta". Status atual: "${os.status}"`,
       );
     }
 
@@ -209,7 +209,7 @@ export class OrdensServicoService {
     return this.prisma.ordemServico.update({
       where: { id },
       data: {
-        status: 'aberta',
+        status: 'agendada',
         tecnicoId: dto.tecnicoId,
         dataAgendamento: new Date(dto.dataAgendamento),
       },

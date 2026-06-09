@@ -1,12 +1,24 @@
 import { api } from '@/lib/api'
 import { NovaOsForm } from './form'
 
-type Ambiente = { id: string; nome: string; localizacaoInterna: string }
-type Tecnico  = { id: string; email: string }
+type Equipamento = {
+  id: string
+  nome: string
+  tipoEquipamento: string
+  marca: string
+  ambienteId: string
+  ambiente: {
+    id: string
+    nome: string
+    localizacaoInterna: string
+    cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
+  }
+}
+type Tecnico = { id: string; email: string }
 
 export default async function NovaOsPage() {
-  const [ambientes, tecnicos] = await Promise.all([
-    api.get<Ambiente[]>('/ambientes').catch(() => [] as Ambiente[]),
+  const [equipamentos, tecnicos] = await Promise.all([
+    api.get<Equipamento[]>('/equipamentos').catch(() => [] as Equipamento[]),
     api.get<Tecnico[]>('/usuarios/tecnicos').catch(() => [] as Tecnico[]),
   ])
 
@@ -21,17 +33,17 @@ export default async function NovaOsPage() {
       </div>
       <div className="max-w-xl">
         <div className="bg-white rounded-2xl shadow-sm border border-border p-6">
-          {ambientes.length === 0 ? (
+          {equipamentos.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-gray-500">
-                Nenhum ambiente cadastrado.{' '}
-                <a href="/ambientes/novo" className="text-primary font-semibold hover:underline">
-                  Crie um ambiente primeiro.
+                Nenhum equipamento cadastrado.{' '}
+                <a href="/equipamentos/novo" className="text-primary font-semibold hover:underline">
+                  Crie um equipamento primeiro.
                 </a>
               </p>
             </div>
           ) : (
-            <NovaOsForm ambientes={ambientes} tecnicos={tecnicos} />
+            <NovaOsForm equipamentos={equipamentos} tecnicos={tecnicos} />
           )}
         </div>
       </div>

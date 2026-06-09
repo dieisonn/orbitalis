@@ -1,8 +1,13 @@
 import { api } from '@/lib/api'
 import { NovoPlanoForm } from './form'
 
-type Ambiente = { id: string; nome: string; localizacaoInterna: string }
-type Tecnico  = { id: string; email: string }
+type Ambiente = {
+  id: string
+  nome: string
+  localizacaoInterna: string
+  cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
+}
+type Tecnico = { id: string; email: string }
 
 export default async function NovoPlanoPage() {
   const [ambientes, tecnicos] = await Promise.all([

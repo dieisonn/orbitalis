@@ -86,8 +86,14 @@ export default async function ClientesPage() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <a
-                        href={`/clientes/${c.id}/editar`}
+                        href={`/clientes/${c.id}`}
                         className="text-xs font-semibold text-primary hover:underline"
+                      >
+                        Ver
+                      </a>
+                      <a
+                        href={`/clientes/${c.id}/editar`}
+                        className="text-xs font-semibold text-gray-500 hover:underline"
                       >
                         Editar
                       </a>

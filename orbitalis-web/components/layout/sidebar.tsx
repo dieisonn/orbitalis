@@ -68,7 +68,7 @@ export default function Sidebar() {
             <img
               src="/logo.png"
               alt="Orbitalis"
-              className="h-12 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
           </div>
           {/* Close button — mobile only */}

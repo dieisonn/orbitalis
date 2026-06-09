@@ -45,7 +45,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
               <img
                 src="/logo.png"
                 alt="Orbitalis"
-                className="h-12 w-auto object-contain"
+                className="h-16 w-auto object-contain"
               />
             </div>
             <p className="text-[10px] text-white/50 mt-1.5 uppercase tracking-widest">

@@ -13,7 +13,10 @@ export class AmbientesService {
   findAll() {
     return this.prisma.ambiente.findMany({
       where: { deletedAt: null },
-      include: { equipamentos: { where: { deletedAt: null } } },
+      include: {
+        equipamentos: { where: { deletedAt: null } },
+        cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+      },
     });
   }
 

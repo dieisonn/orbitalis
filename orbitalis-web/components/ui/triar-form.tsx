@@ -57,7 +57,7 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
 
   const hoje = new Date().toISOString().split('T')[0]
 
-  if (status !== 'agendada') {
+  if (status !== 'aberta') {
     return (
       <div className="text-right">
         <button

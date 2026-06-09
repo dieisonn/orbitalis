@@ -10,6 +10,7 @@ type Ambiente = {
   capacidadeTermica: string
   localizacaoInterna: string
   equipamentos: { id: string }[]
+  cliente: { razaoSocial: string; nomeFantasia: string | null } | null
 }
 
 export default async function AmbientesPage() {
@@ -53,6 +54,11 @@ export default async function AmbientesPage() {
                 <div>
                   <p className="font-semibold text-gray-900">{a.nome}</p>
                   <p className="text-xs text-gray-400 mt-0.5">{a.localizacaoInterna}</p>
+                  {a.cliente && (
+                    <p className="text-xs text-primary/70 mt-0.5 font-medium">
+                      {a.cliente.nomeFantasia ?? a.cliente.razaoSocial}
+                    </p>
+                  )}
                 </div>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg">
                   <Cpu size={10} />
