@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { TriarForm } from '@/components/ui/triar-form'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, FileText } from 'lucide-react'
 
 type OrdemServico = {
   id: string
@@ -61,10 +61,10 @@ export default async function OrdensServicoPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                {['Ambiente', 'Status', 'Origem', 'Técnico', 'Data', 'Itens', 'Ação'].map((h) => (
+                {['Nº', 'Ambiente', 'Status', 'Origem', 'Técnico', 'Data', 'Itens', 'Ação'].map((h) => (
                   <th
                     key={h}
-                    className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
+                    className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
                   >
                     {h}
                   </th>
@@ -74,27 +74,30 @@ export default async function OrdensServicoPage() {
             <tbody className="divide-y divide-border">
               {ordens.map((os) => (
                 <tr key={os.id} className="hover:bg-surface transition-colors align-top">
-                  <td className="px-6 py-4 font-medium text-gray-900">
+                  <td className="px-4 py-4 font-mono text-xs text-gray-400 whitespace-nowrap">
+                    OS-{os.id.slice(0, 6).toUpperCase()}
+                  </td>
+                  <td className="px-4 py-4 font-medium text-gray-900">
                     {os.ambiente?.nome ?? '—'}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     <StatusBadge status={os.status} />
                   </td>
-                  <td className="px-6 py-4 text-gray-500">
+                  <td className="px-4 py-4 text-gray-500">
                     {ORIGEM_LABEL[os.origem] ?? os.origem}
                   </td>
-                  <td className="px-6 py-4 text-gray-500 text-xs">
+                  <td className="px-4 py-4 text-gray-500 text-xs">
                     {os.tecnico?.email ?? (
                       <span className="italic text-gray-400">Não atribuído</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-gray-500 text-xs">
+                  <td className="px-4 py-4 text-gray-500 text-xs">
                     {new Date(os.dataAgendamento).toLocaleDateString('pt-BR')}
                   </td>
-                  <td className="px-6 py-4 text-center font-semibold text-gray-600">
+                  <td className="px-4 py-4 text-center font-semibold text-gray-600">
                     {os.itens?.length ?? 0}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 text-right">
                     <div className="flex flex-col gap-2 items-end">
                       <TriarForm
                         osId={os.id}
@@ -103,9 +106,12 @@ export default async function OrdensServicoPage() {
                       />
                       <a
                         href={`/ordens-servico/${os.id}/pdf`}
-                        className="text-xs font-semibold text-gray-400 hover:text-primary hover:underline"
-                        title="Ver / Imprimir PDF"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                        title="Imprimir / PDF"
                       >
+                        <FileText size={11} />
                         PDF
                       </a>
                     </div>

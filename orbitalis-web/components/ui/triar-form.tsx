@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { triarOs, cancelarOs } from '@/app/(admin)/ordens-servico/actions'
 import { UserCheck, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
 
@@ -16,6 +17,7 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   const isTerminal = status === 'concluida' || status === 'cancelada'
   if (isTerminal) return null
@@ -31,8 +33,12 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
       try {
         await triarOs(osId, tecnicoId, dataAgendamento)
         setOpen(false)
+        router.refresh()
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao despachar')
+        const msg = err instanceof Error ? err.message : String(err)
+        if (!msg.includes('NEXT_REDIRECT')) {
+          setError(msg || 'Erro ao despachar')
+        }
       }
     })
   }
@@ -40,13 +46,17 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
   function handleCancelar() {
     if (!confirm('Cancelar esta O.S.? Ação irreversível.')) return
     startTransition(async () => {
-      await cancelarOs(osId)
+      try {
+        await cancelarOs(osId)
+        router.refresh()
+      } catch {
+        // silent
+      }
     })
   }
 
   const hoje = new Date().toISOString().split('T')[0]
 
-  // For non-agendada active statuses: just show cancel button
   if (status !== 'agendada') {
     return (
       <div className="text-right">
@@ -56,14 +66,14 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 disabled:opacity-60 transition-colors"
         >
           <XCircle size={12} />
-          Cancelar O.S.
+          {isPending ? '…' : 'Cancelar O.S.'}
         </button>
       </div>
     )
   }
 
   return (
-    <div className="text-right">
+    <div className="relative text-right">
       <button
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-action text-white rounded-lg hover:bg-action/90 transition-colors"
@@ -74,7 +84,7 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
       </button>
 
       {open && (
-        <div className="mt-2 p-4 bg-surface border border-border rounded-xl shadow-lg text-left min-w-64">
+        <div className="absolute right-0 top-full mt-1 z-50 p-4 bg-white border border-border rounded-xl shadow-xl text-left w-64">
           <p className="text-xs font-semibold text-primary mb-3">Despachar O.S.</p>
 
           <form onSubmit={handleTriar} className="space-y-3">
@@ -106,9 +116,7 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
               />
             </div>
 
-            {error && (
-              <p className="text-xs text-destructive">{error}</p>
-            )}
+            {error && <p className="text-xs text-destructive">{error}</p>}
 
             <div className="flex gap-2 pt-1">
               <button

@@ -12,6 +12,11 @@ type Equipamento = {
   codigoQr: string
   tipoEquipamento: string
   numeroSerie: string | null
+  ambiente: {
+    nome: string
+    localizacaoInterna: string
+    cliente: { razaoSocial: string; nomeFantasia: string | null }
+  } | null
 }
 
 export default async function EquipamentosPage() {
@@ -49,7 +54,7 @@ export default async function EquipamentosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                {['Equipamento', 'Tipo', 'Marca / Modelo', 'Nº Série', 'QR Code', ''].map((h) => (
+                {['Equipamento', 'Cliente / Ambiente', 'Tipo', 'Marca / Modelo', 'Nº Série', 'QR Code', ''].map((h) => (
                   <th
                     key={h}
                     className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
@@ -63,6 +68,18 @@ export default async function EquipamentosPage() {
               {equipamentos.map((eq) => (
                 <tr key={eq.id} className="hover:bg-surface transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{eq.nome}</td>
+                  <td className="px-6 py-4">
+                    {eq.ambiente ? (
+                      <>
+                        <p className="text-xs font-medium text-gray-700">
+                          {eq.ambiente.cliente?.nomeFantasia ?? eq.ambiente.cliente?.razaoSocial}
+                        </p>
+                        <p className="text-xs text-gray-400">{eq.ambiente.nome}</p>
+                      </>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-gray-500">{eq.tipoEquipamento}</td>
                   <td className="px-6 py-4 text-gray-600">
                     {[eq.marca, eq.modelo].filter(Boolean).join(' ') || '—'}

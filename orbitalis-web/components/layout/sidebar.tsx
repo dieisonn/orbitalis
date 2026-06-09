@@ -30,7 +30,7 @@ export default function Sidebar() {
   const path = usePathname()
 
   return (
-    <aside className="flex flex-col w-56 min-h-screen bg-primary text-white shrink-0">
+    <aside className="flex flex-col w-56 min-h-screen bg-primary text-white shrink-0 print:hidden">
       {/* Logo */}
       <div className="px-6 py-5 border-b border-white/10">
         <p className="text-xl font-bold tracking-wide">Orbitalis</p>

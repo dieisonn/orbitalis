@@ -20,7 +20,11 @@ export class EquipamentosService {
   }
 
   findAll() {
-    return this.prisma.equipamento.findMany({ where: { deletedAt: null } });
+    return this.prisma.equipamento.findMany({
+      where: { deletedAt: null },
+      include: { ambiente: { include: { cliente: true } } },
+      orderBy: { nome: 'asc' },
+    });
   }
 
   async findOne(id: string) {

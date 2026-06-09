@@ -15,7 +15,7 @@ type Equipamento = {
 
 export function PrintLabel({ equipamento: eq }: { equipamento: Equipamento }) {
   const cliente = eq.ambiente.cliente.nomeFantasia ?? eq.ambiente.cliente.razaoSocial
-  const qrValue = `ORB:${eq.codigoQr}`
+  const qrValue = `https://orbitalis-web.vercel.app/e/${eq.codigoQr}`
 
   return (
     <>

@@ -37,7 +37,11 @@ export async function login(email: string, password: string) {
   })
 
   // Redireciona pela role diretamente no Server Action
-  redirect(role === 'cliente' ? '/meus-ambientes' : '/dashboard')
+  redirect(
+    role === 'cliente' ? '/meus-ambientes' :
+    role === 'tecnico' ? '/minhas-os' :
+    '/dashboard',
+  )
 }
 
 export async function logout() {
@@ -50,4 +54,17 @@ export async function logout() {
 export async function getRole(): Promise<string | undefined> {
   const store = await cookies()
   return store.get('orbitalis_role')?.value
+}
+
+export async function getUserId(): Promise<string | undefined> {
+  const store = await cookies()
+  const token = store.get('orbitalis_token')?.value
+  if (!token) return undefined
+  try {
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'))
+    return payload.sub as string
+  } catch {
+    return undefined
+  }
 }

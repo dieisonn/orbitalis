@@ -42,9 +42,9 @@ export class EquipamentosController {
     return this.equipamentosService.findOne(id);
   }
 
-  // GET /api/v1/equipamentos/qr/:codigo — Técnico escaneia QR Code (§US09)
+  // GET /api/v1/equipamentos/qr/:codigo — Técnico ou Admin escaneia QR Code (§US09)
   @Get('qr/:codigo')
-  @Roles(UsuarioTipo.tecnico)
+  @Roles(UsuarioTipo.tecnico, UsuarioTipo.admin)
   findByQr(@Param('codigo') codigo: string) {
     return this.equipamentosService.findByQr(codigo);
   }

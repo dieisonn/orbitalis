@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { QrCode, X, Printer } from 'lucide-react'
 
+const APP_URL = 'https://orbitalis-web.vercel.app'
+
 type Props = {
   equipamentoId: string
   codigoQr: string
@@ -13,7 +15,7 @@ type Props = {
 export function QrModal({ equipamentoId, codigoQr, nome }: Props) {
   const [open, setOpen] = useState(false)
 
-  const qrValue = `ORB:${codigoQr}`
+  const qrValue = `${APP_URL}/e/${codigoQr}`
 
   return (
     <>
