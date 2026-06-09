@@ -41,11 +41,11 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       >
         <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
           <div>
-            <div className="bg-white rounded-2xl px-3 py-2 inline-flex items-center">
+            <div className="bg-white rounded-3xl p-3 inline-flex items-center">
               <img
                 src="/logo.png"
                 alt="Orbitalis"
-                className="h-8 w-auto object-contain"
+                className="h-12 w-auto object-contain"
               />
             </div>
             <p className="text-[10px] text-white/50 mt-1.5 uppercase tracking-widest">

@@ -64,11 +64,11 @@ export default function Sidebar() {
       >
         {/* Logo */}
         <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
-          <div className="bg-white rounded-2xl px-3 py-2 flex items-center">
+          <div className="bg-white rounded-3xl p-3 flex items-center">
             <img
               src="/logo.png"
               alt="Orbitalis"
-              className="h-9 w-auto object-contain"
+              className="h-12 w-auto object-contain"
             />
           </div>
           {/* Close button — mobile only */}
