@@ -39,10 +39,14 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
       >
-        <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
           <div>
-            <p className="text-xl font-bold tracking-wide">Orbitalis</p>
-            <p className="text-[10px] text-white/50 mt-0.5 uppercase tracking-widest">
+            <img
+              src="/logo.png"
+              alt="Orbitalis"
+              className="h-9 w-auto object-contain brightness-0 invert"
+            />
+            <p className="text-[10px] text-white/50 mt-1 uppercase tracking-widest">
               Portal do Técnico
             </p>
           </div>

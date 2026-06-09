@@ -63,13 +63,12 @@ export default function Sidebar() {
         ].join(' ')}
       >
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
-          <div>
-            <p className="text-xl font-bold tracking-wide">Orbitalis</p>
-            <p className="text-[10px] text-white/50 mt-0.5 uppercase tracking-widest">
-              Gestão de Ativos
-            </p>
-          </div>
+        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+          <img
+            src="/logo.png"
+            alt="Orbitalis"
+            className="h-10 w-auto object-contain brightness-0 invert"
+          />
           {/* Close button — mobile only */}
           <button
             className="md:hidden p-1 text-white/60 hover:text-white transition-colors"
