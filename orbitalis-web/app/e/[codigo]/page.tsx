@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { getRole } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Cpu, MapPin, Building2, QrCode } from 'lucide-react'
+import { AbrirChamadoForm } from './abrir-chamado-form'
 
 type Props = { params: Promise<{ codigo: string }> }
 
@@ -14,6 +15,7 @@ type Equipamento = {
   numeroSerie: string | null
   codigoQr: string
   ambiente: {
+    id: string
     nome: string
     localizacaoInterna: string
     capacidadeTermica: string
@@ -26,7 +28,7 @@ export default async function QrLandingPage({ params }: Props) {
 
   const role = await getRole()
   if (!role) {
-    redirect(`/login`)
+    redirect('/login')
   }
 
   let equipamento: Equipamento | null = null
@@ -94,6 +96,14 @@ export default async function QrLandingPage({ params }: Props) {
               <p className="text-sm font-medium text-gray-800">{cliente}</p>
             </div>
           </div>
+
+          {/* Abrir Chamado — disponível para cliente e técnico */}
+          {(role === 'cliente' || role === 'tecnico' || role === 'admin') && (
+            <AbrirChamadoForm
+              ambienteId={equipamento.ambiente.id}
+              ambienteNome={equipamento.ambiente.nome}
+            />
+          )}
         </div>
 
         <div className="px-6 pb-6">

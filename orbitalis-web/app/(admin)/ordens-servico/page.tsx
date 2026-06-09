@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { TriarForm } from '@/components/ui/triar-form'
+import { OsFilterBar } from '@/components/ui/os-filter-bar'
 import { ClipboardList, FileText } from 'lucide-react'
 
 type OrdemServico = {
@@ -21,25 +22,59 @@ const ORIGEM_LABEL: Record<string, string> = {
   portal_cliente:        'Portal Cliente',
 }
 
-export default async function OrdensServicoPage() {
-  const [ordens, tecnicos] = await Promise.all([
-    api.get<OrdemServico[]>('/ordens-servico').catch(() => [] as OrdemServico[]),
+const STATUS_LABELS: Record<string, string> = {
+  aberta: 'Abertas',
+  agendada: 'Agendadas',
+  em_andamento: 'Em Andamento',
+  concluida: 'Concluídas',
+  cancelada: 'Canceladas',
+}
+
+type Props = { searchParams: Promise<{ status?: string; q?: string }> }
+
+export default async function OrdensServicoPage({ searchParams }: Props) {
+  const { status, q } = await searchParams
+
+  const [allOrdens, tecnicos] = await Promise.all([
+    api.get<OrdemServico[]>(`/ordens-servico${status ? `?status=${status}` : ''}`).catch(() => [] as OrdemServico[]),
     api.get<Tecnico[]>('/usuarios/tecnicos').catch(() => [] as Tecnico[]),
   ])
+
+  // Client-side text filter (short ID or ambiente name)
+  const ordens = q
+    ? allOrdens.filter((o) => {
+        const shortId = `OS-${o.id.slice(0, 6).toUpperCase()}`
+        const search = q.toUpperCase()
+        return shortId.includes(search) || o.ambiente?.nome?.toUpperCase().includes(search)
+      })
+    : allOrdens
 
   const aguardandoTriagem = ordens.filter((o) => o.status === 'agendada').length
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-primary">Ordens de Serviço</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {ordens.length} O.S. no sistema
-            {aguardandoTriagem > 0 && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-scheduled text-primary">
-                {aguardandoTriagem} aguardando triagem
+            {status ? (
+              <span>
+                Filtrando por:{' '}
+                <span className="font-semibold text-primary">{STATUS_LABELS[status] ?? status}</span>
+                {' · '}
+                <a href="/ordens-servico" className="text-primary underline">
+                  Ver todas
+                </a>
               </span>
+            ) : (
+              <>
+                {ordens.length} O.S. no sistema
+                {aguardandoTriagem > 0 && (
+                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-scheduled text-primary">
+                    {aguardandoTriagem} aguardando triagem
+                  </span>
+                )}
+              </>
             )}
           </p>
         </div>
@@ -51,13 +86,21 @@ export default async function OrdensServicoPage() {
         </a>
       </div>
 
+      {/* Barra de filtros */}
+      <OsFilterBar currentStatus={status} currentQ={q} />
+
       {ordens.length === 0 ? (
         <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
           <ClipboardList size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhuma O.S. encontrada.</p>
+          {status && (
+            <a href="/ordens-servico" className="text-sm text-primary underline mt-2 block">
+              Ver todas as O.S.
+            </a>
+          )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden mt-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">

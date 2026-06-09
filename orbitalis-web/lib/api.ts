@@ -12,10 +12,11 @@ async function apiFetch<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = await getToken()
+  const hasBody = options.body !== undefined
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
@@ -24,9 +25,12 @@ async function apiFetch<T>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message ?? `API error ${res.status}`)
+    const msg = Array.isArray(body.message) ? body.message[0] : (body.message ?? `API error ${res.status}`)
+    throw new Error(msg)
   }
 
+  const ct = res.headers.get('content-type') ?? ''
+  if (!ct.includes('application/json')) return undefined as T
   return res.json() as Promise<T>
 }
 

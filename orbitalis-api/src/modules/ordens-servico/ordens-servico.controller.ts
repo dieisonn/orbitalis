@@ -23,9 +23,9 @@ import { TriarOsDto } from './dto/triar-os.dto';
 export class OrdensServicoController {
   constructor(private readonly ordensServicoService: OrdensServicoService) {}
 
-  // POST /api/v1/ordens-servico — Admin ou Cliente
+  // POST /api/v1/ordens-servico — Admin, Cliente ou Técnico (chamado via QR)
   @Post()
-  @Roles(UsuarioTipo.admin, UsuarioTipo.cliente)
+  @Roles(UsuarioTipo.admin, UsuarioTipo.cliente, UsuarioTipo.tecnico)
   create(@Body() dto: CreateOrdemServicoDto) {
     return this.ordensServicoService.create(dto);
   }
@@ -86,9 +86,9 @@ export class OrdensServicoController {
     return this.ordensServicoService.cancelar(id);
   }
 
-  // PATCH /api/v1/ordens-servico/:id/status — Admin altera status manualmente
+  // PATCH /api/v1/ordens-servico/:id/status — Admin ou Técnico altera status
   @Patch(':id/status')
-  @Roles(UsuarioTipo.admin)
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   alterarStatus(@Param('id') id: string, @Body('status') status: OsStatus) {
     return this.ordensServicoService.alterarStatus(id, status);
   }

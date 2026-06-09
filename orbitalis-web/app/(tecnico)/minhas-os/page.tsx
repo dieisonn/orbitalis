@@ -47,9 +47,10 @@ export default async function MinhasOsPage() {
       ) : (
         <div className="space-y-3">
           {ordens.map((os) => (
-            <div
+            <a
               key={os.id}
-              className="bg-white rounded-2xl p-5 shadow-sm border border-border"
+              href={`/minhas-os/${os.id}`}
+              className="bg-white rounded-2xl p-5 shadow-sm border border-border block hover:bg-surface transition-colors"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -74,7 +75,7 @@ export default async function MinhasOsPage() {
                   </p>
                 </div>
               </div>
-            </div>
+            </a>
           ))}
         </div>
       )}
