@@ -2,13 +2,13 @@
 
 /* ── Tokens de cor Orbitalis (blueprint §2) ─────────────────────────────── */
 @theme {
-  --color-primary:     #480058; /* Roxo Escuro — sidebar, headers, tipografia */
-  --color-action:      #4B75FF; /* Azul Orbital — botões primários, OPERANDO  */
-  --color-destructive: #B71247; /* Carmesim — ações destrutivas, CRÍTICO       */
-  --color-warning:     #EDD82A; /* Amarelo — ATENÇÃO / EM ANDAMENTO            */
-  --color-scheduled:   #FF997E; /* Salmão — AGENDADO                           */
-  --color-surface:     #f8f5fa; /* Fundo claro levemente roxo                  */
-  --color-border:      #e5dde8;
+  --color-primary:     #0505ad; /* Azul Profundo — sidebar, headers, tipografia */
+  --color-action:      #2563eb; /* Azul — botões primários, OPERANDO            */
+  --color-destructive: #B71247; /* Carmesim — ações destrutivas, CRÍTICO        */
+  --color-warning:     #EDD82A; /* Amarelo — ATENÇÃO / EM ANDAMENTO             */
+  --color-scheduled:   #FF997E; /* Salmão — AGENDADO                            */
+  --color-surface:     #f4f6ff; /* Fundo claro levemente azul                   */
+  --color-border:      #dde3f5;
 }
 
 body {
@@ -19,4 +19,4 @@ body {
 
 /* Scrollbar fina no sidebar */
 ::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: #480058; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #0505ad; border-radius: 2px; }

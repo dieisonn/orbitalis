@@ -30,12 +30,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-primary">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img
-            src="/logo.png"
-            alt="Orbitalis"
-            className="mx-auto mb-4 h-16 w-auto object-contain"
-          />
-          <p className="text-white/60 text-sm mt-1 uppercase tracking-widest">DADOS EM ÓRBITA. MANUTENÇÃO EM DIA.</p>
+          <div className="inline-flex items-center justify-center bg-white rounded-3xl p-5 mb-5 shadow-lg">
+            <img
+              src="/logo.png"
+              alt="Orbitalis"
+              className="h-20 w-auto object-contain"
+            />
+          </div>
+          <p className="text-white/60 text-sm uppercase tracking-widest">DADOS EM ÓRBITA. MANUTENÇÃO EM DIA.</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
