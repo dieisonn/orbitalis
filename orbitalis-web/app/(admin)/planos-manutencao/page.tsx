@@ -1,4 +1,6 @@
 import { api } from '@/lib/api'
+import { DeleteButton } from '@/components/ui/delete-button'
+import { deletarPlano } from './actions'
 import { CalendarClock, CheckCircle, XCircle } from 'lucide-react'
 
 type Plano = {
@@ -46,10 +48,10 @@ export default async function PlanosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                {['Ambiente', 'Técnico', 'Frequência', 'Próxima Geração', 'Última Geração', 'Ativo'].map((h) => (
+                {['Ambiente', 'Técnico', 'Frequência', 'Próxima Geração', 'Última Geração', 'Ativo', ''].map((h) => (
                   <th
                     key={h}
-                    className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                    className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
                   >
                     {h}
                   </th>
@@ -82,6 +84,17 @@ export default async function PlanosPage() {
                     ) : (
                       <XCircle size={16} className="text-destructive" />
                     )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <a
+                        href={`/planos-manutencao/${p.id}/editar`}
+                        className="text-xs font-semibold text-primary hover:underline"
+                      >
+                        Editar
+                      </a>
+                      <DeleteButton action={deletarPlano.bind(null, p.id)} />
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -86,6 +86,13 @@ export class OrdensServicoController {
     return this.ordensServicoService.cancelar(id);
   }
 
+  // PATCH /api/v1/ordens-servico/:id/status — Admin altera status manualmente
+  @Patch(':id/status')
+  @Roles(UsuarioTipo.admin)
+  alterarStatus(@Param('id') id: string, @Body('status') status: OsStatus) {
+    return this.ordensServicoService.alterarStatus(id, status);
+  }
+
   // PATCH /api/v1/ordens-servico/:id/sincronizar — Técnico (§6.3 §6.4)
   @Patch(':id/sincronizar')
   @Roles(UsuarioTipo.tecnico)

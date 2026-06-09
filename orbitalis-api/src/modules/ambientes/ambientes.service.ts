@@ -26,6 +26,11 @@ export class AmbientesService {
     return ambiente;
   }
 
+  async update(id: string, data: { nome?: string; metrosQuadrados?: number; capacidadeTermica?: string; localizacaoInterna?: string }) {
+    await this.findOne(id);
+    return this.prisma.ambiente.update({ where: { id }, data });
+  }
+
   async findByCliente(clienteId: string) {
     return this.prisma.ambiente.findMany({
       where: { clienteId, deletedAt: null },

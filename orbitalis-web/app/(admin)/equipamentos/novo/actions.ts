@@ -15,8 +15,8 @@ export async function criarEquipamento(
     ambienteId,
     nome,
     marca,
-    modelo,
-    numeroSerie,
+    modelo: modelo || undefined,
+    numeroSerie: numeroSerie || undefined,
     tipoEquipamento,
   })
   redirect('/equipamentos')

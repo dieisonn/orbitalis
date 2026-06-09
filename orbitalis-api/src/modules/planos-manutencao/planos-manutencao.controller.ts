@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -34,6 +34,21 @@ export class PlanosManutencaoController {
   @Patch(':id/toggle-ativo')
   toggleAtivo(@Param('id') id: string) {
     return this.planosService.toggleAtivo(id);
+  }
+
+  // PATCH /api/v1/planos-manutencao/:id
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() body: { tecnicoId?: string | null; frequenciaDias?: number; proximaGeracao?: string; ativo?: boolean },
+  ) {
+    return this.planosService.update(id, body);
+  }
+
+  // DELETE /api/v1/planos-manutencao/:id
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.planosService.remove(id);
   }
 
   // POST /api/v1/planos-manutencao/disparar-agora — força execução do cron (Admin)

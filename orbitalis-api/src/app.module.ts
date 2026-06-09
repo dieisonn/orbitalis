@@ -9,6 +9,7 @@ import { OrdensServicoModule } from './modules/ordens-servico/ordens-servico.mod
 import { RelatoriosModule } from './modules/relatorios/relatorios.module';
 import { PlanosManutencaoModule } from './modules/planos-manutencao/planos-manutencao.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
+import { ModelosChecklistModule } from './modules/modelos-checklist/modelos-checklist.module';
 
 @Module({
   controllers: [HealthController],
@@ -22,6 +23,7 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
     RelatoriosModule,
     PlanosManutencaoModule,
     UsuariosModule,
+    ModelosChecklistModule,
   ],
 })
 export class AppModule {}

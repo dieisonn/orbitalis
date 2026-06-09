@@ -113,12 +113,11 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Modelo <span className="text-destructive">*</span>
+            Modelo
           </label>
           <input
             name="modelo"
-            required
-            placeholder="Ex: FTXS35LVMA"
+            placeholder="Ex: FTXS35LVMA (opcional)"
             className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
@@ -126,12 +125,11 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Número de Série <span className="text-destructive">*</span>
+          Número de Série
         </label>
         <input
           name="numeroSerie"
-          required
-          placeholder="Nº série da placa do equipamento"
+          placeholder="Nº série da placa (opcional)"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-mono"
         />
       </div>

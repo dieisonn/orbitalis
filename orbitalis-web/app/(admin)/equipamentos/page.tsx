@@ -1,14 +1,17 @@
 import { api } from '@/lib/api'
-import { Cpu, QrCode } from 'lucide-react'
+import { DeleteButton } from '@/components/ui/delete-button'
+import { QrModal } from '@/components/ui/qr-modal'
+import { deletarEquipamento } from './actions'
+import { Cpu } from 'lucide-react'
 
 type Equipamento = {
   id: string
   nome: string
   marca: string
-  modelo: string
+  modelo: string | null
   codigoQr: string
   tipoEquipamento: string
-  numeroSerie: string
+  numeroSerie: string | null
 }
 
 export default async function EquipamentosPage() {
@@ -46,10 +49,10 @@ export default async function EquipamentosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                {['Equipamento', 'Tipo', 'Marca / Modelo', 'Nº Série', 'QR Code'].map((h) => (
+                {['Equipamento', 'Tipo', 'Marca / Modelo', 'Nº Série', 'QR Code', ''].map((h) => (
                   <th
                     key={h}
-                    className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                    className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
                   >
                     {h}
                   </th>
@@ -62,16 +65,28 @@ export default async function EquipamentosPage() {
                   <td className="px-6 py-4 font-medium text-gray-900">{eq.nome}</td>
                   <td className="px-6 py-4 text-gray-500">{eq.tipoEquipamento}</td>
                   <td className="px-6 py-4 text-gray-600">
-                    {eq.marca} {eq.modelo}
+                    {[eq.marca, eq.modelo].filter(Boolean).join(' ') || '—'}
                   </td>
                   <td className="px-6 py-4 font-mono text-xs text-gray-500">
-                    {eq.numeroSerie}
+                    {eq.numeroSerie || '—'}
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary text-xs font-mono font-semibold rounded-lg">
-                      <QrCode size={11} />
-                      {eq.codigoQr}
-                    </span>
+                    <QrModal
+                      equipamentoId={eq.id}
+                      codigoQr={eq.codigoQr}
+                      nome={eq.nome}
+                    />
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <a
+                        href={`/equipamentos/${eq.id}/editar`}
+                        className="text-xs font-semibold text-primary hover:underline"
+                      >
+                        Editar
+                      </a>
+                      <DeleteButton action={deletarEquipamento.bind(null, eq.id)} />
+                    </div>
                   </td>
                 </tr>
               ))}

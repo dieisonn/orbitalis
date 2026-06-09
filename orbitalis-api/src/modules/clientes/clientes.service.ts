@@ -75,6 +75,11 @@ export class ClientesService {
     });
   }
 
+  async update(id: string, data: { razaoSocial?: string; nomeFantasia?: string; endereco?: string }) {
+    await this.findOne(id);
+    return this.prisma.cliente.update({ where: { id }, data });
+  }
+
   // GET /clientes/meu-perfil — retorna o perfil do cliente autenticado com seus ambientes
   async meuPerfil(usuarioId: string) {
     const cliente = await this.prisma.cliente.findFirst({

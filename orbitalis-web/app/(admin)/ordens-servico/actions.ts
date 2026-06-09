@@ -12,3 +12,8 @@ export async function cancelarOs(osId: string) {
   await api.patch(`/ordens-servico/${osId}/cancelar`, {})
   redirect('/ordens-servico')
 }
+
+export async function alterarStatusOs(osId: string, status: string) {
+  await api.patch(`/ordens-servico/${osId}/status`, { status })
+  redirect('/ordens-servico')
+}

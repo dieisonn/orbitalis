@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -53,6 +54,16 @@ export class ClientesController {
   @Roles(UsuarioTipo.admin)
   findOne(@Param('id') id: string) {
     return this.clientesService.findOne(id);
+  }
+
+  // PATCH /api/v1/clientes/:id
+  @Patch(':id')
+  @Roles(UsuarioTipo.admin)
+  update(
+    @Param('id') id: string,
+    @Body() body: { razaoSocial?: string; nomeFantasia?: string; endereco?: string },
+  ) {
+    return this.clientesService.update(id, body);
   }
 
   // DELETE /api/v1/clientes/:id (soft delete §6.5)

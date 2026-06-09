@@ -181,7 +181,11 @@ export class OrdensServicoService {
   findOne(id: string) {
     return this.prisma.ordemServico.findUnique({
       where: { id },
-      include: { itens: { include: { equipamento: true } }, ambiente: true },
+      include: {
+        itens: { include: { equipamento: true } },
+        ambiente: { include: { cliente: true } },
+        tecnico: { select: { id: true, email: true } },
+      },
     });
   }
 
@@ -228,6 +232,17 @@ export class OrdensServicoService {
     return this.prisma.ordemServico.update({
       where: { id },
       data: { status: 'cancelada' },
+    });
+  }
+
+  // PATCH /ordens-servico/:id/status — Admin altera status manualmente
+  async alterarStatus(id: string, status: OsStatus) {
+    const os = await this.prisma.ordemServico.findUnique({ where: { id } });
+    if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+
+    return this.prisma.ordemServico.update({
+      where: { id },
+      data: { status },
     });
   }
 }

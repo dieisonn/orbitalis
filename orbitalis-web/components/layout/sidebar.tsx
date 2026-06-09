@@ -6,20 +6,24 @@ import { logout } from '@/lib/auth'
 import {
   LayoutDashboard,
   Users,
+  UserCog,
   Building2,
   Cpu,
   ClipboardList,
   CalendarClock,
+  ClipboardCheck,
   LogOut,
 } from 'lucide-react'
 
 const NAV = [
-  { href: '/dashboard',        label: 'Cockpit',          icon: LayoutDashboard },
-  { href: '/clientes',         label: 'Clientes',         icon: Users },
-  { href: '/ambientes',        label: 'Ambientes',        icon: Building2 },
-  { href: '/equipamentos',     label: 'Equipamentos',     icon: Cpu },
-  { href: '/ordens-servico',   label: 'Ordens de Serviço', icon: ClipboardList },
-  { href: '/planos-manutencao', label: 'Planos Prev.',    icon: CalendarClock },
+  { href: '/dashboard',         label: 'Cockpit',           icon: LayoutDashboard },
+  { href: '/clientes',          label: 'Clientes',          icon: Users },
+  { href: '/ambientes',         label: 'Ambientes',         icon: Building2 },
+  { href: '/equipamentos',      label: 'Equipamentos',      icon: Cpu },
+  { href: '/ordens-servico',    label: 'Ordens de Serviço', icon: ClipboardList },
+  { href: '/planos-manutencao', label: 'Planos Prev.',      icon: CalendarClock },
+  { href: '/checklists',        label: 'Checklists',        icon: ClipboardCheck },
+  { href: '/usuarios',          label: 'Técnicos',          icon: UserCog },
 ]
 
 export default function Sidebar() {

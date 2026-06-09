@@ -45,6 +45,24 @@ export class PlanosManutencaoService {
     });
   }
 
+  async update(id: string, data: { tecnicoId?: string | null; frequenciaDias?: number; proximaGeracao?: string; ativo?: boolean }) {
+    await this.findOne(id);
+    const { proximaGeracao, ...rest } = data;
+    return this.prisma.planoManutencao.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(proximaGeracao ? { proximaGeracao: new Date(proximaGeracao) } : {}),
+      },
+      include: { ambiente: true, tecnico: { select: { email: true } } },
+    });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id);
+    return this.prisma.planoManutencao.delete({ where: { id } });
+  }
+
   // Disparo manual do cron — útil para testes e para o Admin forçar geração imediata
   dispararAgora() {
     return this.cronService.gerarOsPreventivas();

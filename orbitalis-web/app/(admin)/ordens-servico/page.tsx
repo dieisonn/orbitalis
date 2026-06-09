@@ -95,11 +95,20 @@ export default async function OrdensServicoPage() {
                     {os.itens?.length ?? 0}
                   </td>
                   <td className="px-6 py-4">
-                    <TriarForm
-                      osId={os.id}
-                      status={os.status}
-                      tecnicos={tecnicos}
-                    />
+                    <div className="flex flex-col gap-2 items-end">
+                      <TriarForm
+                        osId={os.id}
+                        status={os.status}
+                        tecnicos={tecnicos}
+                      />
+                      <a
+                        href={`/ordens-servico/${os.id}/pdf`}
+                        className="text-xs font-semibold text-gray-400 hover:text-primary hover:underline"
+                        title="Ver / Imprimir PDF"
+                      >
+                        PDF
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}

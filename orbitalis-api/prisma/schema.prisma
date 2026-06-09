@@ -104,8 +104,8 @@ model Equipamento {
   codigoQr        String    @unique @map("codigo_qr") @db.VarChar(50)
   nome            String    @db.VarChar(100)
   marca           String    @db.VarChar(100)
-  modelo          String    @db.VarChar(100)
-  numeroSerie     String    @map("numero_serie") @db.VarChar(100)
+  modelo          String?   @db.VarChar(100)
+  numeroSerie     String?   @map("numero_serie") @db.VarChar(100)
   tipoEquipamento String    @map("tipo_equipamento") @db.VarChar(100)
   deletedAt       DateTime? @map("deleted_at")
 

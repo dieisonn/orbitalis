@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -38,6 +39,13 @@ export class AmbientesController {
   @Roles(UsuarioTipo.admin, UsuarioTipo.cliente)
   findOne(@Param('id') id: string) {
     return this.ambientesService.findOne(id);
+  }
+
+  // PATCH /api/v1/ambientes/:id
+  @Patch(':id')
+  @Roles(UsuarioTipo.admin)
+  update(@Param('id') id: string, @Body() body: { nome?: string; metrosQuadrados?: number; capacidadeTermica?: string; localizacaoInterna?: string }) {
+    return this.ambientesService.update(id, body);
   }
 
   // DELETE /api/v1/ambientes/:id (soft delete §6.5)

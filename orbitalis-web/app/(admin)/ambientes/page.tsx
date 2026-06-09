@@ -1,4 +1,6 @@
 import { api } from '@/lib/api'
+import { DeleteButton } from '@/components/ui/delete-button'
+import { deletarAmbiente } from './actions'
 import { Building2, Cpu } from 'lucide-react'
 
 type Ambiente = {
@@ -57,7 +59,7 @@ export default async function AmbientesPage() {
                   {a.equipamentos?.length ?? 0} eq.
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-3">
                 <div>
                   <span className="block text-[10px] uppercase tracking-wide text-gray-400">
                     Área
@@ -70,6 +72,15 @@ export default async function AmbientesPage() {
                   </span>
                   {a.capacidadeTermica}
                 </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-border pt-2">
+                <a
+                  href={`/ambientes/${a.id}/editar`}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Editar
+                </a>
+                <DeleteButton action={deletarAmbiente.bind(null, a.id)} />
               </div>
             </div>
           ))}

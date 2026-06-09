@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const PUBLIC = ['/login']
 
 // Rotas exclusivas de cada role
-const ADMIN_ONLY = ['/dashboard', '/clientes', '/ambientes', '/equipamentos', '/ordens-servico', '/planos-manutencao']
+const ADMIN_ONLY = ['/dashboard', '/clientes', '/ambientes', '/equipamentos', '/ordens-servico', '/planos-manutencao', '/usuarios', '/checklists']
 const CLIENT_ONLY = ['/meus-ambientes', '/abrir-chamado', '/historico']
 
 export function proxy(request: NextRequest) {

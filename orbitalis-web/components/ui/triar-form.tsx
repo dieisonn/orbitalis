@@ -17,7 +17,8 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  if (status !== 'agendada') return null
+  const isTerminal = status === 'concluida' || status === 'cancelada'
+  if (isTerminal) return null
 
   function handleTriar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -37,12 +38,29 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
   }
 
   function handleCancelar() {
+    if (!confirm('Cancelar esta O.S.? Ação irreversível.')) return
     startTransition(async () => {
       await cancelarOs(osId)
     })
   }
 
   const hoje = new Date().toISOString().split('T')[0]
+
+  // For non-agendada active statuses: just show cancel button
+  if (status !== 'agendada') {
+    return (
+      <div className="text-right">
+        <button
+          onClick={handleCancelar}
+          disabled={isPending}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 disabled:opacity-60 transition-colors"
+        >
+          <XCircle size={12} />
+          Cancelar O.S.
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="text-right">

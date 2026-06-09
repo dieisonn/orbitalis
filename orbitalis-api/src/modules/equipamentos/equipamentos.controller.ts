@@ -49,6 +49,13 @@ export class EquipamentosController {
     return this.equipamentosService.findByQr(codigo);
   }
 
+  // PATCH /api/v1/equipamentos/:id — Admin atualiza equipamento
+  @Patch(':id')
+  @Roles(UsuarioTipo.admin)
+  update(@Param('id') id: string, @Body() body: { nome?: string; marca?: string; modelo?: string | null; numeroSerie?: string | null; tipoEquipamento?: string }) {
+    return this.equipamentosService.update(id, body);
+  }
+
   // PATCH /api/v1/equipamentos/:id/substituir-qr — Admin
   @Patch(':id/substituir-qr')
   @Roles(UsuarioTipo.admin)

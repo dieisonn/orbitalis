@@ -26,6 +26,7 @@ export class EquipamentosService {
   async findOne(id: string) {
     const equipamento = await this.prisma.equipamento.findFirst({
       where: { id, deletedAt: null },
+      include: { ambiente: { include: { cliente: true } } },
     });
     if (!equipamento) throw new NotFoundException('Equipamento não encontrado');
     return equipamento;
@@ -38,6 +39,11 @@ export class EquipamentosService {
     });
     if (!equipamento) throw new NotFoundException('QR Code não encontrado');
     return equipamento;
+  }
+
+  async update(id: string, data: { nome?: string; marca?: string; modelo?: string | null; numeroSerie?: string | null; tipoEquipamento?: string }) {
+    await this.findOne(id);
+    return this.prisma.equipamento.update({ where: { id }, data });
   }
 
   async substituirQr(id: string, dto: SubstituirQrDto) {

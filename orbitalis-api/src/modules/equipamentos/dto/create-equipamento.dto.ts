@@ -1,4 +1,4 @@
-import { IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreateEquipamentoDto {
   @IsUUID()
@@ -13,13 +13,15 @@ export class CreateEquipamentoDto {
   @MaxLength(100)
   marca: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(100)
-  modelo: string;
+  modelo?: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(100)
-  numeroSerie: string;
+  numeroSerie?: string;
 
   @IsString()
   @MaxLength(100)

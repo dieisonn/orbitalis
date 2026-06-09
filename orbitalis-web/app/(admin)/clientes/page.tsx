@@ -1,4 +1,6 @@
 import { api } from '@/lib/api'
+import { DeleteButton } from '@/components/ui/delete-button'
+import { deletarCliente } from './actions'
 import { Users, Building2 } from 'lucide-react'
 
 type Cliente = {
@@ -57,6 +59,7 @@ export default async function ClientesPage() {
                 <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   Ambientes
                 </th>
+                <th className="px-6 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -79,6 +82,17 @@ export default async function ClientesPage() {
                       <Building2 size={12} />
                       {c.ambientes?.length ?? 0}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <a
+                        href={`/clientes/${c.id}/editar`}
+                        className="text-xs font-semibold text-primary hover:underline"
+                      >
+                        Editar
+                      </a>
+                      <DeleteButton action={deletarCliente.bind(null, c.id)} />
+                    </div>
                   </td>
                 </tr>
               ))}
