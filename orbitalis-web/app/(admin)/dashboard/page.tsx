@@ -11,7 +11,7 @@ type Tecnico = {
   aberta: number; agendada: number; em_andamento: number; total: number
 }
 type Painel = {
-  porStatus: Partial<Record<string, number>>
+  porStatus: Record<string, number>
   atrasadas: number
   taxaConclusao: TaxaConclusao
   porTecnico: Tecnico[]
@@ -40,7 +40,7 @@ function TecnicoBar({ value, max }: { value: number; max: number }) {
 
 export default async function DashboardPage() {
   const [painel, historico] = await Promise.all([
-    api.get<Painel>('/ordens-servico/painel').catch(() => ({
+    api.get<Painel>('/ordens-servico/painel').catch((): Painel => ({
       porStatus: {},
       atrasadas: 0,
       taxaConclusao: { concluidas: 0, total: 0, percentual: 0 },
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
           <a key={key} href={`/ordens-servico?status=${key}`}
             className={`rounded-2xl p-5 flex flex-col gap-2 shadow-sm ${bg} hover:opacity-90 transition-opacity cursor-pointer`}>
             <Icon size={20} className={text} />
-            <p className={`text-3xl font-bold ${text}`}>{(porStatus as Record<string, number>)[key] ?? 0}</p>
+            <p className={`text-3xl font-bold ${text}`}>{porStatus[key] ?? 0}</p>
             <p className={`text-xs font-medium uppercase tracking-wide ${text} opacity-80`}>{label}</p>
           </a>
         ))}
