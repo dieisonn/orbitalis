@@ -6,10 +6,16 @@ type Config = {
   nomeFantasia: string | null
   logoUrl: string | null
   corPrimaria: string | null
+  cnpj: string | null
+  telefone: string | null
+  endereco: string | null
 }
 
 export default async function ConfiguracoesPage() {
-  let config: Config = { nomeEmpresa: 'Orbitalis', nomeFantasia: null, logoUrl: null, corPrimaria: '#0505ad' }
+  let config: Config = {
+    nomeEmpresa: 'Orbitalis', nomeFantasia: null, logoUrl: null,
+    corPrimaria: '#0505ad', cnpj: null, telefone: null, endereco: null,
+  }
   try {
     config = await api.get<Config>('/configuracao')
   } catch { /* usa padrão */ }
