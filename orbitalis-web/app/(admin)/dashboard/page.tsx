@@ -66,7 +66,7 @@ export default async function DashboardPage() {
           <a key={key} href={`/ordens-servico?status=${key}`}
             className={`rounded-2xl p-5 flex flex-col gap-2 shadow-sm ${bg} hover:opacity-90 transition-opacity cursor-pointer`}>
             <Icon size={20} className={text} />
-            <p className={`text-3xl font-bold ${text}`}>{porStatus[key] ?? 0}</p>
+            <p className={`text-3xl font-bold ${text}`}>{(porStatus as Record<string, number>)[key] ?? 0}</p>
             <p className={`text-xs font-medium uppercase tracking-wide ${text} opacity-80`}>{label}</p>
           </a>
         ))}
