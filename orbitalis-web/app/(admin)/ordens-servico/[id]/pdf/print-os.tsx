@@ -42,9 +42,11 @@ type OS = {
       endereco: string
     }
   }
-  tecnico: { email: string } | null
+  tecnico: { email: string; nome: string | null } | null
   itens: Item[]
 }
+
+type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null } | null
 
 const STATUS_LABEL: Record<string, string> = {
   aberta: 'Aberta',
@@ -82,8 +84,13 @@ function parseSnapshot(snapshot: unknown): ChecklistItem[] {
   }
 }
 
-export function PrintOS({ os }: { os: OS }) {
+export function PrintOS({ os, config }: { os: OS; config?: Config }) {
   const shortId = `OS-${os.id.slice(0, 6).toUpperCase()}`
+  const nomeEmpresa = config?.nomeFantasia ?? config?.nomeEmpresa ?? 'Orbitalis'
+  const logoUrl = config?.logoUrl ?? null
+  const tecnicoLabel = os.tecnico
+    ? (os.tecnico.nome ?? os.tecnico.email)
+    : 'Não atribuído'
 
   return (
     <>
@@ -114,9 +121,25 @@ export function PrintOS({ os }: { os: OS }) {
       <div className="max-w-3xl mx-auto p-8 bg-white text-gray-900 font-sans print:p-0 print:max-w-none">
         {/* Header */}
         <div className="flex items-start justify-between border-b-2 border-gray-900 pb-4 mb-5">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight">ORBITALIS</h1>
-            <p className="text-xs text-gray-400">Sistema de Gestão de Climatização</p>
+          <div className="flex items-center gap-3">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={nomeEmpresa}
+                className="h-12 w-auto object-contain"
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore — crossOrigin needed for print
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <h1 className="text-2xl font-black tracking-tight">{nomeEmpresa.toUpperCase()}</h1>
+            )}
+            {logoUrl && (
+              <div>
+                <p className="text-base font-black tracking-tight">{nomeEmpresa}</p>
+                <p className="text-xs text-gray-400">Sistema de Gestão de Climatização</p>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400 uppercase tracking-wide">Ordem de Serviço</p>
@@ -152,7 +175,10 @@ export function PrintOS({ os }: { os: OS }) {
 
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">Técnico</p>
-            <p className="text-sm font-medium">{os.tecnico?.email ?? 'Não atribuído'}</p>
+            <p className="text-sm font-medium">{tecnicoLabel}</p>
+            {os.tecnico?.nome && (
+              <p className="text-xs text-gray-400">{os.tecnico.email}</p>
+            )}
           </div>
 
           <div>
@@ -253,7 +279,7 @@ export function PrintOS({ os }: { os: OS }) {
           <div>
             <div className="border-b border-gray-400 h-12 mb-1" />
             <p className="text-xs text-gray-500 text-center">Assinatura do Técnico</p>
-            <p className="text-[10px] text-gray-400 text-center">{os.tecnico?.email ?? ''}</p>
+            <p className="text-[10px] text-gray-400 text-center">{tecnicoLabel}</p>
           </div>
           <div>
             <div className="border-b border-gray-400 h-12 mb-1" />
@@ -263,7 +289,7 @@ export function PrintOS({ os }: { os: OS }) {
         </div>
 
         <p className="text-[8px] text-gray-300 text-center mt-6">
-          {shortId} · Orbitalis CMMS · Gerado em {new Date().toLocaleString('pt-BR')}
+          {shortId} · {nomeEmpresa} · Gerado em {new Date().toLocaleString('pt-BR')}
         </p>
       </div>
     </>
