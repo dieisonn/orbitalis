@@ -27,12 +27,8 @@ export function EditarTecnicoForm({ id, email, nome, telefone, especialidade }: 
     if (senha && senha !== confirmacao) { setError('As senhas não coincidem'); return }
     setError(null)
     startTransition(async () => {
-      try {
-        await editarTecnico(id, novoEmail, senha, novoNome, novoTelefone, novaEspecialidade)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erro ao salvar'
-        if (!msg.includes('NEXT_REDIRECT')) setError(msg)
-      }
+      const result = await editarTecnico(id, novoEmail, senha, novoNome, novoTelefone, novaEspecialidade)
+      if (result && !result.ok) setError(result.error ?? 'Erro ao salvar')
     })
   }
 

@@ -20,12 +20,8 @@ export function NovoTecnicoForm() {
     if (senha !== confirmacao) { setError('As senhas não coincidem'); return }
     setError(null)
     startTransition(async () => {
-      try {
-        await criarTecnico(email, senha, nome, telefone, especialidade)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erro ao criar técnico'
-        if (!msg.includes('NEXT_REDIRECT')) setError(msg)
-      }
+      const result = await criarTecnico(email, senha, nome, telefone, especialidade)
+      if (result && !result.ok) setError(result.error ?? 'Erro ao criar técnico')
     })
   }
 

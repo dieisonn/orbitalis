@@ -7,10 +7,15 @@ export async function salvarConfiguracao(
   logoUrl: string,
   corPrimaria: string,
 ) {
-  await api.patch('/configuracao', {
-    nomeEmpresa,
-    nomeFantasia: nomeFantasia || undefined,
-    logoUrl: logoUrl || undefined,
-    corPrimaria: corPrimaria || undefined,
-  })
+  try {
+    await api.patch('/configuracao', {
+      nomeEmpresa,
+      nomeFantasia: nomeFantasia || undefined,
+      logoUrl: logoUrl || undefined,
+      corPrimaria: corPrimaria || undefined,
+    })
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar configuração' }
+  }
 }

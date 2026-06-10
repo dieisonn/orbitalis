@@ -255,11 +255,11 @@ export class OrdensServicoService {
       { mes: string; status: string; total: bigint }[]
     >`
       SELECT
-        TO_CHAR("data_agendamento", 'YYYY-MM') AS mes,
+        TO_CHAR("data_criacao", 'YYYY-MM') AS mes,
         status::text,
         COUNT(*)::bigint AS total
       FROM ordens_servico
-      WHERE "data_agendamento" >= NOW() - INTERVAL '12 months'
+      WHERE "data_criacao" >= NOW() - INTERVAL '12 months'
       GROUP BY mes, status
       ORDER BY mes ASC
     `;

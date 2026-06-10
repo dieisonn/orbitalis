@@ -30,28 +30,21 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
 
     setError(null)
     startTransition(async () => {
-      try {
-        await triarOs(osId, tecnicoId, dataAgendamento)
-        setOpen(false)
-        router.refresh()
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        if (!msg.includes('NEXT_REDIRECT')) {
-          setError(msg || 'Erro ao despachar')
-        }
+      const result = await triarOs(osId, tecnicoId, dataAgendamento)
+      if (!result.ok) {
+        setError(result.error ?? 'Erro ao despachar')
+        return
       }
+      setOpen(false)
+      router.refresh()
     })
   }
 
   function handleCancelar() {
     if (!confirm('Cancelar esta O.S.? Ação irreversível.')) return
     startTransition(async () => {
-      try {
-        await cancelarOs(osId)
-        router.refresh()
-      } catch {
-        // silent
-      }
+      await cancelarOs(osId)
+      router.refresh()
     })
   }
 

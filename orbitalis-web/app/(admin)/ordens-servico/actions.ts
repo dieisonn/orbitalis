@@ -2,13 +2,28 @@
 import { api } from '@/lib/api'
 
 export async function triarOs(osId: string, tecnicoId: string, dataAgendamento: string) {
-  await api.patch(`/ordens-servico/${osId}/triar`, { tecnicoId, dataAgendamento })
+  try {
+    await api.patch(`/ordens-servico/${osId}/triar`, { tecnicoId, dataAgendamento })
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao despachar' }
+  }
 }
 
 export async function cancelarOs(osId: string) {
-  await api.patch(`/ordens-servico/${osId}/cancelar`, {})
+  try {
+    await api.patch(`/ordens-servico/${osId}/cancelar`, {})
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao cancelar' }
+  }
 }
 
 export async function alterarStatusOs(osId: string, status: string) {
-  await api.patch(`/ordens-servico/${osId}/status`, { status })
+  try {
+    await api.patch(`/ordens-servico/${osId}/status`, { status })
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao alterar status' }
+  }
 }

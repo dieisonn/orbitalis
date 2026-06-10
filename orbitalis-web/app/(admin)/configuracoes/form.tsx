@@ -20,13 +20,12 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
 
     setError(null); setSuccess(false)
     startTransition(async () => {
-      try {
-        await salvarConfiguracao(nomeEmpresa, nomeFantasia, logoUrl, corPrimaria)
-        setSuccess(true)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erro ao salvar'
-        if (!msg.includes('NEXT_REDIRECT')) setError(msg)
+      const result = await salvarConfiguracao(nomeEmpresa, nomeFantasia, logoUrl, corPrimaria)
+      if (!result.ok) {
+        setError(result.error ?? 'Erro ao salvar')
+        return
       }
+      setSuccess(true)
     })
   }
 

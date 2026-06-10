@@ -13,6 +13,10 @@ export async function editarTecnico(
     especialidade: especialidade || undefined,
   }
   if (senha) body.senha = senha
-  await api.patch(`/usuarios/${id}`, body)
+  try {
+    await api.patch(`/usuarios/${id}`, body)
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar' }
+  }
   redirect('/usuarios')
 }

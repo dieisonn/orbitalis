@@ -25,7 +25,8 @@ export function FinanceiroForm({ osId, valorMaoObra, valorPecas }: Props) {
     const mao  = parseFloat((fd.get('mao') as string).replace(',', '.')) || null
     const peca = parseFloat((fd.get('peca') as string).replace(',', '.')) || null
     startTransition(async () => {
-      await registrarFinanceiro(osId, mao, peca)
+      const result = await registrarFinanceiro(osId, mao, peca)
+      if (!result.ok) return
       setOk(true)
       setTimeout(() => { setOk(false); setOpen(false) }, 1500)
     })
