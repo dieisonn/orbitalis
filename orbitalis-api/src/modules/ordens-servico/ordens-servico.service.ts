@@ -62,17 +62,83 @@ export class OrdensServicoService {
     });
   }
 
-  // GET /ordens-servico/painel — contadores por status para o dashboard (§US06)
+  // GET /ordens-servico/painel — dados do cockpit (contadores + atrasadas + taxa + ranking)
   async painel() {
-    const contagens = await this.prisma.ordemServico.groupBy({
-      by: ['status'],
-      _count: { _all: true },
-    });
+    const agora = new Date();
+    const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    const fimMes   = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    return contagens.reduce(
+    const [contagens, atrasadas, totalMes, concluidasMes, tecnicos] = await Promise.all([
+      // Contagem por status (total geral)
+      this.prisma.ordemServico.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
+
+      // O.S. com dataAgendamento no passado e ainda abertas/agendadas
+      this.prisma.ordemServico.count({
+        where: {
+          dataAgendamento: { lt: agora },
+          status: { in: ['aberta', 'agendada'] },
+        },
+      }),
+
+      // Total de O.S. agendadas para o mês atual
+      this.prisma.ordemServico.count({
+        where: { dataAgendamento: { gte: inicioMes, lte: fimMes } },
+      }),
+
+      // O.S. concluídas com agendamento no mês atual
+      this.prisma.ordemServico.count({
+        where: {
+          dataAgendamento: { gte: inicioMes, lte: fimMes },
+          status: 'concluida',
+        },
+      }),
+
+      // Técnicos com O.S. ativas (aberta | agendada | em_andamento)
+      this.prisma.usuario.findMany({
+        where: { tipo: 'tecnico' },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          ordensComoTecnico: {
+            where: { status: { in: ['aberta', 'agendada', 'em_andamento'] } },
+            select: { status: true },
+          },
+        },
+      }),
+    ]);
+
+    const porStatus = contagens.reduce(
       (acc, item) => ({ ...acc, [item.status]: item._count._all }),
       {} as Record<string, number>,
     );
+
+    const porTecnico = tecnicos
+      .map((t) => ({
+        tecnicoId: t.id,
+        nome: t.nome ?? t.email,
+        email: t.email,
+        aberta:      t.ordensComoTecnico.filter((o) => o.status === 'aberta').length,
+        agendada:    t.ordensComoTecnico.filter((o) => o.status === 'agendada').length,
+        em_andamento:t.ordensComoTecnico.filter((o) => o.status === 'em_andamento').length,
+        total:       t.ordensComoTecnico.length,
+      }))
+      .filter((t) => t.total > 0)
+      .sort((a, b) => b.total - a.total);
+
+    return {
+      porStatus,
+      atrasadas,
+      taxaConclusao: {
+        concluidas: concluidasMes,
+        total: totalMes,
+        percentual: totalMes > 0 ? Math.round((concluidasMes / totalMes) * 100) : 0,
+      },
+      porTecnico,
+    };
   }
 
   // GET /ordens-servico/tecnico/:tecnicoId — fila do técnico (§US08)
