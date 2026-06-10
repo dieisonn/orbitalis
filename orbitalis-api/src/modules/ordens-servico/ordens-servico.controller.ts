@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -115,5 +116,16 @@ export class OrdensServicoController {
   @Roles(UsuarioTipo.tecnico)
   sincronizar(@Param('id') id: string, @Body() dto: SincronizarOsDto) {
     return this.ordensServicoService.sincronizar(id, dto);
+  }
+
+  // DELETE /api/v1/ordens-servico/:id — Admin, exclusão definitiva com senha
+  @Delete(':id')
+  @Roles(UsuarioTipo.admin)
+  excluir(
+    @Param('id') id: string,
+    @Body('senha') senha: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.ordensServicoService.excluir(id, senha, user.id);
   }
 }

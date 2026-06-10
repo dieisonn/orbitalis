@@ -3,6 +3,8 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { TriarForm } from '@/components/ui/triar-form'
 import { OsFilterBar } from '@/components/ui/os-filter-bar'
 import { FinanceiroForm } from '@/components/ui/financeiro-form'
+import { AlterarStatusForm } from '@/components/ui/alterar-status-form'
+import { ExcluirOsForm } from '@/components/ui/excluir-os-form'
 import { ClipboardList, FileText } from 'lucide-react'
 
 type OrdemServico = {
@@ -150,6 +152,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                         status={os.status}
                         tecnicos={tecnicos}
                       />
+                      <AlterarStatusForm osId={os.id} status={os.status} />
                       <FinanceiroForm
                         osId={os.id}
                         valorMaoObra={os.valorMaoObra ?? null}
@@ -165,6 +168,10 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                         <FileText size={11} />
                         PDF
                       </a>
+                      <ExcluirOsForm
+                        osId={os.id}
+                        osNum={`OS-${os.id.slice(0, 6).toUpperCase()}`}
+                      />
                     </div>
                   </td>
                 </tr>

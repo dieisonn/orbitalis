@@ -1,8 +1,10 @@
+import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { OsStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -247,6 +249,25 @@ export class OrdensServicoService {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
     return this.prisma.ordemServico.update({ where: { id }, data });
+  }
+
+  // DELETE /ordens-servico/:id — exclusão definitiva com confirmação de senha
+  async excluir(id: string, senha: string, adminId: string) {
+    const admin = await this.prisma.usuario.findUnique({ where: { id: adminId } });
+    if (!admin) throw new UnauthorizedException('Admin não encontrado');
+    const senhaOk = await bcrypt.compare(senha, admin.senhaHash);
+    if (!senhaOk) throw new UnauthorizedException('Senha incorreta');
+
+    const os = await this.prisma.ordemServico.findUnique({ where: { id } });
+    if (!os) throw new NotFoundException('O.S. não encontrada');
+
+    // conflitos não têm cascade, precisam ser deletados antes
+    await this.prisma.auditoriaConflitoSincronizacao.deleteMany({ where: { ordemServicoId: id } });
+    // itens têm onDelete: Cascade, mas deleta explicitamente para segurança
+    await this.prisma.ordemServicoItem.deleteMany({ where: { ordemServicoId: id } });
+    await this.prisma.ordemServico.delete({ where: { id } });
+
+    return { message: 'O.S. excluída permanentemente' };
   }
 
   // GET /ordens-servico/historico — últimos 12 meses agrupados por mês e status

@@ -173,6 +173,7 @@ model OrdemServico {
   dataConclusao     DateTime? @map("data_conclusao")
   valorMaoObra      Decimal?  @map("valor_mao_obra") @db.Decimal(10, 2)
   valorPecas        Decimal?  @map("valor_pecas") @db.Decimal(10, 2)
+  dataCriacao       DateTime  @default(now()) @map("data_criacao")
 
   ambiente  Ambiente           @relation(fields: [ambienteId], references: [id])
   tecnico   Usuario?           @relation("TecnicoOrdens", fields: [tecnicoId], references: [id])
