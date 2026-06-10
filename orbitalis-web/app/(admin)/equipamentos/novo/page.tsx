@@ -5,7 +5,7 @@ type Ambiente = {
   id: string
   nome: string
   localizacaoInterna: string
-  cliente?: { razaoSocial: string; nomeFantasia: string | null }
+  cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
 }
 
 export default async function NovoEquipamentoPage() {
