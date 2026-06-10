@@ -233,17 +233,79 @@ export class OrdensServicoService {
     });
   }
 
-  // GET /ordens-servico — listagem geral Admin com filtro opcional de status
-  findAll(status?: OsStatus) {
-    return this.prisma.ordemServico.findMany({
-      where: status ? { status } : undefined,
-      include: {
-        ambiente: true,
-        tecnico: { select: { id: true, email: true } },
-        itens: { select: { id: true, statusItem: true } },
-      },
-      orderBy: { dataAgendamento: 'desc' },
-    });
+  // GET /ordens-servico — listagem admin com filtros, busca e paginação
+  async findAll(filters: {
+    status?: OsStatus;
+    tecnicoId?: string;
+    clienteId?: string;
+    dataInicio?: string;
+    dataFim?: string;
+    atrasadas?: boolean;
+    q?: string;
+    page?: number;
+    perPage?: number;
+  }) {
+    const {
+      status, tecnicoId, clienteId,
+      dataInicio, dataFim, atrasadas,
+      q, page = 1, perPage = 20,
+    } = filters;
+
+    const agora = new Date();
+    const where: {
+      status?: any; tecnicoId?: string; dataAgendamento?: any;
+      ambiente?: any; OR?: any[];
+    } = {};
+
+    // Status / atrasadas (mutuamente exclusivos)
+    if (atrasadas) {
+      where.status = { in: ['aberta', 'agendada'] };
+      where.dataAgendamento = { lt: agora };
+    } else if (status) {
+      where.status = status;
+    }
+
+    if (tecnicoId) where.tecnicoId = tecnicoId;
+    if (clienteId) where.ambiente = { clienteId };
+
+    // Date range (só se não for filtro "atrasadas")
+    if (!atrasadas && (dataInicio || dataFim)) {
+      where.dataAgendamento = {
+        ...(dataInicio ? { gte: new Date(dataInicio) } : {}),
+        ...(dataFim ? { lte: new Date(`${dataFim}T23:59:59`) } : {}),
+      };
+    }
+
+    // Busca textual: ambiente, cliente
+    if (q) {
+      where.OR = [
+        { ambiente: { nome: { contains: q, mode: 'insensitive' } } },
+        { ambiente: { cliente: { razaoSocial: { contains: q, mode: 'insensitive' } } } },
+        { ambiente: { cliente: { nomeFantasia: { contains: q, mode: 'insensitive' } } } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.ordemServico.findMany({
+        where,
+        include: {
+          ambiente: {
+            select: {
+              nome: true,
+              cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+            },
+          },
+          tecnico: { select: { id: true, email: true, nome: true } },
+          itens: { select: { id: true, statusItem: true } },
+        },
+        orderBy: { dataAgendamento: 'desc' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+      this.prisma.ordemServico.count({ where }),
+    ]);
+
+    return { data, total, page, perPage };
   }
 
   findOne(id: string) {

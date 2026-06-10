@@ -38,11 +38,31 @@ export class OrdensServicoController {
     return this.ordensServicoService.findMeus(user.id);
   }
 
-  // GET /api/v1/ordens-servico — Admin (listagem geral com filtro ?status=)
+  // GET /api/v1/ordens-servico — Admin (listagem com filtros + paginação)
   @Get()
   @Roles(UsuarioTipo.admin)
-  findAll(@Query('status') status?: OsStatus) {
-    return this.ordensServicoService.findAll(status);
+  findAll(
+    @Query('status') status?: OsStatus,
+    @Query('tecnicoId') tecnicoId?: string,
+    @Query('clienteId') clienteId?: string,
+    @Query('dataInicio') dataInicio?: string,
+    @Query('dataFim') dataFim?: string,
+    @Query('atrasadas') atrasadas?: string,
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+  ) {
+    return this.ordensServicoService.findAll({
+      status,
+      tecnicoId,
+      clienteId,
+      dataInicio,
+      dataFim,
+      atrasadas: atrasadas === '1' || atrasadas === 'true',
+      q,
+      page: page ? parseInt(page, 10) : 1,
+      perPage: perPage ? parseInt(perPage, 10) : 20,
+    });
   }
 
   // GET /api/v1/ordens-servico/painel — Admin (dashboard)
