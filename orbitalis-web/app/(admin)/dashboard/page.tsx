@@ -50,7 +50,7 @@ export default async function DashboardPage() {
   ])
 
   const { porStatus, atrasadas, taxaConclusao, porTecnico } = painel
-  const total = Object.values(porStatus).reduce((s, n) => s + (n ?? 0), 0)
+  const total = Object.values(porStatus).reduce<number>((s, n) => s + (n ?? 0), 0)
   const maxTecnico = porTecnico[0]?.total ?? 1
 
   return (
