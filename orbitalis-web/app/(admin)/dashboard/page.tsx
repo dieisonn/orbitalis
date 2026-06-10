@@ -57,7 +57,10 @@ export default async function DashboardPage() {
 
       {/* Gráfico histórico */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">Histórico dos últimos 12 meses</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-gray-700">O.S. por mês de agendamento</h2>
+          <span className="text-xs text-gray-400">6 meses anteriores · mês atual · 5 meses futuros</span>
+        </div>
         <OsChart data={historico} />
       </div>
     </div>

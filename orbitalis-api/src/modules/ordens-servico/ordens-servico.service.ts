@@ -270,35 +270,50 @@ export class OrdensServicoService {
     return { message: 'O.S. excluída permanentemente' };
   }
 
-  // GET /ordens-servico/historico — últimos 12 meses agrupados por mês e status
+  // GET /ordens-servico/historico — janela de 12 meses (6 passados + atual + 5 futuros)
+  // Agrupa por data_agendamento para refletir a distribuição de trabalho por mês
   async historico() {
     const rows = await this.prisma.$queryRaw<
       { mes: string; status: string; total: bigint }[]
     >`
       SELECT
-        TO_CHAR("data_criacao", 'YYYY-MM') AS mes,
+        TO_CHAR("data_agendamento", 'YYYY-MM') AS mes,
         status::text,
         COUNT(*)::bigint AS total
       FROM ordens_servico
-      WHERE "data_criacao" >= NOW() - INTERVAL '12 months'
+      WHERE "data_agendamento" >= DATE_TRUNC('month', NOW()) - INTERVAL '6 months'
+        AND "data_agendamento" <  DATE_TRUNC('month', NOW()) + INTERVAL '6 months'
       GROUP BY mes, status
       ORDER BY mes ASC
     `;
 
-    // Pivot para { mes, aberta, agendada, em_andamento, concluida, cancelada }
+    // Pivot: mes → { status → total }
     const byMes: Record<string, Record<string, number>> = {};
     for (const r of rows) {
       if (!byMes[r.mes]) byMes[r.mes] = {};
       byMes[r.mes][r.status] = Number(r.total);
     }
 
-    return Object.entries(byMes).map(([mes, counts]) => ({
-      mes,
-      aberta:       counts['aberta'] ?? 0,
-      agendada:     counts['agendada'] ?? 0,
-      em_andamento: counts['em_andamento'] ?? 0,
-      concluida:    counts['concluida'] ?? 0,
-      cancelada:    counts['cancelada'] ?? 0,
-    }));
+    // Gera todos os 12 meses da janela (inclusive os zerados)
+    const result: {
+      mes: string; aberta: number; agendada: number;
+      em_andamento: number; concluida: number; cancelada: number;
+    }[] = [];
+    const now = new Date();
+    for (let i = -6; i <= 5; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const counts = byMes[mes] ?? {};
+      result.push({
+        mes,
+        aberta:       counts['aberta']       ?? 0,
+        agendada:     counts['agendada']     ?? 0,
+        em_andamento: counts['em_andamento'] ?? 0,
+        concluida:    counts['concluida']    ?? 0,
+        cancelada:    counts['cancelada']    ?? 0,
+      });
+    }
+
+    return result;
   }
 }
