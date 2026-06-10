@@ -29,11 +29,18 @@
 
 4. **Deploy**
    ```bash
+   # ⚠️ IMPORTANTE: rodar de DENTRO de orbitalis-api/, não do repo root
+   # O Root Directory no Railway está vazio — o Railway usa o diretório que você envia
+   cd orbitalis-api
    railway up
    ```
    O `railway.json` já configura:
    - Build: `npm install && npm run build && npx prisma generate`
    - Start: `npx prisma db push && node dist/main`
+
+   > Para re-deploys futuros: `cd orbitalis-api && railway up`
+   > **Auto-deploy via GitHub**: se quiser auto-deploy no push, configure no painel Railway →
+   > Settings → Source → Root Directory: `orbitalis-api`; após isso use `railway up` da raiz do repo.
 
 5. **Seed inicial (uma vez)**
    ```bash
