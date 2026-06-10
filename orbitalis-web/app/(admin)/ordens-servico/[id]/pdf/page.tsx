@@ -2,7 +2,10 @@ import { api } from '@/lib/api'
 import { PrintOS } from './print-os'
 import { notFound } from 'next/navigation'
 
-type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null }
+type Config = {
+  nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null
+  corPrimaria: string | null; cnpj: string | null; telefone: string | null; endereco: string | null
+}
 type Props = { params: Promise<{ id: string }> }
 
 export default async function OsPdfPage({ params }: Props) {

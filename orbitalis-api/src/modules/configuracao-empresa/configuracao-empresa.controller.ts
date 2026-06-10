@@ -19,7 +19,7 @@ export class ConfiguracaoEmpresaController {
   @Patch()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UsuarioTipo.admin)
-  upsert(@Body() body: { nomeEmpresa?: string; nomeFantasia?: string; logoUrl?: string; corPrimaria?: string }) {
+  upsert(@Body() body: { nomeEmpresa?: string; nomeFantasia?: string; logoUrl?: string; corPrimaria?: string; cnpj?: string; telefone?: string; endereco?: string }) {
     return this.service.upsert(body);
   }
 }

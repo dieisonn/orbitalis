@@ -217,6 +217,9 @@ model ConfiguracaoEmpresa {
   nomeFantasia String?  @map("nome_fantasia") @db.VarChar(255)
   logoUrl      String?  @map("logo_url") @db.VarChar(512)
   corPrimaria  String?  @map("cor_primaria") @db.VarChar(7)
+  cnpj         String?  @db.VarChar(18)
+  telefone     String?  @db.VarChar(30)
+  endereco     String?  @db.VarChar(255)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("configuracao_empresa")
