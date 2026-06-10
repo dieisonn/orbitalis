@@ -42,13 +42,13 @@ function formatMes(mes: string) {
 }
 
 function CustomTick({ x, y, payload, atualLabel }: {
-  x?: number; y?: number; payload?: { value: string }; atualLabel: string
+  x?: number | string; y?: number | string; payload?: { value: string }; atualLabel: string
 }) {
   if (!payload) return null
   const isAtual = payload.value === atualLabel
   return (
     <text
-      x={x} y={(y ?? 0) + 12}
+      x={Number(x ?? 0)} y={Number(y ?? 0) + 12}
       textAnchor="middle"
       fontSize={isAtual ? 12 : 11}
       fontWeight={isAtual ? 700 : 400}
