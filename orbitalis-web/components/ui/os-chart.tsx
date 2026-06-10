@@ -54,7 +54,7 @@ export function OsChart({ data }: { data: Ponto[] }) {
         <XAxis dataKey="mes" tick={{ fontSize: 11, fill: '#6b7280' }} />
         <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
         <Tooltip
-          formatter={(value: number, name: string) => [value, LABEL[name] ?? name]}
+          formatter={(value, name) => [value, LABEL[String(name)] ?? String(name)]}
           contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #dde3f5' }}
         />
         <Legend formatter={(name) => LABEL[name] ?? name} wrapperStyle={{ fontSize: 12 }} />
