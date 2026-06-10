@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   X,
+  Settings,
 } from 'lucide-react'
 
 const NAV = [
@@ -27,11 +28,17 @@ const NAV = [
   { href: '/planos-manutencao', label: 'Planos Prev.',      icon: CalendarClock },
   { href: '/checklists',        label: 'Checklists',        icon: ClipboardCheck },
   { href: '/usuarios',          label: 'Técnicos',          icon: UserCog },
+  { href: '/configuracoes',     label: 'Configurações',     icon: Settings },
 ]
 
-export default function Sidebar() {
+type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null } | null
+
+export default function Sidebar({ config }: { config?: Config }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
+
+  const logoSrc = config?.logoUrl || '/logo.png'
+  const nomeExibido = config?.nomeFantasia || config?.nomeEmpresa || 'Orbitalis'
 
   return (
     <>
@@ -66,8 +73,8 @@ export default function Sidebar() {
         <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
           <div className="bg-white rounded-3xl p-3 flex items-center">
             <img
-              src="/logo.png"
-              alt="Orbitalis"
+              src={logoSrc}
+              alt={nomeExibido}
               className="h-16 w-auto object-contain"
             />
           </div>

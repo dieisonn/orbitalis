@@ -44,11 +44,14 @@ enum OsItemStatus {
 // usuarios
 // ─────────────────────────────────────────
 model Usuario {
-  id           String      @id @default(uuid()) @db.Uuid
-  email        String      @unique @db.VarChar(255)
-  senhaHash    String      @map("senha_hash") @db.VarChar(255)
-  tipo         UsuarioTipo
-  dataCriacao  DateTime    @default(now()) @map("data_criacao")
+  id            String      @id @default(uuid()) @db.Uuid
+  email         String      @unique @db.VarChar(255)
+  senhaHash     String      @map("senha_hash") @db.VarChar(255)
+  tipo          UsuarioTipo
+  nome          String?     @db.VarChar(150)
+  telefone      String?     @db.VarChar(20)
+  especialidade String?     @db.VarChar(100)
+  dataCriacao   DateTime    @default(now()) @map("data_criacao")
 
   cliente              Cliente?
   ordensComoTecnico    OrdemServico[]    @relation("TecnicoOrdens")
@@ -168,6 +171,8 @@ model OrdemServico {
   dataAgendamento   DateTime  @map("data_agendamento")
   dataInicio        DateTime? @map("data_inicio")
   dataConclusao     DateTime? @map("data_conclusao")
+  valorMaoObra      Decimal?  @map("valor_mao_obra") @db.Decimal(10, 2)
+  valorPecas        Decimal?  @map("valor_pecas") @db.Decimal(10, 2)
 
   ambiente  Ambiente           @relation(fields: [ambienteId], references: [id])
   tecnico   Usuario?           @relation("TecnicoOrdens", fields: [tecnicoId], references: [id])
@@ -201,6 +206,21 @@ model OrdemServicoItem {
 // Estrutura mínima derivada da narrativa do blueprint.
 // payloadRejeitado: lote completo enviado pelo técnico offline.
 // ─────────────────────────────────────────
+// ─────────────────────────────────────────
+// configuracao_empresa  (white-label / branding)
+// Linha única — upsert no PATCH
+// ─────────────────────────────────────────
+model ConfiguracaoEmpresa {
+  id           String   @id @default(uuid()) @db.Uuid
+  nomeEmpresa  String   @map("nome_empresa") @db.VarChar(255)
+  nomeFantasia String?  @map("nome_fantasia") @db.VarChar(255)
+  logoUrl      String?  @map("logo_url") @db.VarChar(512)
+  corPrimaria  String?  @map("cor_primaria") @db.VarChar(7)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("configuracao_empresa")
+}
+
 model AuditoriaConflitoSincronizacao {
   id                String   @id @default(uuid()) @db.Uuid
   ordemServicoId    String   @map("ordem_servico_id") @db.Uuid

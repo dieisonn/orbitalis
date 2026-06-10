@@ -51,6 +51,13 @@ export class OrdensServicoController {
     return this.ordensServicoService.painel();
   }
 
+  // GET /api/v1/ordens-servico/historico — Admin (gráfico últimos 12 meses)
+  @Get('historico')
+  @Roles(UsuarioTipo.admin)
+  historico() {
+    return this.ordensServicoService.historico();
+  }
+
   // GET /api/v1/ordens-servico/tecnico/:tecnicoId — Técnico
   @Get('tecnico/:tecnicoId')
   @Roles(UsuarioTipo.tecnico)
@@ -91,6 +98,16 @@ export class OrdensServicoController {
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   alterarStatus(@Param('id') id: string, @Body('status') status: OsStatus) {
     return this.ordensServicoService.alterarStatus(id, status);
+  }
+
+  // PATCH /api/v1/ordens-servico/:id/financeiro — Admin registra valores
+  @Patch(':id/financeiro')
+  @Roles(UsuarioTipo.admin)
+  financeiro(
+    @Param('id') id: string,
+    @Body() body: { valorMaoObra?: number; valorPecas?: number },
+  ) {
+    return this.ordensServicoService.atualizarFinanceiro(id, body);
   }
 
   // PATCH /api/v1/ordens-servico/:id/sincronizar — Técnico (§6.3 §6.4)

@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { TriarForm } from '@/components/ui/triar-form'
 import { OsFilterBar } from '@/components/ui/os-filter-bar'
+import { FinanceiroForm } from '@/components/ui/financeiro-form'
 import { ClipboardList, FileText } from 'lucide-react'
 
 type OrdemServico = {
@@ -12,6 +13,8 @@ type OrdemServico = {
   ambiente: { nome: string }
   tecnico: { id: string; email: string } | null
   itens: { id: string; statusItem: string }[]
+  valorMaoObra: number | null
+  valorPecas: number | null
 }
 
 type Tecnico = { id: string; email: string }
@@ -146,6 +149,11 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                         osId={os.id}
                         status={os.status}
                         tecnicos={tecnicos}
+                      />
+                      <FinanceiroForm
+                        osId={os.id}
+                        valorMaoObra={os.valorMaoObra ?? null}
+                        valorPecas={os.valorPecas ?? null}
                       />
                       <a
                         href={`/ordens-servico/${os.id}/pdf`}

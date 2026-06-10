@@ -239,10 +239,45 @@ export class OrdensServicoService {
   async alterarStatus(id: string, status: OsStatus) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+    return this.prisma.ordemServico.update({ where: { id }, data: { status } });
+  }
 
-    return this.prisma.ordemServico.update({
-      where: { id },
-      data: { status },
-    });
+  // PATCH /ordens-servico/:id/financeiro — Admin registra valores da O.S.
+  async atualizarFinanceiro(id: string, data: { valorMaoObra?: number; valorPecas?: number }) {
+    const os = await this.prisma.ordemServico.findUnique({ where: { id } });
+    if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+    return this.prisma.ordemServico.update({ where: { id }, data });
+  }
+
+  // GET /ordens-servico/historico — últimos 12 meses agrupados por mês e status
+  async historico() {
+    const rows = await this.prisma.$queryRaw<
+      { mes: string; status: string; total: bigint }[]
+    >`
+      SELECT
+        TO_CHAR("data_agendamento", 'YYYY-MM') AS mes,
+        status::text,
+        COUNT(*)::bigint AS total
+      FROM ordens_servico
+      WHERE "data_agendamento" >= NOW() - INTERVAL '12 months'
+      GROUP BY mes, status
+      ORDER BY mes ASC
+    `;
+
+    // Pivot para { mes, aberta, agendada, em_andamento, concluida, cancelada }
+    const byMes: Record<string, Record<string, number>> = {};
+    for (const r of rows) {
+      if (!byMes[r.mes]) byMes[r.mes] = {};
+      byMes[r.mes][r.status] = Number(r.total);
+    }
+
+    return Object.entries(byMes).map(([mes, counts]) => ({
+      mes,
+      aberta:       counts['aberta'] ?? 0,
+      agendada:     counts['agendada'] ?? 0,
+      em_andamento: counts['em_andamento'] ?? 0,
+      concluida:    counts['concluida'] ?? 0,
+      cancelada:    counts['cancelada'] ?? 0,
+    }));
   }
 }

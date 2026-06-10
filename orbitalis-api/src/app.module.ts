@@ -10,6 +10,7 @@ import { RelatoriosModule } from './modules/relatorios/relatorios.module';
 import { PlanosManutencaoModule } from './modules/planos-manutencao/planos-manutencao.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { ModelosChecklistModule } from './modules/modelos-checklist/modelos-checklist.module';
+import { ConfiguracaoEmpresaModule } from './modules/configuracao-empresa/configuracao-empresa.module';
 
 @Module({
   controllers: [HealthController],
@@ -24,6 +25,7 @@ import { ModelosChecklistModule } from './modules/modelos-checklist/modelos-chec
     PlanosManutencaoModule,
     UsuariosModule,
     ModelosChecklistModule,
+    ConfiguracaoEmpresaModule,
   ],
 })
 export class AppModule {}
