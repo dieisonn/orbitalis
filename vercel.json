@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd orbitalis-web && npm run build",
+  "outputDirectory": "orbitalis-web/.next",
+  "installCommand": "cd orbitalis-web && npm install",
+  "framework": "nextjs"
+}
