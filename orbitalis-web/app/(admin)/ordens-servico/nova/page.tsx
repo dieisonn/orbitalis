@@ -1,28 +1,23 @@
 import { api } from '@/lib/api'
 import { NovaOsForm } from './form'
 
-type Equipamento = {
+type Ambiente = {
   id: string
   nome: string
-  tipoEquipamento: string
-  marca: string
-  ambienteId: string
-  ambiente: {
-    id: string
-    nome: string
-    localizacaoInterna: string
-    cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
-  }
+  localizacaoInterna: string
+  clienteId: string
+  cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
+  equipamentos: { id: string; nome: string; tipoEquipamento: string }[]
 }
-type Tecnico = { id: string; email: string }
+type Tecnico = { id: string; email: string; nome: string | null }
 
 export default async function NovaOsPage() {
-  const [equipamentosRes, tecnicosRes] = await Promise.all([
-    api.get<{ data: Equipamento[] }>('/equipamentos?perPage=1000').catch(() => ({ data: [] as Equipamento[] })),
+  const [ambientesRes, tecnicosRes] = await Promise.all([
+    api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
   ])
-  const equipamentos = equipamentosRes.data
-  const tecnicos = tecnicosRes.data
+  const ambientes = ambientesRes.data
+  const tecnicos  = tecnicosRes.data
 
   return (
     <div>
@@ -35,17 +30,17 @@ export default async function NovaOsPage() {
       </div>
       <div className="max-w-xl">
         <div className="bg-white rounded-2xl shadow-sm border border-border p-6">
-          {equipamentos.length === 0 ? (
+          {ambientes.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-gray-500">
-                Nenhum equipamento cadastrado.{' '}
-                <a href="/equipamentos/novo" className="text-primary font-semibold hover:underline">
-                  Crie um equipamento primeiro.
+                Nenhum ambiente cadastrado.{' '}
+                <a href="/ambientes/novo" className="text-primary font-semibold hover:underline">
+                  Crie um ambiente primeiro.
                 </a>
               </p>
             </div>
           ) : (
-            <NovaOsForm equipamentos={equipamentos} tecnicos={tecnicos} />
+            <NovaOsForm ambientes={ambientes} tecnicos={tecnicos} />
           )}
         </div>
       </div>
