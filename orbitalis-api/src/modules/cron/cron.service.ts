@@ -36,54 +36,78 @@ export class CronService {
 
     for (const plano of planos) {
       try {
-        await this.prisma.$transaction(async (tx) => {
-          const os = await tx.ordemServico.create({
-            data: {
-              ambienteId: plano.ambienteId,
-              tecnicoId: plano.tecnicoId,
-              status: 'agendada',
-              origem: 'preventiva_automatica',
-              dataAgendamento: agora,
-            },
+        // Monta a lista de datas a gerar:
+        // - Com dataFim: todas as ocorrências de proximaGeracao até dataFim
+        // - Sem dataFim: apenas a próxima ocorrência (lazy, gera 1 por cron)
+        const datasParaGerar: Date[] = [];
+        let cursor = new Date(plano.proximaGeracao);
+
+        if (plano.dataFim) {
+          while (cursor <= plano.dataFim) {
+            datasParaGerar.push(new Date(cursor));
+            cursor = new Date(cursor);
+            cursor.setDate(cursor.getDate() + plano.frequenciaDias);
+          }
+        } else {
+          datasParaGerar.push(new Date(cursor));
+          cursor.setDate(cursor.getDate() + plano.frequenciaDias);
+        }
+
+        const snapshot = plano.modeloChecklist
+          ? JSON.parse(JSON.stringify(plano.modeloChecklist.itens))
+          : [];
+
+        for (const dataGeracao of datasParaGerar) {
+          await this.prisma.$transaction(async (tx) => {
+            const os = await tx.ordemServico.create({
+              data: {
+                ambienteId: plano.ambienteId,
+                tecnicoId: plano.tecnicoId,
+                status: 'agendada',
+                origem: 'preventiva_automatica',
+                dataAgendamento: dataGeracao,
+              },
+            });
+
+            await tx.ordemServicoItem.createMany({
+              data: plano.ambiente.equipamentos.map((eq) => ({
+                ordemServicoId: os.id,
+                equipamentoId: eq.id,
+                statusItem: 'pendente' as const,
+                checklistSnapshot: snapshot,
+              })),
+            });
           });
 
-          // Deep copy do checklist no momento da geração (§6.2)
-          const snapshot = plano.modeloChecklist
-            ? JSON.parse(JSON.stringify(plano.modeloChecklist.itens))
-            : [];
+          geradas++;
+        }
 
-          await tx.ordemServicoItem.createMany({
-            data: plano.ambiente.equipamentos.map((eq) => ({
-              ordemServicoId: os.id,
-              equipamentoId: eq.id,
-              statusItem: 'pendente' as const,
-              checklistSnapshot: snapshot,
-            })),
-          });
+        // Avança proximaGeracao para depois da última O.S. gerada
+        const ultimaData = datasParaGerar[datasParaGerar.length - 1];
+        const proximaGeracao = new Date(ultimaData);
+        proximaGeracao.setDate(proximaGeracao.getDate() + plano.frequenciaDias);
 
-          // Avança a próxima geração pelo ciclo do plano
-          const proximaGeracao = new Date(agora);
-          proximaGeracao.setDate(proximaGeracao.getDate() + plano.frequenciaDias);
+        // Desativa o plano se já passou de dataFim
+        const esgotado = plano.dataFim ? proximaGeracao > plano.dataFim : false;
 
-          await tx.planoManutencao.update({
-            where: { id: plano.id },
-            data: {
-              ultimaGeracao: agora,
-              proximaGeracao,
-            },
-          });
+        await this.prisma.planoManutencao.update({
+          where: { id: plano.id },
+          data: {
+            ultimaGeracao: ultimaData,
+            proximaGeracao,
+            ...(esgotado ? { ativo: false } : {}),
+          },
         });
 
-        geradas++;
         this.logger.log(
-          `O.S. preventiva gerada — ambiente: ${plano.ambiente.nome} (próxima em ${plano.frequenciaDias}d)`,
+          `${datasParaGerar.length} O.S. gerada(s) — ambiente: ${plano.ambiente.nome}${esgotado ? ' [PLANO CONCLUÍDO]' : ''}`,
         );
       } catch (err) {
         this.logger.error(`Falha ao gerar O.S. para plano ${plano.id}:`, err);
       }
     }
 
-    this.logger.log(`Cron finalizado — ${geradas}/${planos.length} O.S. gerada(s)`);
+    this.logger.log(`Cron finalizado — ${geradas} O.S. gerada(s) no total`);
     return geradas;
   }
 }
