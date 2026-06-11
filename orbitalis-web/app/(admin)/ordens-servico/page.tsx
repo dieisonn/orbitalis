@@ -1,13 +1,10 @@
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { TriarForm } from '@/components/ui/triar-form'
 import { OsFilterBar } from '@/components/ui/os-filter-bar'
 import { OsPagination } from '@/components/ui/os-pagination'
-import { FinanceiroForm } from '@/components/ui/financeiro-form'
-import { AlterarStatusForm } from '@/components/ui/alterar-status-form'
-import { ExcluirOsForm } from '@/components/ui/excluir-os-form'
-import { ClipboardList, FileText } from 'lucide-react'
+import { OsActionsMenu } from '@/components/ui/os-actions-menu'
+import { ClipboardList } from 'lucide-react'
 
 type OrdemServico = {
   id: string
@@ -156,7 +153,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                 const cliente = os.ambiente?.cliente
                 const clienteNome = cliente?.nomeFantasia ?? cliente?.razaoSocial
                 return (
-                  <tr key={os.id} className="hover:bg-surface transition-colors align-top">
+                  <tr key={os.id} className="hover:bg-surface transition-colors align-middle">
                     <td className="px-4 py-4 font-mono text-xs text-gray-400 whitespace-nowrap">
                       OS-{os.id.slice(0, 6).toUpperCase()}
                     </td>
@@ -185,27 +182,14 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                     <td className="px-4 py-4 text-center font-semibold text-gray-600">
                       {os.itens?.length ?? 0}
                     </td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex flex-col gap-2 items-end">
-                        <TriarForm osId={os.id} status={os.status} tecnicos={tecnicos} />
-                        <AlterarStatusForm osId={os.id} status={os.status} />
-                        <FinanceiroForm
-                          osId={os.id}
-                          valorMaoObra={os.valorMaoObra ?? null}
-                          valorPecas={os.valorPecas ?? null}
-                        />
-                        <a
-                          href={`/ordens-servico/${os.id}/pdf`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                          title="Imprimir / PDF"
-                        >
-                          <FileText size={11} />
-                          PDF
-                        </a>
-                        <ExcluirOsForm osId={os.id} osNum={`OS-${os.id.slice(0, 6).toUpperCase()}`} />
-                      </div>
+                    <td className="px-4 py-3">
+                      <OsActionsMenu
+                        osId={os.id}
+                        status={os.status}
+                        tecnicos={tecnicos}
+                        valorMaoObra={os.valorMaoObra ?? null}
+                        valorPecas={os.valorPecas ?? null}
+                      />
                     </td>
                   </tr>
                 )
