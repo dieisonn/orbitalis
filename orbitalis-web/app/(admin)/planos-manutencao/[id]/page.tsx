@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import { CalendarClock, CheckCircle, XCircle, Clock, ClipboardList, Pencil } from 'lucide-react'
+import { dispararCron } from '../actions'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -56,6 +57,11 @@ export default async function DetalhePlanoPage({ params }: Props) {
              : `A cada ${plano.frequenciaDias} dias`
 
   const os = plano.ordensServico ?? []
+  const proxData = new Date(plano.proximaGeracao)
+  const agora    = new Date()
+  const elegivel = plano.ativo && proxData <= agora
+
+  const dispararAction = dispararCron.bind(null, id)
 
   return (
     <div className="max-w-3xl">
@@ -82,7 +88,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             {plano.ativo
               ? <span className="flex items-center gap-1.5 text-xs font-semibold text-action bg-action/10 px-2.5 py-1 rounded-full"><CheckCircle size={12} />Ativo</span>
               : <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full"><XCircle size={12} />Inativo</span>
@@ -104,7 +110,9 @@ export default async function DetalhePlanoPage({ params }: Props) {
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Técnico</p>
-            <p className="text-sm font-semibold text-gray-800">{plano.tecnico?.email ?? <span className="text-gray-400 font-normal italic">Não atribuído</span>}</p>
+            <p className="text-sm font-semibold text-gray-800">
+              {plano.tecnico?.email ?? <span className="text-gray-400 font-normal italic">Não atribuído</span>}
+            </p>
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Checklist</p>
@@ -117,20 +125,25 @@ export default async function DetalhePlanoPage({ params }: Props) {
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Próxima Geração</p>
-            <p className="text-sm font-semibold text-gray-800">
-              {new Date(plano.proximaGeracao).toLocaleDateString('pt-BR')}
+            <p className={`text-sm font-semibold ${elegivel ? 'text-action' : 'text-gray-800'}`}>
+              {proxData.toLocaleDateString('pt-BR')}
+              {elegivel && <span className="ml-1 text-[10px] bg-action/10 text-action px-1.5 py-0.5 rounded-full">pronta p/ gerar</span>}
             </p>
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Última Geração</p>
             <p className="text-sm font-semibold text-gray-800">
-              {plano.ultimaGeracao ? new Date(plano.ultimaGeracao).toLocaleDateString('pt-BR') : <span className="text-gray-400 font-normal italic">Nenhuma</span>}
+              {plano.ultimaGeracao
+                ? new Date(plano.ultimaGeracao).toLocaleDateString('pt-BR')
+                : <span className="text-gray-400 font-normal italic">Nenhuma</span>}
             </p>
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Data Limite</p>
             <p className="text-sm font-semibold text-gray-800">
-              {plano.dataFim ? new Date(plano.dataFim).toLocaleDateString('pt-BR') : <span className="text-gray-400 font-normal italic">Sem limite</span>}
+              {plano.dataFim
+                ? new Date(plano.dataFim).toLocaleDateString('pt-BR')
+                : <span className="text-gray-400 font-normal italic">Sem limite</span>}
             </p>
           </div>
         </div>
@@ -142,17 +155,36 @@ export default async function DetalhePlanoPage({ params }: Props) {
           <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
             <ClipboardList size={16} className="text-primary" />
             Ordens de Serviço Geradas
+            <span className="text-xs font-normal text-gray-400">({os.length})</span>
           </h2>
-          <span className="text-xs text-gray-400">{os.length} O.S.</span>
+
+          {/* Botão disparar cron */}
+          {plano.ativo && (
+            <form action={dispararAction}>
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-action text-white rounded-lg hover:bg-action/90 transition-colors"
+                title="Força a geração de todas as O.S. de planos preventivos elegíveis agora, sem esperar o cron de meia-noite"
+              >
+                ⚡ Gerar agora
+              </button>
+            </form>
+          )}
         </div>
 
         {os.length === 0 ? (
           <div className="bg-white rounded-2xl border border-border p-10 text-center shadow-sm">
             <Clock size={32} className="mx-auto text-primary/20 mb-3" />
-            <p className="text-sm text-gray-400">Nenhuma O.S. gerada ainda.</p>
-            <p className="text-xs text-gray-300 mt-1">
-              A primeira será criada automaticamente na data de início configurada.
-            </p>
+            <p className="text-sm text-gray-500">Nenhuma O.S. gerada ainda.</p>
+            {elegivel ? (
+              <p className="text-xs text-action mt-1 font-medium">
+                Este plano está elegível — clique em "Gerar agora" para criar a primeira O.S.
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 mt-1">
+                O cron gera automaticamente quando a data de próxima geração chegar ({proxData.toLocaleDateString('pt-BR')}).
+              </p>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
