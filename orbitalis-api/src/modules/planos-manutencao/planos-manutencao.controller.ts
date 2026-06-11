@@ -58,9 +58,15 @@ export class PlanosManutencaoController {
     return this.planosService.remove(id);
   }
 
-  // POST /api/v1/planos-manutencao/disparar-agora — força execução do cron (Admin)
+  // POST /api/v1/planos-manutencao/disparar-agora — força execução do cron (todos os planos elegíveis)
   @Post('disparar-agora')
   dispararAgora() {
     return this.planosService.dispararAgora();
+  }
+
+  // POST /api/v1/planos-manutencao/:id/gerar-os — gera todas as O.S. restantes de um plano específico
+  @Post(':id/gerar-os')
+  gerarOsPlano(@Param('id') id: string) {
+    return this.planosService.gerarOsPlano(id);
   }
 }

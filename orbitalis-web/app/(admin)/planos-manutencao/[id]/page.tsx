@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import { CalendarClock, CheckCircle, XCircle, Clock, ClipboardList, Pencil } from 'lucide-react'
-import { dispararCron } from '../actions'
+import { gerarOsPlano } from '../actions'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -61,7 +61,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
   const agora    = new Date()
   const elegivel = plano.ativo && proxData <= agora
 
-  const dispararAction = dispararCron.bind(null, id)
+  const dispararAction = gerarOsPlano.bind(null, id)
 
   return (
     <div className="max-w-3xl">
@@ -158,13 +158,13 @@ export default async function DetalhePlanoPage({ params }: Props) {
             <span className="text-xs font-normal text-gray-400">({os.length})</span>
           </h2>
 
-          {/* Botão disparar cron */}
-          {plano.ativo && (
+          {/* Botão gerar O.S. restantes */}
+          {(!plano.dataFim || new Date(plano.proximaGeracao) <= new Date(plano.dataFim)) && (
             <form action={dispararAction}>
               <button
                 type="submit"
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-action text-white rounded-lg hover:bg-action/90 transition-colors"
-                title="Força a geração de todas as O.S. de planos preventivos elegíveis agora, sem esperar o cron de meia-noite"
+                title="Gera todas as O.S. restantes deste plano imediatamente"
               >
                 ⚡ Gerar agora
               </button>

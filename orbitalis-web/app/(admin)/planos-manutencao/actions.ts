@@ -6,7 +6,7 @@ export async function deletarPlano(id: string) {
   await api.delete(`/planos-manutencao/${id}`)
 }
 
-export async function dispararCron(planoId: string) {
-  await api.post('/planos-manutencao/disparar-agora', {})
+export async function gerarOsPlano(planoId: string) {
+  await api.post(`/planos-manutencao/${planoId}/gerar-os`, {})
   revalidatePath(`/planos-manutencao/${planoId}`)
 }
