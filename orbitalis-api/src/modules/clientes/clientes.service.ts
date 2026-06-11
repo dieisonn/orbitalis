@@ -35,6 +35,7 @@ export class ClientesService {
           razaoSocial: dto.razaoSocial,
           nomeFantasia: dto.nomeFantasia,
           endereco: dto.endereco,
+          telefone: dto.telefone,
           usuarioId: usuario.id,
         },
       });
@@ -91,7 +92,7 @@ export class ClientesService {
     });
   }
 
-  async update(id: string, data: { razaoSocial?: string; nomeFantasia?: string; endereco?: string }) {
+  async update(id: string, data: { razaoSocial?: string; nomeFantasia?: string; endereco?: string; telefone?: string }) {
     await this.findOne(id);
     return this.prisma.cliente.update({ where: { id }, data });
   }

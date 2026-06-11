@@ -51,6 +51,7 @@ export async function criarCliente(
   razaoSocial: string,
   nomeFantasia: string,
   endereco: string,
+  telefone?: string,
 ): Promise<CriarClienteResult> {
   const result = await api.post<{ cliente: { documento: string }; senhaTemporaria: string }>(
     '/clientes',
@@ -59,6 +60,7 @@ export async function criarCliente(
       razaoSocial,
       nomeFantasia: nomeFantasia || undefined,
       endereco,
+      telefone: telefone || undefined,
     },
   )
   return {

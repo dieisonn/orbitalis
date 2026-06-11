@@ -2,8 +2,9 @@ import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
+import { ExportarClientesButton, ImportarClientesButton } from '@/components/ui/clientes-import-export'
 import { deletarCliente } from './actions'
-import { Users, Building2 } from 'lucide-react'
+import { Users, Building2, Phone } from 'lucide-react'
 
 type Cliente = {
   id: string
@@ -11,6 +12,7 @@ type Cliente = {
   nomeFantasia: string | null
   documento: string
   endereco: string
+  telefone: string | null
   ambientes: { id: string }[]
 }
 
@@ -36,9 +38,13 @@ export default async function ClientesPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold text-primary">Clientes</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} cliente(s) cadastrado(s)</p>
         </div>
-        <a href="/clientes/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
-          + Novo Cliente
-        </a>
+        <div className="flex items-center gap-2">
+          <ImportarClientesButton />
+          <ExportarClientesButton />
+          <a href="/clientes/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
+            + Novo Cliente
+          </a>
+        </div>
       </div>
 
       {clientes.length === 0 ? (
@@ -52,7 +58,8 @@ export default async function ClientesPage({ searchParams }: Props) {
             <thead>
               <tr className="border-b border-border bg-surface">
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Razão Social</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Documento</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CPF/CNPJ</th>
+                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Telefone</th>
                 <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Endereço</th>
                 <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambientes</th>
                 <th className="px-6 py-3" />
@@ -66,6 +73,11 @@ export default async function ClientesPage({ searchParams }: Props) {
                     {c.nomeFantasia && <p className="text-xs text-gray-400">{c.nomeFantasia}</p>}
                   </td>
                   <td className="px-6 py-4 text-gray-600 font-mono text-xs">{c.documento}</td>
+                  <td className="px-6 py-4 text-gray-500 text-xs whitespace-nowrap">
+                    {c.telefone
+                      ? <span className="inline-flex items-center gap-1"><Phone size={11} className="text-primary/40" />{c.telefone}</span>
+                      : <span className="text-gray-300">—</span>}
+                  </td>
                   <td className="px-6 py-4 text-gray-500 max-w-xs truncate">{c.endereco}</td>
                   <td className="px-6 py-4 text-center">
                     <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold">

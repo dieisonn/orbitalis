@@ -41,11 +41,12 @@ export function NovoClienteForm() {
     const razaoSocial  = fd.get('razaoSocial') as string
     const nomeFantasia = fd.get('nomeFantasia') as string
     const endereco     = fd.get('endereco') as string
+    const telefone     = fd.get('telefone') as string
 
     setError(null)
     startTransition(async () => {
       try {
-        const result = await criarCliente(documento, razaoSocial, nomeFantasia, endereco)
+        const result = await criarCliente(documento, razaoSocial, nomeFantasia, endereco, telefone || undefined)
         setSuccess(result)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao criar cliente')
@@ -165,6 +166,17 @@ export function NovoClienteForm() {
           value={prefill.endereco}
           onChange={(e) => setPrefill((p) => ({ ...p, endereco: e.target.value }))}
           placeholder="Rua, número, bairro, cidade/UF"
+          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Telefone
+        </label>
+        <input
+          name="telefone"
+          placeholder="(00) 00000-0000"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>

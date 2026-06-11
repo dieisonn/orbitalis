@@ -62,7 +62,7 @@ export class ClientesController {
   @Roles(UsuarioTipo.admin)
   update(
     @Param('id') id: string,
-    @Body() body: { razaoSocial?: string; nomeFantasia?: string; endereco?: string },
+    @Body() body: { razaoSocial?: string; nomeFantasia?: string; endereco?: string; telefone?: string },
   ) {
     return this.clientesService.update(id, body);
   }

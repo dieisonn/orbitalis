@@ -7,7 +7,7 @@ type Props = { params: Promise<{ id: string }> }
 export default async function EditarClientePage({ params }: Props) {
   const { id } = await params
 
-  let cliente: { id: string; razaoSocial: string; nomeFantasia: string | null; endereco: string }
+  let cliente: { id: string; razaoSocial: string; nomeFantasia: string | null; endereco: string; telefone: string | null }
   try {
     cliente = await api.get(`/clientes/${id}`)
   } catch {
@@ -26,6 +26,7 @@ export default async function EditarClientePage({ params }: Props) {
           razaoSocial={cliente.razaoSocial}
           nomeFantasia={cliente.nomeFantasia}
           endereco={cliente.endereco}
+          telefone={cliente.telefone}
         />
       </div>
     </div>

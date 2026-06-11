@@ -24,4 +24,9 @@ export class CreateClienteDto {
   @IsString()
   @MinLength(5)
   endereco: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  telefone?: string;
 }

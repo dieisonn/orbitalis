@@ -8,9 +8,10 @@ type Props = {
   razaoSocial: string
   nomeFantasia: string | null
   endereco: string
+  telefone: string | null
 }
 
-export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco }: Props) {
+export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco, telefone }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -24,6 +25,7 @@ export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco }: P
           razaoSocial: fd.get('razaoSocial') as string,
           nomeFantasia: fd.get('nomeFantasia') as string,
           endereco: fd.get('endereco') as string,
+          telefone: (fd.get('telefone') as string) || undefined,
         })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao salvar'
@@ -66,6 +68,18 @@ export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco }: P
           name="endereco"
           required
           defaultValue={endereco}
+          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Telefone
+        </label>
+        <input
+          name="telefone"
+          defaultValue={telefone ?? ''}
+          placeholder="(00) 00000-0000"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
       </div>

@@ -70,6 +70,7 @@ model Cliente {
   razaoSocial  String    @map("razao_social") @db.VarChar(255)
   nomeFantasia String?   @map("nome_fantasia") @db.VarChar(255)
   endereco     String    @db.Text
+  telefone     String?   @db.VarChar(20)
   deletedAt    DateTime? @map("deleted_at")
 
   usuario  Usuario?   @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
