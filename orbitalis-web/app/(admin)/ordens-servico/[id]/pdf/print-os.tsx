@@ -105,7 +105,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
           <div className="flex items-center gap-4">
             {logoUrl ? (
               <div className="bg-white rounded-2xl p-2 shrink-0">
-                <img src={logoUrl} alt={nomeEmpresa} crossOrigin="anonymous"
+                <img src={logoUrl} alt={nomeEmpresa}
                   style={{ height: '52px', width: 'auto', objectFit: 'contain', display: 'block' }} />
               </div>
             ) : (
