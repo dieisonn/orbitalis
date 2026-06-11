@@ -3,7 +3,7 @@ import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { deletarPlano } from './actions'
-import { CalendarClock, CheckCircle, XCircle } from 'lucide-react'
+import { CalendarClock, CheckCircle, XCircle, ClipboardList, Pencil } from 'lucide-react'
 
 type Plano = {
   id: string
@@ -73,9 +73,23 @@ export default async function PlanosPage({ searchParams }: Props) {
                     {p.ativo ? <CheckCircle size={16} className="text-action" /> : <XCircle size={16} className="text-destructive" />}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <a href={`/planos-manutencao/${p.id}`} className="text-xs font-semibold text-gray-500 hover:text-primary hover:underline">O.S.</a>
-                      <a href={`/planos-manutencao/${p.id}/editar`} className="text-xs font-semibold text-primary hover:underline">Editar</a>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <a
+                        href={`/planos-manutencao/${p.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors"
+                        title="Ver O.S. geradas e detalhes do plano"
+                      >
+                        <ClipboardList size={13} />
+                        O.S.
+                      </a>
+                      <a
+                        href={`/planos-manutencao/${p.id}/editar`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-action/10 text-action text-xs font-semibold rounded-lg hover:bg-action/20 transition-colors"
+                        title="Editar plano"
+                      >
+                        <Pencil size={13} />
+                        Editar
+                      </a>
                       <DeleteButton action={deletarPlano.bind(null, p.id)} />
                     </div>
                   </td>
