@@ -45,11 +45,11 @@ export default function LoginPage() {
         </div>
 
         {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="bg-white rounded-2xl p-2.5 shadow-lg">
-            <img src="/logo.png" alt="Orbitalis" className="h-10 w-auto object-contain" />
+        <div className="relative z-10">
+          <div className="bg-white rounded-3xl p-5 shadow-xl inline-flex">
+            <img src="/logo.png" alt="Orbitalis" className="h-24 w-auto object-contain" />
           </div>
-          <span className="text-white font-black text-2xl tracking-tight">Orbitalis</span>
+          <p className="text-white font-black text-2xl tracking-tight mt-3">Orbitalis</p>
         </div>
 
         {/* Hero */}

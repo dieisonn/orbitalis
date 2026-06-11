@@ -62,16 +62,25 @@ export default function Sidebar({ config }: { config?: Config }) {
       {/* Sidebar */}
       <aside
         className={[
-          'flex flex-col bg-primary text-white shrink-0 print:hidden',
+          'relative flex flex-col bg-primary text-white shrink-0 print:hidden overflow-hidden',
           'fixed inset-y-0 left-0 z-50 w-64 md:w-56',
           'md:static md:translate-x-0',
           'transition-transform duration-200',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
       >
+        {/* Círculos decorativos */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full border border-white/10" />
+          <div className="absolute -top-20 -right-20 w-36 h-36 rounded-full bg-white/5" />
+          <div className="absolute top-1/2 -left-16  w-48 h-48 rounded-full bg-white/5" />
+          <div className="absolute -bottom-16 -right-12 w-52 h-52 rounded-full border border-white/10" />
+          <div className="absolute -bottom-16 -right-12 w-32 h-32 rounded-full bg-white/5" />
+        </div>
+
         {/* Logo */}
-        <div className="px-4 py-4 border-b border-white/10 flex items-center justify-between">
-          <div className="bg-white rounded-3xl p-3 flex items-center">
+        <div className="relative z-10 px-4 py-5 border-b border-white/10 flex items-center justify-between">
+          <div className="bg-white rounded-3xl p-3 flex items-center shadow-md">
             <img
               src={logoSrc}
               alt={nomeExibido}
@@ -89,7 +98,7 @@ export default function Sidebar({ config }: { config?: Config }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-4 overflow-y-auto">
+        <nav className="relative z-10 flex-1 py-4 overflow-y-auto">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = path === href || (href !== '/dashboard' && path.startsWith(href))
             return (
@@ -112,7 +121,7 @@ export default function Sidebar({ config }: { config?: Config }) {
         </nav>
 
         {/* Logout */}
-        <div className="p-4 border-t border-white/10">
+        <div className="relative z-10 p-4 border-t border-white/10">
           <form action={logout}>
             <button
               type="submit"
