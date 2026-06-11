@@ -8,6 +8,8 @@ export async function editarPlano(
     tecnicoId: string
     frequenciaDias: string
     proximaGeracao: string
+    modeloChecklistId?: string
+    dataFim?: string
     ativo: boolean
   },
 ) {
@@ -15,6 +17,8 @@ export async function editarPlano(
     tecnicoId: data.tecnicoId || null,
     frequenciaDias: Number(data.frequenciaDias),
     proximaGeracao: data.proximaGeracao,
+    modeloChecklistId: data.modeloChecklistId || null,
+    dataFim: data.dataFim || null,
     ativo: data.ativo,
   })
   redirect('/planos-manutencao')

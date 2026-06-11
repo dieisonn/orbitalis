@@ -8,12 +8,16 @@ export async function criarPlano(
   tecnicoId: string,
   frequenciaDias: number,
   proximaGeracao: string,
+  modeloChecklistId?: string,
+  dataFim?: string,
 ) {
   await api.post('/planos-manutencao', {
     ambienteId,
     tecnicoId: tecnicoId || undefined,
     frequenciaDias,
     proximaGeracao,
+    modeloChecklistId: modeloChecklistId || undefined,
+    dataFim: dataFim || undefined,
     ativo: true,
   })
   redirect('/planos-manutencao')

@@ -2,11 +2,19 @@ import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
-import { deletarChecklist, importarPmocSplitHiwall } from './actions'
+import { deletarChecklist, importarPmocSplitHiwall, importarAnvisa } from './actions'
 import { ClipboardCheck, Pencil, Download } from 'lucide-react'
 
-type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean }
+type TipoItem = 'texto' | 'numero' | 'escolha_unica' | 'multipla_escolha'
+type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: TipoItem; unidade?: string; opcoes?: string[] }
 type Modelo = { id: string; nome: string; itens: ChecklistItem[] }
+
+const TIPO_LABELS: Record<TipoItem, string> = {
+  texto:            'Texto',
+  numero:           'Número',
+  escolha_unica:    'Escolha única',
+  multipla_escolha: 'Múltipla',
+}
 type ApiResponse = { data: Modelo[]; total: number; page: number; perPage: number }
 
 type Props = { searchParams: Promise<{ page?: string }> }
@@ -29,7 +37,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
           <h1 className="text-2xl font-bold text-primary">Checklists PMOC</h1>
           <p className="text-gray-500 text-sm mt-1">Templates de itens de manutenção usados nas O.S.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <form action={importarPmocSplitHiwall}>
             <button
               type="submit"
@@ -37,7 +45,17 @@ export default async function ChecklistsPage({ searchParams }: Props) {
               title="Importar checklist padrão PMOC Split Hi-Wall (ABRAVA)"
             >
               <Download size={14} />
-              PMOC Split Hi-Wall (ABRAVA)
+              PMOC Split Hi-Wall
+            </button>
+          </form>
+          <form action={importarAnvisa}>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-primary text-sm font-semibold rounded-lg border border-primary hover:bg-primary/5 transition-colors"
+              title="Importar checklist padrão ANVISA — Climatização em Serviços de Saúde (RDC 09/2003)"
+            >
+              <Download size={14} />
+              ANVISA (RDC 09/2003)
             </button>
           </form>
           <a href="/checklists/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
@@ -68,12 +86,18 @@ export default async function ChecklistsPage({ searchParams }: Props) {
                   </div>
 
                   {itens.length > 0 && (
-                    <ul className="space-y-1 mb-4 max-h-40 overflow-y-auto">
+                    <ul className="space-y-1.5 mb-4 max-h-44 overflow-y-auto">
                       {itens.map((item) => (
                         <li key={item.id} className="flex items-center gap-2 text-xs text-gray-600">
                           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${item.obrigatorio ? 'bg-destructive' : 'bg-gray-300'}`} />
-                          {item.descricao}
-                          {item.obrigatorio && <span className="text-[9px] text-destructive font-semibold uppercase">obrig.</span>}
+                          <span className="flex-1 truncate">{item.descricao}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-400 rounded font-medium shrink-0">
+                            {TIPO_LABELS[item.tipo ?? 'texto']}
+                          </span>
+                          {item.tipo === 'numero' && item.unidade && (
+                            <span className="text-[9px] text-gray-400 shrink-0">{item.unidade}</span>
+                          )}
+                          {item.obrigatorio && <span className="text-[9px] text-destructive font-semibold uppercase shrink-0">obrig.</span>}
                         </li>
                       ))}
                     </ul>

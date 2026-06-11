@@ -18,6 +18,7 @@ export class PlanosManutencaoService {
         modeloChecklistId: dto.modeloChecklistId,
         frequenciaDias: dto.frequenciaDias,
         proximaGeracao: new Date(dto.proximaGeracao),
+        dataFim: dto.dataFim ? new Date(dto.dataFim) : null,
         ativo: dto.ativo ?? true,
       },
       include: { ambiente: true, tecnico: { select: { email: true } } },
@@ -39,9 +40,24 @@ export class PlanosManutencaoService {
   }
 
   async findOne(id: string) {
-    const plano = await this.prisma.planoManutencao.findUnique({ where: { id } });
+    const plano = await this.prisma.planoManutencao.findUnique({
+      where: { id },
+      include: {
+        ambiente: { include: { cliente: { select: { razaoSocial: true, nomeFantasia: true } } } },
+        tecnico: { select: { id: true, email: true } },
+        modeloChecklist: { select: { id: true, nome: true } },
+      },
+    });
     if (!plano) throw new NotFoundException('Plano não encontrado');
-    return plano;
+
+    const ordensServico = await this.prisma.ordemServico.findMany({
+      where: { ambienteId: plano.ambienteId, origem: 'preventiva_automatica' },
+      orderBy: { dataAgendamento: 'desc' },
+      take: 50,
+      select: { id: true, status: true, origem: true, dataAgendamento: true, dataConclusao: true },
+    });
+
+    return { ...plano, ordensServico };
   }
 
   async toggleAtivo(id: string) {
@@ -52,16 +68,31 @@ export class PlanosManutencaoService {
     });
   }
 
-  async update(id: string, data: { tecnicoId?: string | null; frequenciaDias?: number; proximaGeracao?: string; ativo?: boolean }) {
+  async update(
+    id: string,
+    data: {
+      tecnicoId?: string | null;
+      modeloChecklistId?: string | null;
+      frequenciaDias?: number;
+      proximaGeracao?: string;
+      dataFim?: string | null;
+      ativo?: boolean;
+    },
+  ) {
     await this.findOne(id);
-    const { proximaGeracao, ...rest } = data;
+    const { proximaGeracao, dataFim, ...rest } = data;
     return this.prisma.planoManutencao.update({
       where: { id },
       data: {
         ...rest,
         ...(proximaGeracao ? { proximaGeracao: new Date(proximaGeracao) } : {}),
+        ...(dataFim !== undefined ? { dataFim: dataFim ? new Date(dataFim) : null } : {}),
       },
-      include: { ambiente: true, tecnico: { select: { email: true } } },
+      include: {
+        ambiente: true,
+        tecnico: { select: { email: true } },
+        modeloChecklist: { select: { id: true, nome: true } },
+      },
     });
   }
 

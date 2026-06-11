@@ -40,7 +40,14 @@ export class PlanosManutencaoController {
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() body: { tecnicoId?: string | null; frequenciaDias?: number; proximaGeracao?: string; ativo?: boolean },
+    @Body() body: {
+      tecnicoId?: string | null;
+      modeloChecklistId?: string | null;
+      frequenciaDias?: number;
+      proximaGeracao?: string;
+      dataFim?: string | null;
+      ativo?: boolean;
+    },
   ) {
     return this.planosService.update(id, body);
   }

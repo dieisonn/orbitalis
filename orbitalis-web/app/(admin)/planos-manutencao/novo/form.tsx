@@ -9,7 +9,8 @@ type Ambiente = {
   localizacaoInterna: string
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
 }
-type Tecnico = { id: string; email: string }
+type Tecnico   = { id: string; email: string }
+type Checklist = { id: string; nome: string }
 
 const FREQUENCIAS = [
   { label: 'Mensal (30 dias)',      value: 30 },
@@ -22,9 +23,11 @@ const FREQUENCIAS = [
 export function NovoPlanoForm({
   ambientes,
   tecnicos,
+  checklists,
 }: {
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
+  checklists: Checklist[]
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -47,15 +50,17 @@ export function NovoPlanoForm({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    const ambienteId     = fd.get('ambienteId') as string
-    const tecnicoId      = fd.get('tecnicoId') as string
-    const frequenciaDias = Number(fd.get('frequenciaDias'))
-    const proximaGeracao = fd.get('proximaGeracao') as string
+    const ambienteId        = fd.get('ambienteId') as string
+    const tecnicoId         = fd.get('tecnicoId') as string
+    const frequenciaDias    = Number(fd.get('frequenciaDias'))
+    const proximaGeracao    = fd.get('proximaGeracao') as string
+    const modeloChecklistId = fd.get('modeloChecklistId') as string
+    const dataFim           = fd.get('dataFim') as string
 
     setError(null)
     startTransition(async () => {
       try {
-        await criarPlano(ambienteId, tecnicoId, frequenciaDias, proximaGeracao)
+        await criarPlano(ambienteId, tecnicoId, frequenciaDias, proximaGeracao, modeloChecklistId, dataFim)
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar plano'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)
@@ -105,6 +110,7 @@ export function NovoPlanoForm({
         </select>
       </div>
 
+      {/* Técnico */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Técnico Responsável
@@ -120,6 +126,26 @@ export function NovoPlanoForm({
         </select>
       </div>
 
+      {/* Checklist */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Checklist de Manutenção
+        </label>
+        <select
+          name="modeloChecklistId"
+          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+        >
+          <option value="">Sem checklist (inspeção livre)…</option>
+          {checklists.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 mt-1">
+          O checklist selecionado será copiado em cada O.S. gerada automaticamente.
+        </p>
+      </div>
+
+      {/* Frequência */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Frequência de Manutenção <span className="text-destructive">*</span>
@@ -136,6 +162,7 @@ export function NovoPlanoForm({
         </select>
       </div>
 
+      {/* Primeira geração */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Primeira Geração de O.S. <span className="text-destructive">*</span>
@@ -149,7 +176,23 @@ export function NovoPlanoForm({
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
         <p className="text-xs text-gray-400 mt-1">
-          O cron irá gerar a O.S. automaticamente nesta data.
+          O cron irá gerar a primeira O.S. automaticamente nesta data.
+        </p>
+      </div>
+
+      {/* Data fim */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Data Limite do Plano
+        </label>
+        <input
+          name="dataFim"
+          type="date"
+          min={hoje}
+          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Opcional. Nenhuma O.S. será gerada após esta data. Deixe em branco para plano contínuo.
         </p>
       </div>
 

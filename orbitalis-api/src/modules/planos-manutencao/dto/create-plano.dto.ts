@@ -27,6 +27,10 @@ export class CreatePlanoManutencaoDto {
   proximaGeracao: string;
 
   @IsOptional()
+  @IsDateString()
+  dataFim?: string;
+
+  @IsOptional()
   @IsBoolean()
   ativo?: boolean;
 }

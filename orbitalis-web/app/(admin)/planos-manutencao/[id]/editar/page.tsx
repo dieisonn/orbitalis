@@ -9,24 +9,31 @@ type Plano = {
   frequenciaDias: number
   ativo: boolean
   proximaGeracao: string
+  dataFim: string | null
   tecnico: { id: string; email: string } | null
+  modeloChecklist: { id: string; nome: string } | null
   ambiente: { nome: string }
 }
 
-type Tecnico = { id: string; email: string }
+type Tecnico   = { id: string; email: string }
+type Checklist = { id: string; nome: string }
 
 export default async function EditarPlanoPage({ params }: Props) {
   const { id } = await params
 
   let plano: Plano
-  let tecnicos: Tecnico[] = []
+  let tecnicos: Tecnico[]   = []
+  let checklists: Checklist[] = []
+
   try {
-    const [planoData, tecnicosRes] = await Promise.all([
+    const [planoData, tecnicosRes, checklistsRes] = await Promise.all([
       api.get<Plano>(`/planos-manutencao/${id}`),
       api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000'),
+      api.get<{ data: Checklist[] }>('/modelos-checklist?perPage=1000'),
     ])
-    plano = planoData
-    tecnicos = tecnicosRes.data
+    plano      = planoData
+    tecnicos   = tecnicosRes.data
+    checklists = checklistsRes.data
   } catch {
     notFound()
   }
@@ -41,10 +48,13 @@ export default async function EditarPlanoPage({ params }: Props) {
         <EditarPlanoForm
           id={plano.id}
           tecnicoId={plano.tecnico?.id ?? null}
+          modeloChecklistId={plano.modeloChecklist?.id ?? null}
           frequenciaDias={plano.frequenciaDias}
           proximaGeracao={plano.proximaGeracao}
+          dataFim={plano.dataFim}
           ativo={plano.ativo}
           tecnicos={tecnicos}
+          checklists={checklists}
         />
       </div>
     </div>

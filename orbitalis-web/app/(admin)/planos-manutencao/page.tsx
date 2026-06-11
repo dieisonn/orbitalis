@@ -74,6 +74,7 @@ export default async function PlanosPage({ searchParams }: Props) {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <a href={`/planos-manutencao/${p.id}`} className="text-xs font-semibold text-gray-500 hover:text-primary hover:underline">O.S.</a>
                       <a href={`/planos-manutencao/${p.id}/editar`} className="text-xs font-semibold text-primary hover:underline">Editar</a>
                       <DeleteButton action={deletarPlano.bind(null, p.id)} />
                     </div>

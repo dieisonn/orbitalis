@@ -23,6 +23,12 @@ export class ModelosChecklistController {
     return this.service.seedPmocSplitHiwall();
   }
 
+  @Post('seed-anvisa')
+  @Roles(UsuarioTipo.admin)
+  seedAnvisa() {
+    return this.service.seedAnvisa();
+  }
+
   @Get(':id')
   @Roles(UsuarioTipo.admin)
   findOne(@Param('id') id: string) {

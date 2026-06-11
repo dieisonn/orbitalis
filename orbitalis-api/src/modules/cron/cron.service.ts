@@ -20,6 +20,7 @@ export class CronService {
       where: {
         ativo: true,
         proximaGeracao: { lte: agora },
+        OR: [{ dataFim: null }, { dataFim: { gte: agora } }],
       },
       include: {
         ambiente: {

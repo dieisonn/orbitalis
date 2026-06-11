@@ -149,6 +149,7 @@ model PlanoManutencao {
   ativo             Boolean   @default(true)
   proximaGeracao    DateTime  @map("proxima_geracao")
   ultimaGeracao     DateTime? @map("ultima_geracao")
+  dataFim           DateTime? @map("data_fim")
 
   ambiente        Ambiente         @relation(fields: [ambienteId], references: [id])
   tecnico         Usuario?         @relation("TecnicoPlanos", fields: [tecnicoId], references: [id])
