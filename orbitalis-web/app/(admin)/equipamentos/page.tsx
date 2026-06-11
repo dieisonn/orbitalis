@@ -1,7 +1,6 @@
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
-import { DeleteButton } from '@/components/ui/delete-button'
-import { QrModal } from '@/components/ui/qr-modal'
+import { EquipamentosTable } from '@/components/ui/equipamentos-table'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { deletarEquipamento } from './actions'
 import { Cpu } from 'lucide-react'
@@ -55,42 +54,7 @@ export default async function EquipamentosPage({ searchParams }: Props) {
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface">
-                {['Equipamento', 'Cliente / Ambiente', 'Tipo', 'Marca / Modelo', 'Nº Série', 'QR Code', ''].map((h) => (
-                  <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {equipamentos.map((eq) => (
-                <tr key={eq.id} className="hover:bg-surface transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{eq.nome}</td>
-                  <td className="px-6 py-4">
-                    {eq.ambiente ? (
-                      <>
-                        <p className="text-xs font-medium text-gray-700">{eq.ambiente.cliente?.nomeFantasia ?? eq.ambiente.cliente?.razaoSocial}</p>
-                        <p className="text-xs text-gray-400">{eq.ambiente.nome}</p>
-                      </>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-gray-500">{eq.tipoEquipamento}</td>
-                  <td className="px-6 py-4 text-gray-600">{[eq.marca, eq.modelo].filter(Boolean).join(' ') || '—'}</td>
-                  <td className="px-6 py-4 font-mono text-xs text-gray-500">{eq.numeroSerie || '—'}</td>
-                  <td className="px-6 py-4"><QrModal equipamentoId={eq.id} codigoQr={eq.codigoQr} nome={eq.nome} /></td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <a href={`/equipamentos/${eq.id}/editar`} className="text-xs font-semibold text-primary hover:underline">Editar</a>
-                      <DeleteButton action={deletarEquipamento.bind(null, eq.id)} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <EquipamentosTable equipamentos={equipamentos} deletarAction={deletarEquipamento} />
           <Suspense>
             <ListPagination page={currentPage} total={result.total} perPage={result.perPage} basePath="/equipamentos" />
           </Suspense>
