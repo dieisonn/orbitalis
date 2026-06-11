@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -20,8 +20,8 @@ export class PlanosManutencaoController {
 
   // GET /api/v1/planos-manutencao
   @Get()
-  findAll() {
-    return this.planosService.findAll();
+  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string) {
+    return this.planosService.findAll(Number(page) || 1, Number(perPage) || 20);
   }
 
   // GET /api/v1/planos-manutencao/:id

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -17,12 +17,16 @@ export class UsuariosController {
 
   @Get('tecnicos')
   @Roles(UsuarioTipo.admin)
-  findTecnicos() {
-    return this.prisma.usuario.findMany({
-      where: { tipo: 'tecnico' },
-      select: SELECT_TECNICO,
-      orderBy: { nome: 'asc' },
-    });
+  async findTecnicos(@Query('page') page?: string, @Query('perPage') perPage?: string) {
+    const p = Number(page) || 1;
+    const pp = Number(perPage) || 20;
+    const skip = (p - 1) * pp;
+    const where = { tipo: 'tecnico' as const };
+    const [data, total] = await Promise.all([
+      this.prisma.usuario.findMany({ where, select: SELECT_TECNICO, orderBy: { nome: 'asc' }, skip, take: pp }),
+      this.prisma.usuario.count({ where }),
+    ]);
+    return { data, total, page: p, perPage: pp };
   }
 
   @Get(':id')

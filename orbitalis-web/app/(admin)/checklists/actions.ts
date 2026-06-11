@@ -23,3 +23,8 @@ export async function deletarChecklist(id: string) {
   await api.delete(`/modelos-checklist/${id}`)
   redirect('/checklists')
 }
+
+export async function importarPmocSplitHiwall() {
+  await api.post('/modelos-checklist/seed-pmoc-split', {})
+  redirect('/checklists')
+}

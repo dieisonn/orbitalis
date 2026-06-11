@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
@@ -30,8 +31,8 @@ export class AmbientesController {
   // GET /api/v1/ambientes
   @Get()
   @Roles(UsuarioTipo.admin)
-  findAll() {
-    return this.ambientesService.findAll();
+  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string) {
+    return this.ambientesService.findAll(Number(page) || 1, Number(perPage) || 20);
   }
 
   // GET /api/v1/ambientes/:id

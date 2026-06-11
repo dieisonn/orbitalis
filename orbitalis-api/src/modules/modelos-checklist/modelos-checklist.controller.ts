@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -13,8 +13,14 @@ export class ModelosChecklistController {
 
   @Get()
   @Roles(UsuarioTipo.admin)
-  findAll() {
-    return this.service.findAll();
+  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string) {
+    return this.service.findAll(Number(page) || 1, Number(perPage) || 20);
+  }
+
+  @Post('seed-pmoc-split')
+  @Roles(UsuarioTipo.admin)
+  seedPmoc() {
+    return this.service.seedPmocSplitHiwall();
   }
 
   @Get(':id')

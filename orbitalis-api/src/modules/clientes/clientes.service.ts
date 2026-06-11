@@ -51,11 +51,20 @@ export class ClientesService {
     return res.json();
   }
 
-  findAll() {
-    return this.prisma.cliente.findMany({
-      where: { deletedAt: null },
-      include: { ambientes: { where: { deletedAt: null } } },
-    });
+  async findAll(page = 1, perPage = 20) {
+    const skip = (page - 1) * perPage;
+    const where = { deletedAt: null };
+    const [data, total] = await Promise.all([
+      this.prisma.cliente.findMany({
+        where,
+        include: { ambientes: { where: { deletedAt: null } } },
+        orderBy: { razaoSocial: 'asc' },
+        skip,
+        take: perPage,
+      }),
+      this.prisma.cliente.count({ where }),
+    ]);
+    return { data, total, page, perPage };
   }
 
   async findOne(id: string) {

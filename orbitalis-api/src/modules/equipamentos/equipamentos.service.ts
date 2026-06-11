@@ -19,12 +19,20 @@ export class EquipamentosService {
     });
   }
 
-  findAll() {
-    return this.prisma.equipamento.findMany({
-      where: { deletedAt: null },
-      include: { ambiente: { include: { cliente: true } } },
-      orderBy: { nome: 'asc' },
-    });
+  async findAll(page = 1, perPage = 20) {
+    const skip = (page - 1) * perPage;
+    const where = { deletedAt: null };
+    const [data, total] = await Promise.all([
+      this.prisma.equipamento.findMany({
+        where,
+        include: { ambiente: { include: { cliente: true } } },
+        orderBy: { nome: 'asc' },
+        skip,
+        take: perPage,
+      }),
+      this.prisma.equipamento.count({ where }),
+    ]);
+    return { data, total, page, perPage };
   }
 
   async findOne(id: string) {

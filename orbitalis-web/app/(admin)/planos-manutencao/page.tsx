@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
+import { ListPagination } from '@/components/ui/list-pagination'
 import { deletarPlano } from './actions'
 import { CalendarClock, CheckCircle, XCircle } from 'lucide-react'
 
@@ -13,27 +15,29 @@ type Plano = {
   tecnico: { email: string } | null
 }
 
-export default async function PlanosPage() {
-  let planos: Plano[] = []
+type ApiResponse = { data: Plano[]; total: number; page: number; perPage: number }
+
+type Props = { searchParams: Promise<{ page?: string }> }
+
+export default async function PlanosPage({ searchParams }: Props) {
+  const { page } = await searchParams
+  const currentPage = Number(page) || 1
+
+  let result: ApiResponse = { data: [], total: 0, page: 1, perPage: 20 }
   try {
-    planos = await api.get<Plano[]>('/planos-manutencao')
-  } catch {
-    // API indisponível
-  }
+    result = await api.get<ApiResponse>(`/planos-manutencao?page=${currentPage}&perPage=20`)
+  } catch { /* API indisponível */ }
+
+  const planos = result.data
 
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-primary">Planos Preventivos</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Motor Cron executa diariamente às 00:00:01
-          </p>
+          <p className="text-gray-500 text-sm mt-1">Motor Cron executa diariamente às 00:00:01</p>
         </div>
-        <a
-          href="/planos-manutencao/novo"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors"
-        >
+        <a href="/planos-manutencao/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
           + Novo Plano
         </a>
       </div>
@@ -49,50 +53,28 @@ export default async function PlanosPage() {
             <thead>
               <tr className="border-b border-border bg-surface">
                 {['Ambiente', 'Técnico', 'Frequência', 'Próxima Geração', 'Última Geração', 'Ativo', ''].map((h) => (
-                  <th
-                    key={h}
-                    className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
-                  >
-                    {h}
-                  </th>
+                  <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {planos.map((p) => (
                 <tr key={p.id} className="hover:bg-surface transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    {p.ambiente?.nome}
-                  </td>
+                  <td className="px-6 py-4 font-medium text-gray-900">{p.ambiente?.nome}</td>
                   <td className="px-6 py-4 text-gray-500 text-xs">
                     {p.tecnico?.email ?? <span className="italic">Não atribuído</span>}
                   </td>
-                  <td className="px-6 py-4 text-gray-600">
-                    A cada {p.frequenciaDias} dia(s)
-                  </td>
-                  <td className="px-6 py-4 text-gray-500 text-xs">
-                    {new Date(p.proximaGeracao).toLocaleDateString('pt-BR')}
-                  </td>
+                  <td className="px-6 py-4 text-gray-600">A cada {p.frequenciaDias} dia(s)</td>
+                  <td className="px-6 py-4 text-gray-500 text-xs">{new Date(p.proximaGeracao).toLocaleDateString('pt-BR')}</td>
                   <td className="px-6 py-4 text-gray-400 text-xs">
-                    {p.ultimaGeracao
-                      ? new Date(p.ultimaGeracao).toLocaleDateString('pt-BR')
-                      : '—'}
+                    {p.ultimaGeracao ? new Date(p.ultimaGeracao).toLocaleDateString('pt-BR') : '—'}
                   </td>
                   <td className="px-6 py-4">
-                    {p.ativo ? (
-                      <CheckCircle size={16} className="text-action" />
-                    ) : (
-                      <XCircle size={16} className="text-destructive" />
-                    )}
+                    {p.ativo ? <CheckCircle size={16} className="text-action" /> : <XCircle size={16} className="text-destructive" />}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <a
-                        href={`/planos-manutencao/${p.id}/editar`}
-                        className="text-xs font-semibold text-primary hover:underline"
-                      >
-                        Editar
-                      </a>
+                      <a href={`/planos-manutencao/${p.id}/editar`} className="text-xs font-semibold text-primary hover:underline">Editar</a>
                       <DeleteButton action={deletarPlano.bind(null, p.id)} />
                     </div>
                   </td>
@@ -100,6 +82,9 @@ export default async function PlanosPage() {
               ))}
             </tbody>
           </table>
+          <Suspense>
+            <ListPagination page={currentPage} total={result.total} perPage={result.perPage} basePath="/planos-manutencao" />
+          </Suspense>
         </div>
       )}
     </div>

@@ -1,0 +1,9 @@
+{
+  "experimentalServices": {
+    "orbitalis-api": {
+      "root": "orbitalis-api",
+      "entrypoint": "src/main.ts",
+      "routePrefix": "/"
+    }
+  }
+}

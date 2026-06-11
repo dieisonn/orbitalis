@@ -24,11 +24,18 @@ export class PlanosManutencaoService {
     });
   }
 
-  findAll() {
-    return this.prisma.planoManutencao.findMany({
-      include: { ambiente: true, tecnico: { select: { email: true } } },
-      orderBy: { proximaGeracao: 'asc' },
-    });
+  async findAll(page = 1, perPage = 20) {
+    const skip = (page - 1) * perPage;
+    const [data, total] = await Promise.all([
+      this.prisma.planoManutencao.findMany({
+        include: { ambiente: true, tecnico: { select: { email: true } } },
+        orderBy: { proximaGeracao: 'asc' },
+        skip,
+        take: perPage,
+      }),
+      this.prisma.planoManutencao.count(),
+    ]);
+    return { data, total, page, perPage };
   }
 
   async findOne(id: string) {
