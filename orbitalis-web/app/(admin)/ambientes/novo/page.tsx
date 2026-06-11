@@ -6,7 +6,8 @@ type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 export default async function NovoAmbientePage() {
   let clientes: Cliente[] = []
   try {
-    clientes = await api.get<Cliente[]>('/clientes')
+    const res = await api.get<{ data: Cliente[] }>('/clientes?perPage=1000')
+    clientes = res.data
   } catch {
     // API indisponível
   }

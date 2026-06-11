@@ -17,10 +17,12 @@ type Equipamento = {
 type Tecnico = { id: string; email: string }
 
 export default async function NovaOsPage() {
-  const [equipamentos, tecnicos] = await Promise.all([
-    api.get<Equipamento[]>('/equipamentos').catch(() => [] as Equipamento[]),
-    api.get<Tecnico[]>('/usuarios/tecnicos').catch(() => [] as Tecnico[]),
+  const [equipamentosRes, tecnicosRes] = await Promise.all([
+    api.get<{ data: Equipamento[] }>('/equipamentos?perPage=1000').catch(() => ({ data: [] as Equipamento[] })),
+    api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
   ])
+  const equipamentos = equipamentosRes.data
+  const tecnicos = tecnicosRes.data
 
   return (
     <div>

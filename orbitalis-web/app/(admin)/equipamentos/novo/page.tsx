@@ -11,7 +11,8 @@ type Ambiente = {
 export default async function NovoEquipamentoPage() {
   let ambientes: Ambiente[] = []
   try {
-    ambientes = await api.get<Ambiente[]>('/ambientes')
+    const res = await api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000')
+    ambientes = res.data
   } catch {
     // API indisponível
   }

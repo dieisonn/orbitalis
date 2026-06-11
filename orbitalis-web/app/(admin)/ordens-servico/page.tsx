@@ -68,18 +68,20 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
   if (page)       qs.set('page', page)
   qs.set('perPage', '20')
 
-  const [result, tecnicos, clientes] = await Promise.all([
+  const [result, tecnicosRes, clientesRes] = await Promise.all([
     api.get<ApiResponse>(`/ordens-servico?${qs.toString()}`).catch(() => ({
       data: [] as OrdemServico[], total: 0, page: 1, perPage: 20,
     })),
-    api.get<Tecnico[]>('/usuarios/tecnicos').catch(() => [] as Tecnico[]),
-    api.get<Cliente[]>('/clientes').catch(() => [] as Cliente[]),
+    api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
+    api.get<{ data: Cliente[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as Cliente[] })),
   ])
 
   const ordens      = result.data
   const currentPage = result.page
   const total       = result.total
   const perPage     = result.perPage
+  const tecnicos    = tecnicosRes.data
+  const clientes    = clientesRes.data
 
   const aguardandoTriagem = ordens.filter((o) => o.status === 'aberta').length
   const isFiltered = !!(status || q || tecnicoId || clienteId || dataInicio || dataFim || atrasadas)

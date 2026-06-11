@@ -21,10 +21,12 @@ export default async function EditarPlanoPage({ params }: Props) {
   let plano: Plano
   let tecnicos: Tecnico[] = []
   try {
-    ;[plano, tecnicos] = await Promise.all([
+    const [planoData, tecnicosRes] = await Promise.all([
       api.get<Plano>(`/planos-manutencao/${id}`),
-      api.get<Tecnico[]>('/usuarios/tecnicos'),
+      api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000'),
     ])
+    plano = planoData
+    tecnicos = tecnicosRes.data
   } catch {
     notFound()
   }

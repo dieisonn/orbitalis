@@ -10,10 +10,12 @@ type Ambiente = {
 type Tecnico = { id: string; email: string }
 
 export default async function NovoPlanoPage() {
-  const [ambientes, tecnicos] = await Promise.all([
-    api.get<Ambiente[]>('/ambientes').catch(() => [] as Ambiente[]),
-    api.get<Tecnico[]>('/usuarios/tecnicos').catch(() => [] as Tecnico[]),
+  const [ambientesRes, tecnicosRes] = await Promise.all([
+    api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
+    api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
   ])
+  const ambientes = ambientesRes.data
+  const tecnicos = tecnicosRes.data
 
   return (
     <div>
