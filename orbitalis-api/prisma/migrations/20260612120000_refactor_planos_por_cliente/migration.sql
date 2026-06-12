@@ -16,18 +16,21 @@ ALTER TABLE "planos_manutencao" DROP CONSTRAINT IF EXISTS "planos_manutencao_mod
 ALTER TABLE "planos_manutencao" DROP COLUMN IF EXISTS "ambiente_id";
 ALTER TABLE "planos_manutencao" DROP COLUMN IF EXISTS "modelo_checklist_id";
 
--- Adicionar cliente_id em planos_manutencao
-ALTER TABLE "planos_manutencao" ADD COLUMN "cliente_id" UUID NOT NULL;
+-- Adicionar cliente_id em planos_manutencao (idempotente: IF NOT EXISTS / DROP antes de ADD CONSTRAINT)
+ALTER TABLE "planos_manutencao" ADD COLUMN IF NOT EXISTS "cliente_id" UUID;
+ALTER TABLE "planos_manutencao" ALTER COLUMN "cliente_id" SET NOT NULL;
+ALTER TABLE "planos_manutencao" DROP CONSTRAINT IF EXISTS "planos_manutencao_cliente_id_fkey";
 ALTER TABLE "planos_manutencao" ADD CONSTRAINT "planos_manutencao_cliente_id_fkey"
   FOREIGN KEY ("cliente_id") REFERENCES "clientes"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- Adicionar plano_id em ordens_servico (nullable — O.S. manuais não têm plano)
-ALTER TABLE "ordens_servico" ADD COLUMN "plano_id" UUID;
+-- Adicionar plano_id em ordens_servico (idempotente)
+ALTER TABLE "ordens_servico" ADD COLUMN IF NOT EXISTS "plano_id" UUID;
+ALTER TABLE "ordens_servico" DROP CONSTRAINT IF EXISTS "ordens_servico_plano_id_fkey";
 ALTER TABLE "ordens_servico" ADD CONSTRAINT "ordens_servico_plano_id_fkey"
   FOREIGN KEY ("plano_id") REFERENCES "planos_manutencao"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Criar tabela plano_equipamento_config
-CREATE TABLE "plano_equipamento_config" (
+-- Criar tabela plano_equipamento_config (idempotente)
+CREATE TABLE IF NOT EXISTS "plano_equipamento_config" (
   "id"                   UUID NOT NULL DEFAULT gen_random_uuid(),
   "plano_id"             UUID NOT NULL,
   "equipamento_id"       UUID NOT NULL,

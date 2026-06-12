@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+﻿FROM node:20.18-alpine AS builder
 
 WORKDIR /app
 
@@ -11,8 +11,8 @@ COPY . .
 
 RUN npm run build && npx prisma generate
 
-# ── Runtime ──────────────────────────────────
-FROM node:20-alpine AS runner
+# â”€â”€ Runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+FROM node:20.18-alpine AS runner
 
 WORKDIR /app
 
@@ -29,3 +29,4 @@ COPY prisma ./prisma/
 EXPOSE 3000
 
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+
