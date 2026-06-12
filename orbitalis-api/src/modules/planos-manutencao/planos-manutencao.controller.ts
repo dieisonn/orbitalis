@@ -42,11 +42,11 @@ export class PlanosManutencaoController {
     @Param('id') id: string,
     @Body() body: {
       tecnicoId?: string | null;
-      modeloChecklistId?: string | null;
       frequenciaDias?: number;
       proximaGeracao?: string;
       dataFim?: string | null;
       ativo?: boolean;
+      equipamentosConfig?: { equipamentoId: string; modeloChecklistId?: string | null }[];
     },
   ) {
     return this.planosService.update(id, body);

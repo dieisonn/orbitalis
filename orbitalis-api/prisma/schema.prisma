@@ -1,6 +1,4 @@
 // schema.prisma — Plataforma Orbitalis
-// Derivado 1:1 de schema_blueprint.md §4
-// Gerador: Prisma Client (TypeScript)
 
 generator client {
   provider = "prisma-client-js"
@@ -53,9 +51,9 @@ model Usuario {
   especialidade String?     @db.VarChar(100)
   dataCriacao   DateTime    @default(now()) @map("data_criacao")
 
-  cliente              Cliente?
-  ordensComoTecnico    OrdemServico[]    @relation("TecnicoOrdens")
-  planosComoTecnico    PlanoManutencao[] @relation("TecnicoPlanos")
+  cliente           Cliente?
+  ordensComoTecnico OrdemServico[]    @relation("TecnicoOrdens")
+  planosComoTecnico PlanoManutencao[] @relation("TecnicoPlanos")
 
   @@map("usuarios")
 }
@@ -73,8 +71,9 @@ model Cliente {
   telefone     String?   @db.VarChar(20)
   deletedAt    DateTime? @map("deleted_at")
 
-  usuario  Usuario?   @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
-  ambientes Ambiente[]
+  usuario          Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  ambientes        Ambiente[]
+  planosManutencao PlanoManutencao[]
 
   @@map("clientes")
 }
@@ -91,10 +90,9 @@ model Ambiente {
   localizacaoInterna String    @map("localizacao_interna") @db.Text
   deletedAt          DateTime? @map("deleted_at")
 
-  cliente         Cliente           @relation(fields: [clienteId], references: [id])
-  equipamentos    Equipamento[]
-  ordensServico   OrdemServico[]
-  planosManutencao PlanoManutencao[]
+  cliente       Cliente        @relation(fields: [clienteId], references: [id])
+  equipamentos  Equipamento[]
+  ordensServico OrdemServico[]
 
   @@map("ambientes")
 }
@@ -117,8 +115,9 @@ model Equipamento {
   valorAquisicao     Decimal?  @map("valor_aquisicao") @db.Decimal(10, 2)
   deletedAt          DateTime? @map("deleted_at")
 
-  ambiente Ambiente             @relation(fields: [ambienteId], references: [id])
-  itensOs  OrdemServicoItem[]
+  ambiente     Ambiente                @relation(fields: [ambienteId], references: [id])
+  itensOs      OrdemServicoItem[]
+  planoConfigs PlanoEquipamentoConfig[]
 
   @@index([codigoQr])
   @@map("equipamentos")
@@ -126,49 +125,66 @@ model Equipamento {
 
 // ─────────────────────────────────────────
 // modelos_checklist
-// itens: JSONB — estrutura livre definida pelo Admin (§US04)
 // ─────────────────────────────────────────
 model ModeloChecklist {
   id    String @id @default(uuid()) @db.Uuid
   nome  String @db.VarChar(150)
   itens Json
 
-  planos PlanoManutencao[]
+  planoConfigs PlanoEquipamentoConfig[]
 
   @@map("modelos_checklist")
 }
 
 // ─────────────────────────────────────────
 // planos_manutencao  (§US05)
-// Vincula um ambiente a um ciclo de manutenção preventiva.
-// O Cron (00:00:01) lê WHERE ativo = true AND proxima_geracao <= NOW()
-// e gera uma O.S. com origem = 'preventiva_automatica'.
+// Um plano por cliente cobre todos os ambientes/equipamentos.
+// Gera uma O.S. por ambiente por ciclo.
 // ─────────────────────────────────────────
 model PlanoManutencao {
-  id                String    @id @default(uuid()) @db.Uuid
-  ambienteId        String    @map("ambiente_id") @db.Uuid
-  tecnicoId         String?   @map("tecnico_id") @db.Uuid
-  modeloChecklistId String?   @map("modelo_checklist_id") @db.Uuid
-  frequenciaDias    Int       @map("frequencia_dias")
-  ativo             Boolean   @default(true)
-  proximaGeracao    DateTime  @map("proxima_geracao")
-  ultimaGeracao     DateTime? @map("ultima_geracao")
-  dataFim           DateTime? @map("data_fim")
+  id             String    @id @default(uuid()) @db.Uuid
+  clienteId      String    @map("cliente_id") @db.Uuid
+  tecnicoId      String?   @map("tecnico_id") @db.Uuid
+  frequenciaDias Int       @map("frequencia_dias")
+  ativo          Boolean   @default(true)
+  proximaGeracao DateTime  @map("proxima_geracao")
+  ultimaGeracao  DateTime? @map("ultima_geracao")
+  dataFim        DateTime? @map("data_fim")
 
-  ambiente        Ambiente         @relation(fields: [ambienteId], references: [id])
-  tecnico         Usuario?         @relation("TecnicoPlanos", fields: [tecnicoId], references: [id])
-  modeloChecklist ModeloChecklist? @relation(fields: [modeloChecklistId], references: [id])
+  cliente            Cliente                  @relation(fields: [clienteId], references: [id])
+  tecnico            Usuario?                 @relation("TecnicoPlanos", fields: [tecnicoId], references: [id])
+  equipamentosConfig PlanoEquipamentoConfig[]
+  ordensServico      OrdemServico[]
 
   @@index([proximaGeracao, ativo])
   @@map("planos_manutencao")
 }
 
 // ─────────────────────────────────────────
-// ordens_servico  (tabela pai da O.S.)
+// plano_equipamento_config
+// Mapeamento equipamento → checklist específico dentro do plano.
+// ─────────────────────────────────────────
+model PlanoEquipamentoConfig {
+  id                String  @id @default(uuid()) @db.Uuid
+  planoId           String  @map("plano_id") @db.Uuid
+  equipamentoId     String  @map("equipamento_id") @db.Uuid
+  modeloChecklistId String? @map("modelo_checklist_id") @db.Uuid
+
+  plano           PlanoManutencao  @relation(fields: [planoId], references: [id], onDelete: Cascade)
+  equipamento     Equipamento      @relation(fields: [equipamentoId], references: [id])
+  modeloChecklist ModeloChecklist? @relation(fields: [modeloChecklistId], references: [id], onDelete: SetNull)
+
+  @@unique([planoId, equipamentoId])
+  @@map("plano_equipamento_config")
+}
+
+// ─────────────────────────────────────────
+// ordens_servico
 // ─────────────────────────────────────────
 model OrdemServico {
   id                String    @id @default(uuid()) @db.Uuid
   ambienteId        String    @map("ambiente_id") @db.Uuid
+  planoId           String?   @map("plano_id") @db.Uuid
   tecnicoId         String?   @map("tecnico_id") @db.Uuid
   status            OsStatus
   origem            OsOrigem
@@ -181,8 +197,9 @@ model OrdemServico {
   valorPecas        Decimal?  @map("valor_pecas") @db.Decimal(10, 2)
   dataCriacao       DateTime  @default(now()) @map("data_criacao")
 
-  ambiente  Ambiente           @relation(fields: [ambienteId], references: [id])
-  tecnico   Usuario?           @relation("TecnicoOrdens", fields: [tecnicoId], references: [id])
+  ambiente  Ambiente                        @relation(fields: [ambienteId], references: [id])
+  plano     PlanoManutencao?                @relation(fields: [planoId], references: [id], onDelete: SetNull)
+  tecnico   Usuario?                        @relation("TecnicoOrdens", fields: [tecnicoId], references: [id])
   itens     OrdemServicoItem[]
   conflitos AuditoriaConflitoSincronizacao[]
 
@@ -191,8 +208,7 @@ model OrdemServico {
 }
 
 // ─────────────────────────────────────────
-// ordem_servico_itens  (1 por equipamento do ambiente)
-// checklist_snapshot: deep copy do modelo no momento da abertura (§6.2)
+// ordem_servico_itens
 // ─────────────────────────────────────────
 model OrdemServicoItem {
   id                  String       @id @default(uuid()) @db.Uuid
@@ -209,13 +225,7 @@ model OrdemServicoItem {
 }
 
 // ─────────────────────────────────────────
-// auditoria_conflitos_sincronizacao  (§6.4)
-// Estrutura mínima derivada da narrativa do blueprint.
-// payloadRejeitado: lote completo enviado pelo técnico offline.
-// ─────────────────────────────────────────
-// ─────────────────────────────────────────
 // configuracao_empresa  (white-label / branding)
-// Linha única — upsert no PATCH
 // ─────────────────────────────────────────
 model ConfiguracaoEmpresa {
   id           String   @id @default(uuid()) @db.Uuid
@@ -232,10 +242,10 @@ model ConfiguracaoEmpresa {
 }
 
 model AuditoriaConflitoSincronizacao {
-  id                String   @id @default(uuid()) @db.Uuid
-  ordemServicoId    String   @map("ordem_servico_id") @db.Uuid
-  payloadRejeitado  Json     @map("payload_rejeitado")
-  criadoEm         DateTime @default(now()) @map("criado_em")
+  id               String   @id @default(uuid()) @db.Uuid
+  ordemServicoId   String   @map("ordem_servico_id") @db.Uuid
+  payloadRejeitado Json     @map("payload_rejeitado")
+  criadoEm        DateTime @default(now()) @map("criado_em")
 
   ordemServico OrdemServico @relation(fields: [ordemServicoId], references: [id])
 

@@ -31,8 +31,12 @@ export class AmbientesController {
   // GET /api/v1/ambientes
   @Get()
   @Roles(UsuarioTipo.admin)
-  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string) {
-    return this.ambientesService.findAll(Number(page) || 1, Number(perPage) || 20);
+  findAll(
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+    @Query('clienteId') clienteId?: string,
+  ) {
+    return this.ambientesService.findAll(Number(page) || 1, Number(perPage) || 20, clienteId);
   }
 
   // GET /api/v1/ambientes/:id

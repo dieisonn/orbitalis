@@ -9,7 +9,6 @@ export class CronService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Executa diariamente às 00:00:01 (§US05)
-  // Lê planos ativos cuja proxima_geracao <= agora e gera O.S. preventivas
   @Cron('1 0 0 * * *')
   async gerarOsPreventivas() {
     this.logger.log('Cron preventivo iniciado');
@@ -23,10 +22,12 @@ export class CronService {
         OR: [{ dataFim: null }, { dataFim: { gte: agora } }],
       },
       include: {
-        ambiente: {
-          include: { equipamentos: { where: { deletedAt: null } } },
+        equipamentosConfig: {
+          include: {
+            equipamento: { select: { id: true, ambienteId: true } },
+            modeloChecklist: true,
+          },
         },
-        modeloChecklist: true,
       },
     });
 
@@ -36,9 +37,17 @@ export class CronService {
 
     for (const plano of planos) {
       try {
-        // Monta a lista de datas a gerar:
-        // - Com dataFim: todas as ocorrências de proximaGeracao até dataFim
-        // - Sem dataFim: apenas a próxima ocorrência (lazy, gera 1 por cron)
+        // Agrupa equipamentos por ambienteId
+        const ambienteMap = new Map<string, { equipamentoId: string; snapshot: unknown }[]>();
+        for (const config of plano.equipamentosConfig) {
+          const ambienteId = config.equipamento.ambienteId;
+          if (!ambienteMap.has(ambienteId)) ambienteMap.set(ambienteId, []);
+          ambienteMap.get(ambienteId)!.push({
+            equipamentoId: config.equipamentoId,
+            snapshot: config.modeloChecklist ? JSON.parse(JSON.stringify(config.modeloChecklist.itens)) : [],
+          });
+        }
+
         const datasParaGerar: Date[] = [];
         let cursor = new Date(plano.proximaGeracao);
 
@@ -50,44 +59,40 @@ export class CronService {
           }
         } else {
           datasParaGerar.push(new Date(cursor));
-          cursor.setDate(cursor.getDate() + plano.frequenciaDias);
         }
-
-        const snapshot = plano.modeloChecklist
-          ? JSON.parse(JSON.stringify(plano.modeloChecklist.itens))
-          : [];
 
         for (const dataGeracao of datasParaGerar) {
-          await this.prisma.$transaction(async (tx) => {
-            const os = await tx.ordemServico.create({
-              data: {
-                ambienteId: plano.ambienteId,
-                tecnicoId: plano.tecnicoId,
-                status: 'agendada',
-                origem: 'preventiva_automatica',
-                dataAgendamento: dataGeracao,
-              },
-            });
+          for (const [ambienteId, equipamentos] of ambienteMap) {
+            await this.prisma.$transaction(async (tx) => {
+              const os = await tx.ordemServico.create({
+                data: {
+                  ambienteId,
+                  planoId: plano.id,
+                  tecnicoId: plano.tecnicoId,
+                  status: 'agendada',
+                  origem: 'preventiva_automatica',
+                  dataAgendamento: dataGeracao,
+                },
+              });
 
-            await tx.ordemServicoItem.createMany({
-              data: plano.ambiente.equipamentos.map((eq) => ({
-                ordemServicoId: os.id,
-                equipamentoId: eq.id,
-                statusItem: 'pendente' as const,
-                checklistSnapshot: snapshot,
-              })),
+              if (equipamentos.length > 0) {
+                await tx.ordemServicoItem.createMany({
+                  data: equipamentos.map((eq) => ({
+                    ordemServicoId: os.id,
+                    equipamentoId: eq.equipamentoId,
+                    statusItem: 'pendente' as const,
+                    checklistSnapshot: eq.snapshot,
+                  })),
+                });
+              }
             });
-          });
-
-          geradas++;
+            geradas++;
+          }
         }
 
-        // Avança proximaGeracao para depois da última O.S. gerada
         const ultimaData = datasParaGerar[datasParaGerar.length - 1];
         const proximaGeracao = new Date(ultimaData);
         proximaGeracao.setDate(proximaGeracao.getDate() + plano.frequenciaDias);
-
-        // Desativa o plano se já passou de dataFim
         const esgotado = plano.dataFim ? proximaGeracao > plano.dataFim : false;
 
         await this.prisma.planoManutencao.update({
@@ -100,7 +105,7 @@ export class CronService {
         });
 
         this.logger.log(
-          `${datasParaGerar.length} O.S. gerada(s) — ambiente: ${plano.ambiente.nome}${esgotado ? ' [PLANO CONCLUÍDO]' : ''}`,
+          `Plano ${plano.id}: ${datasParaGerar.length} ciclo(s) × ${ambienteMap.size} ambiente(s)${esgotado ? ' [CONCLUÍDO]' : ''}`,
         );
       } catch (err) {
         this.logger.error(`Falha ao gerar O.S. para plano ${plano.id}:`, err);

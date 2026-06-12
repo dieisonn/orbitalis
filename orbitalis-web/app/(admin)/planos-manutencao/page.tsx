@@ -11,13 +11,18 @@ type Plano = {
   ativo: boolean
   proximaGeracao: string
   ultimaGeracao: string | null
-  ambiente: { nome: string }
-  tecnico: { email: string } | null
+  cliente: { razaoSocial: string; nomeFantasia: string | null }
+  tecnico: { email: string; nome: string | null } | null
+  _count: { equipamentosConfig: number }
 }
 
 type ApiResponse = { data: Plano[]; total: number; page: number; perPage: number }
 
 type Props = { searchParams: Promise<{ page?: string }> }
+
+const FREQ: Record<number, string> = {
+  30: 'Mensal', 60: 'Bimestral', 90: 'Trimestral', 180: 'Semestral', 365: 'Anual',
+}
 
 export default async function PlanosPage({ searchParams }: Props) {
   const { page } = await searchParams
@@ -52,43 +57,44 @@ export default async function PlanosPage({ searchParams }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                {['Ambiente', 'Técnico', 'Frequência', 'Próxima Geração', 'Última Geração', 'Ativo', ''].map((h) => (
-                  <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">{h}</th>
+                {['Cliente', 'Técnico', 'Equip.', 'Frequência', 'Próxima Geração', 'Ativo', ''].map((h) => (
+                  <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {planos.map((p) => (
                 <tr key={p.id} className="hover:bg-surface transition-colors">
-                  <td className="px-6 py-4 font-medium text-gray-900">{p.ambiente?.nome}</td>
-                  <td className="px-6 py-4 text-gray-500 text-xs">
-                    {p.tecnico?.email ?? <span className="italic">Não atribuído</span>}
+                  <td className="px-5 py-4">
+                    <p className="font-semibold text-gray-900">{p.cliente?.nomeFantasia ?? p.cliente?.razaoSocial}</p>
+                    {p.cliente?.nomeFantasia && (
+                      <p className="text-xs text-gray-400">{p.cliente.razaoSocial}</p>
+                    )}
                   </td>
-                  <td className="px-6 py-4 text-gray-600">A cada {p.frequenciaDias} dia(s)</td>
-                  <td className="px-6 py-4 text-gray-500 text-xs">{new Date(p.proximaGeracao).toLocaleDateString('pt-BR')}</td>
-                  <td className="px-6 py-4 text-gray-400 text-xs">
-                    {p.ultimaGeracao ? new Date(p.ultimaGeracao).toLocaleDateString('pt-BR') : '—'}
+                  <td className="px-5 py-4 text-gray-500 text-xs">
+                    {p.tecnico ? (p.tecnico.nome ?? p.tecnico.email) : <span className="italic">Não atribuído</span>}
                   </td>
-                  <td className="px-6 py-4">
-                    {p.ativo ? <CheckCircle size={16} className="text-action" /> : <XCircle size={16} className="text-destructive" />}
+                  <td className="px-5 py-4 text-gray-600 text-xs">{p._count?.equipamentosConfig ?? 0} eq.</td>
+                  <td className="px-5 py-4 text-gray-600 text-xs">
+                    {FREQ[p.frequenciaDias] ?? `A cada ${p.frequenciaDias} dias`}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-5 py-4 text-gray-500 text-xs">
+                    {new Date(p.proximaGeracao).toLocaleDateString('pt-BR')}
+                  </td>
+                  <td className="px-5 py-4">
+                    {p.ativo
+                      ? <CheckCircle size={16} className="text-action" />
+                      : <XCircle size={16} className="text-destructive" />}
+                  </td>
+                  <td className="px-5 py-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      <a
-                        href={`/planos-manutencao/${p.id}`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors"
-                        title="Ver O.S. geradas e detalhes do plano"
-                      >
-                        <ClipboardList size={13} />
-                        O.S.
+                      <a href={`/planos-manutencao/${p.id}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors">
+                        <ClipboardList size={13} />Ver
                       </a>
-                      <a
-                        href={`/planos-manutencao/${p.id}/editar`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-action/10 text-action text-xs font-semibold rounded-lg hover:bg-action/20 transition-colors"
-                        title="Editar plano"
-                      >
-                        <Pencil size={13} />
-                        Editar
+                      <a href={`/planos-manutencao/${p.id}/editar`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-action/10 text-action text-xs font-semibold rounded-lg hover:bg-action/20 transition-colors">
+                        <Pencil size={13} />Editar
                       </a>
                       <DeleteButton action={deletarPlano.bind(null, p.id)} />
                     </div>

@@ -4,26 +4,52 @@ import { notFound } from 'next/navigation'
 
 type Props = { params: Promise<{ id: string }> }
 
+type Equipamento = {
+  id: string
+  nome: string
+  marca: string
+  modelo: string | null
+  tipoEquipamento: string
+  numeroSerie: string | null
+}
+
+type Ambiente = {
+  id: string
+  nome: string
+  localizacaoInterna: string
+  clienteId: string
+  cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
+  equipamentos: Equipamento[]
+}
+
+type EquipConfig = {
+  equipamentoId: string
+  modeloChecklistId: string | null
+  equipamento: { id: string; nome: string; tipoEquipamento: string; ambienteId: string }
+  modeloChecklist: { id: string; nome: string } | null
+}
+
 type Plano = {
   id: string
   frequenciaDias: number
   ativo: boolean
   proximaGeracao: string
   dataFim: string | null
-  tecnico: { id: string; email: string } | null
-  modeloChecklist: { id: string; nome: string } | null
-  ambiente: { nome: string }
+  cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
+  tecnico: { id: string; email: string; nome: string | null } | null
+  equipamentosConfig: EquipConfig[]
 }
 
-type Tecnico   = { id: string; email: string }
+type Tecnico   = { id: string; email: string; nome: string | null }
 type Checklist = { id: string; nome: string }
 
 export default async function EditarPlanoPage({ params }: Props) {
   const { id } = await params
 
   let plano: Plano
-  let tecnicos: Tecnico[]   = []
+  let tecnicos: Tecnico[] = []
   let checklists: Checklist[] = []
+  let ambientes: Ambiente[] = []
 
   try {
     const [planoData, tecnicosRes, checklistsRes] = await Promise.all([
@@ -34,29 +60,39 @@ export default async function EditarPlanoPage({ params }: Props) {
     plano      = planoData
     tecnicos   = tecnicosRes.data
     checklists = checklistsRes.data
+
+    // Carrega todos os ambientes do cliente para permitir adicionar/remover equipamentos
+    const ambRes = await api.get<{ data: Ambiente[] }>(`/ambientes?clienteId=${plano.cliente.id}&perPage=1000`)
+    ambientes = ambRes.data
   } catch {
     notFound()
   }
 
+  const clienteLabel = plano.cliente?.nomeFantasia ?? plano.cliente?.razaoSocial ?? '—'
+
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="mb-8">
+    <div className="max-w-3xl">
+      <div className="flex items-center gap-2 mb-8">
+        <a href={`/planos-manutencao/${id}`} className="text-sm text-gray-500 hover:text-primary transition-colors">
+          ← {clienteLabel}
+        </a>
+        <span className="text-gray-300">/</span>
         <h1 className="text-2xl font-bold text-primary">Editar Plano Preventivo</h1>
-        <p className="text-gray-500 text-sm mt-1">{plano.ambiente?.nome}</p>
       </div>
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
-        <EditarPlanoForm
-          id={plano.id}
-          tecnicoId={plano.tecnico?.id ?? null}
-          modeloChecklistId={plano.modeloChecklist?.id ?? null}
-          frequenciaDias={plano.frequenciaDias}
-          proximaGeracao={plano.proximaGeracao}
-          dataFim={plano.dataFim}
-          ativo={plano.ativo}
-          tecnicos={tecnicos}
-          checklists={checklists}
-        />
-      </div>
+
+      <EditarPlanoForm
+        id={plano.id}
+        clienteLabel={clienteLabel}
+        tecnicoId={plano.tecnico?.id ?? null}
+        frequenciaDias={plano.frequenciaDias}
+        proximaGeracao={plano.proximaGeracao}
+        dataFim={plano.dataFim}
+        ativo={plano.ativo}
+        equipamentosConfigAtual={plano.equipamentosConfig}
+        ambientes={ambientes}
+        tecnicos={tecnicos}
+        checklists={checklists}
+      />
     </div>
   )
 }

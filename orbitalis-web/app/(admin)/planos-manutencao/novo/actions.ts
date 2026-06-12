@@ -3,22 +3,24 @@
 import { redirect } from 'next/navigation'
 import { api } from '@/lib/api'
 
-export async function criarPlano(
-  ambienteId: string,
-  tecnicoId: string,
-  frequenciaDias: number,
-  proximaGeracao: string,
-  modeloChecklistId?: string,
-  dataFim?: string,
-) {
+type EquipConfig = { equipamentoId: string; modeloChecklistId: string | null }
+
+export async function criarPlano(data: {
+  clienteId: string
+  tecnicoId: string
+  frequenciaDias: number
+  proximaGeracao: string
+  dataFim?: string
+  equipamentosConfig: EquipConfig[]
+}) {
   await api.post('/planos-manutencao', {
-    ambienteId,
-    tecnicoId: tecnicoId || undefined,
-    frequenciaDias,
-    proximaGeracao,
-    modeloChecklistId: modeloChecklistId || undefined,
-    dataFim: dataFim || undefined,
+    clienteId: data.clienteId,
+    tecnicoId: data.tecnicoId || undefined,
+    frequenciaDias: data.frequenciaDias,
+    proximaGeracao: data.proximaGeracao,
+    dataFim: data.dataFim || undefined,
     ativo: true,
+    equipamentosConfig: data.equipamentosConfig,
   })
   redirect('/planos-manutencao')
 }
