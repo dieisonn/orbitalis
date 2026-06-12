@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreateEquipamentoDto {
   @IsUUID()
@@ -26,4 +26,21 @@ export class CreateEquipamentoDto {
   @IsString()
   @MaxLength(100)
   tipoEquipamento: string;
+
+  @IsOptional()
+  @IsDateString()
+  dataInstalacao?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['novo', 'usado'])
+  condicao?: string;
+
+  @IsOptional()
+  @IsString()
+  diagnosticoInicial?: string;
+
+  @IsOptional()
+  @IsNumber()
+  valorAquisicao?: number;
 }

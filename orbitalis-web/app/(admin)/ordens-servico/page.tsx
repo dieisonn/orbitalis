@@ -11,6 +11,7 @@ type OrdemServico = {
   status: 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'
   origem: string
   dataAgendamento: string
+  observacoesGerais: string | null
   ambiente: {
     nome: string
     cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
@@ -161,6 +162,11 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                       <div className="font-medium text-gray-900">{os.ambiente?.nome ?? '—'}</div>
                       {clienteNome && (
                         <div className="text-xs text-gray-400 mt-0.5">{clienteNome}</div>
+                      )}
+                      {os.observacoesGerais && (
+                        <div className="text-xs text-gray-400 mt-1 max-w-[220px] truncate italic" title={os.observacoesGerais}>
+                          {os.observacoesGerais}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-4">

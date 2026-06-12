@@ -111,6 +111,13 @@ export function EquipamentosTable({ equipamentos, deletarAction }: Props) {
                 </td>
                 <td className="px-4 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <a
+                      href={`/equipamentos/${eq.id}/historico`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                      title="Histórico de custos"
+                    >
+                      Histórico
+                    </a>
                     <a href={`/equipamentos/${eq.id}/editar`} className="text-xs font-semibold text-primary hover:underline">
                       Editar
                     </a>

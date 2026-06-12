@@ -43,21 +43,40 @@ export class PlanosManutencaoService {
     const plano = await this.prisma.planoManutencao.findUnique({
       where: { id },
       include: {
-        ambiente: { include: { cliente: { select: { razaoSocial: true, nomeFantasia: true } } } },
-        tecnico: { select: { id: true, email: true } },
-        modeloChecklist: { select: { id: true, nome: true } },
+        ambiente: {
+          include: {
+            cliente: {
+              select: {
+                razaoSocial: true,
+                nomeFantasia: true,
+                documento: true,
+                endereco: true,
+                telefone: true,
+              },
+            },
+          },
+        },
+        tecnico: { select: { id: true, email: true, nome: true } },
+        modeloChecklist: { select: { id: true, nome: true, itens: true } },
       },
     });
     if (!plano) throw new NotFoundException('Plano não encontrado');
 
-    const ordensServico = await this.prisma.ordemServico.findMany({
-      where: { ambienteId: plano.ambienteId, origem: 'preventiva_automatica' },
-      orderBy: { dataAgendamento: 'desc' },
-      take: 50,
-      select: { id: true, status: true, origem: true, dataAgendamento: true, dataConclusao: true },
-    });
+    const [ordensServico, equipamentos] = await Promise.all([
+      this.prisma.ordemServico.findMany({
+        where: { ambienteId: plano.ambienteId, origem: 'preventiva_automatica' },
+        orderBy: { dataAgendamento: 'asc' },
+        take: 100,
+        select: { id: true, status: true, origem: true, dataAgendamento: true, dataConclusao: true },
+      }),
+      this.prisma.equipamento.findMany({
+        where: { ambienteId: plano.ambienteId, deletedAt: null },
+        orderBy: { nome: 'asc' },
+        select: { id: true, nome: true, marca: true, modelo: true, tipoEquipamento: true, numeroSerie: true },
+      }),
+    ]);
 
-    return { ...plano, ordensServico };
+    return { ...plano, ordensServico, equipamentos };
   }
 
   async toggleAtivo(id: string) {

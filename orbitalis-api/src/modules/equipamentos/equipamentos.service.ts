@@ -4,6 +4,18 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateEquipamentoDto } from './dto/create-equipamento.dto';
 import { SubstituirQrDto } from './dto/substituir-qr.dto';
 
+type UpdateEquipamentoData = {
+  nome?: string;
+  marca?: string;
+  modelo?: string | null;
+  numeroSerie?: string | null;
+  tipoEquipamento?: string;
+  dataInstalacao?: string | null;
+  condicao?: string | null;
+  diagnosticoInicial?: string | null;
+  valorAquisicao?: number | null;
+};
+
 @Injectable()
 export class EquipamentosService {
   constructor(private readonly prisma: PrismaService) {}
@@ -15,7 +27,19 @@ export class EquipamentosService {
   async create(dto: CreateEquipamentoDto) {
     const codigoQr = this.gerarCodigoQr();
     return this.prisma.equipamento.create({
-      data: { ...dto, codigoQr },
+      data: {
+        ambienteId: dto.ambienteId,
+        codigoQr,
+        nome: dto.nome,
+        marca: dto.marca,
+        modelo: dto.modelo,
+        numeroSerie: dto.numeroSerie,
+        tipoEquipamento: dto.tipoEquipamento,
+        dataInstalacao: dto.dataInstalacao ? new Date(dto.dataInstalacao) : null,
+        condicao: dto.condicao,
+        diagnosticoInicial: dto.diagnosticoInicial,
+        valorAquisicao: dto.valorAquisicao,
+      },
     });
   }
 
@@ -44,6 +68,35 @@ export class EquipamentosService {
     return equipamento;
   }
 
+  async findHistorico(id: string) {
+    const equipamento = await this.prisma.equipamento.findFirst({
+      where: { id, deletedAt: null },
+      include: { ambiente: { include: { cliente: true } } },
+    });
+    if (!equipamento) throw new NotFoundException('Equipamento não encontrado');
+
+    const itens = await this.prisma.ordemServicoItem.findMany({
+      where: { equipamentoId: id },
+      include: {
+        ordemServico: {
+          select: {
+            id: true,
+            status: true,
+            origem: true,
+            dataAgendamento: true,
+            dataConclusao: true,
+            valorMaoObra: true,
+            valorPecas: true,
+            observacoesGerais: true,
+          },
+        },
+      },
+      orderBy: { ordemServico: { dataAgendamento: 'desc' } },
+    });
+
+    return { equipamento, itens };
+  }
+
   async findByQr(codigoQr: string) {
     const equipamento = await this.prisma.equipamento.findFirst({
       where: { codigoQr, deletedAt: null },
@@ -53,9 +106,18 @@ export class EquipamentosService {
     return equipamento;
   }
 
-  async update(id: string, data: { nome?: string; marca?: string; modelo?: string | null; numeroSerie?: string | null; tipoEquipamento?: string }) {
+  async update(id: string, data: UpdateEquipamentoData) {
     await this.findOne(id);
-    return this.prisma.equipamento.update({ where: { id }, data });
+    const { dataInstalacao, ...rest } = data;
+    return this.prisma.equipamento.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(dataInstalacao !== undefined
+          ? { dataInstalacao: dataInstalacao ? new Date(dataInstalacao) : null }
+          : {}),
+      },
+    });
   }
 
   async substituirQr(id: string, dto: SubstituirQrDto) {
@@ -68,7 +130,6 @@ export class EquipamentosService {
 
   async remove(id: string) {
     await this.findOne(id);
-    // Soft delete (§6.5)
     return this.prisma.equipamento.update({
       where: { id },
       data: { deletedAt: new Date() },

@@ -103,15 +103,19 @@ model Ambiente {
 // equipamentos  (soft delete via deletedAt)
 // ─────────────────────────────────────────
 model Equipamento {
-  id              String    @id @default(uuid()) @db.Uuid
-  ambienteId      String    @map("ambiente_id") @db.Uuid
-  codigoQr        String    @unique @map("codigo_qr") @db.VarChar(50)
-  nome            String    @db.VarChar(100)
-  marca           String    @db.VarChar(100)
-  modelo          String?   @db.VarChar(100)
-  numeroSerie     String?   @map("numero_serie") @db.VarChar(100)
-  tipoEquipamento String    @map("tipo_equipamento") @db.VarChar(100)
-  deletedAt       DateTime? @map("deleted_at")
+  id                 String    @id @default(uuid()) @db.Uuid
+  ambienteId         String    @map("ambiente_id") @db.Uuid
+  codigoQr           String    @unique @map("codigo_qr") @db.VarChar(50)
+  nome               String    @db.VarChar(100)
+  marca              String    @db.VarChar(100)
+  modelo             String?   @db.VarChar(100)
+  numeroSerie        String?   @map("numero_serie") @db.VarChar(100)
+  tipoEquipamento    String    @map("tipo_equipamento") @db.VarChar(100)
+  dataInstalacao     DateTime? @map("data_instalacao")
+  condicao           String?   @db.VarChar(20)
+  diagnosticoInicial String?   @map("diagnostico_inicial") @db.Text
+  valorAquisicao     Decimal?  @map("valor_aquisicao") @db.Decimal(10, 2)
+  deletedAt          DateTime? @map("deleted_at")
 
   ambiente Ambiente             @relation(fields: [ambienteId], references: [id])
   itensOs  OrdemServicoItem[]

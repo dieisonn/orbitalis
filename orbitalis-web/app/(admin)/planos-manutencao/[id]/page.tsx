@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
-import { CalendarClock, CheckCircle, XCircle, Clock, ClipboardList, Pencil } from 'lucide-react'
+import { CalendarClock, CheckCircle, XCircle, Clock, ClipboardList, Pencil, FileText } from 'lucide-react'
 import { gerarOsPlano } from '../actions'
 
 type Props = { params: Promise<{ id: string }> }
@@ -93,6 +93,13 @@ export default async function DetalhePlanoPage({ params }: Props) {
               ? <span className="flex items-center gap-1.5 text-xs font-semibold text-action bg-action/10 px-2.5 py-1 rounded-full"><CheckCircle size={12} />Ativo</span>
               : <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full"><XCircle size={12} />Inativo</span>
             }
+            <a
+              href={`/planos-manutencao/${id}/pmoc`}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
+              target="_blank"
+            >
+              <FileText size={12} />PMOC
+            </a>
             <a
               href={`/planos-manutencao/${id}/editar`}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors"

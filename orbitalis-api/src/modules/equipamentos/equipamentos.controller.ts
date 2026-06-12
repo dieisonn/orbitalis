@@ -50,10 +50,25 @@ export class EquipamentosController {
     return this.equipamentosService.findByQr(codigo);
   }
 
+  // GET /api/v1/equipamentos/:id/historico — Histórico de O.S. e custos
+  @Get(':id/historico')
+  @Roles(UsuarioTipo.admin)
+  findHistorico(@Param('id') id: string) {
+    return this.equipamentosService.findHistorico(id);
+  }
+
   // PATCH /api/v1/equipamentos/:id — Admin atualiza equipamento
   @Patch(':id')
   @Roles(UsuarioTipo.admin)
-  update(@Param('id') id: string, @Body() body: { nome?: string; marca?: string; modelo?: string | null; numeroSerie?: string | null; tipoEquipamento?: string }) {
+  update(
+    @Param('id') id: string,
+    @Body() body: {
+      nome?: string; marca?: string; modelo?: string | null;
+      numeroSerie?: string | null; tipoEquipamento?: string;
+      dataInstalacao?: string | null; condicao?: string | null;
+      diagnosticoInicial?: string | null; valorAquisicao?: number | null;
+    },
+  ) {
     return this.equipamentosService.update(id, body);
   }
 
