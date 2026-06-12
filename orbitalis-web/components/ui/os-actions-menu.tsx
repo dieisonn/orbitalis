@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   MoreVertical, UserCheck, RefreshCw, DollarSign,
@@ -266,19 +266,32 @@ type Props = {
 export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas }: Props) {
   const [open, setOpen]   = useState(false)
   const [panel, setPanel] = useState<Panel>('menu')
+  const [pos, setPos]     = useState({ top: 0, left: 0 })
+  const btnRef            = useRef<HTMLButtonElement>(null)
 
   const isTerminal = status === 'concluida' || status === 'cancelada'
   const osNum      = `OS-${osId.slice(0, 6).toUpperCase()}`
 
   function close() { setOpen(false); setPanel('menu') }
 
+  function handleOpen() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      // w-52 = 208px; posiciona à esquerda do botão para não sair da tela
+      setPos({ top: r.bottom + 4, left: r.right - 208 })
+    }
+    setOpen((v) => !v)
+    setPanel('menu')
+  }
+
   const hasFinanceiro = valorMaoObra != null || valorPecas != null
 
   return (
-    <div className="relative flex justify-end">
+    <div className="flex justify-end">
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => { setOpen((v) => !v); setPanel('menu') }}
+        onClick={handleOpen}
         className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
         aria-label="Ações"
       >
@@ -290,7 +303,11 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
           {/* click-outside backdrop */}
           <div className="fixed inset-0 z-40" onClick={close} />
 
-          <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-xl w-52 overflow-hidden">
+          {/* fixed: não é afetado por overflow-hidden dos ancestrais */}
+          <div
+            className="fixed z-50 bg-white border border-border rounded-xl shadow-xl w-52 overflow-hidden"
+            style={{ top: pos.top, left: pos.left }}
+          >
 
             {panel === 'menu' && (
               <div className="py-1">
