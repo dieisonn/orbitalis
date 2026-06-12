@@ -10,6 +10,7 @@ type CreateEquipamentoData = {
   modelo?: string
   numeroSerie?: string
   tipoEquipamento: string
+  potencia?: string
   dataInstalacao?: string
   condicao?: string
   diagnosticoInicial?: string
@@ -24,7 +25,8 @@ export async function criarEquipamento(data: CreateEquipamentoData) {
     modelo:              data.modelo         || undefined,
     numeroSerie:         data.numeroSerie    || undefined,
     tipoEquipamento:     data.tipoEquipamento,
-    dataInstalacao:      data.dataInstalacao || undefined,
+    potencia:            data.potencia        || undefined,
+    dataInstalacao:      data.dataInstalacao  || undefined,
     condicao:            data.condicao       || undefined,
     diagnosticoInicial:  data.diagnosticoInicial || undefined,
     valorAquisicao:      data.valorAquisicao ?? undefined,

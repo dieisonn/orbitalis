@@ -23,6 +23,7 @@ type Props = {
   modelo: string | null
   numeroSerie: string | null
   tipoEquipamento: string
+  potencia: string | null
   dataInstalacao: string | null
   condicao: string | null
   diagnosticoInicial: string | null
@@ -30,7 +31,7 @@ type Props = {
 }
 
 export function EditarEquipamentoForm({
-  id, nome, marca, modelo, numeroSerie, tipoEquipamento,
+  id, nome, marca, modelo, numeroSerie, tipoEquipamento, potencia,
   dataInstalacao, condicao, diagnosticoInicial, valorAquisicao,
 }: Props) {
   const [isPending, startTransition] = useTransition()
@@ -48,6 +49,7 @@ export function EditarEquipamentoForm({
           modelo: fd.get('modelo') as string,
           numeroSerie: fd.get('numeroSerie') as string,
           tipoEquipamento: fd.get('tipoEquipamento') as string,
+          potencia: fd.get('potencia') as string,
           dataInstalacao: fd.get('dataInstalacao') as string,
           condicao: fd.get('condicao') as string,
           diagnosticoInicial: fd.get('diagnosticoInicial') as string,
@@ -75,20 +77,35 @@ export function EditarEquipamentoForm({
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Tipo <span className="text-destructive">*</span>
-        </label>
-        <select
-          name="tipoEquipamento"
-          required
-          defaultValue={tipoEquipamento}
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-        >
-          {TIPOS.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+      {/* Tipo + Potência */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Tipo <span className="text-destructive">*</span>
+          </label>
+          <select
+            name="tipoEquipamento"
+            required
+            defaultValue={tipoEquipamento}
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+          >
+            {TIPOS.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Potência <span className="text-destructive">*</span>
+          </label>
+          <input
+            name="potencia"
+            required
+            defaultValue={potencia ?? ''}
+            placeholder="Ex: 12000 BTU/h, 3,5 kW"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

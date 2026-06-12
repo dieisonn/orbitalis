@@ -15,6 +15,7 @@ export default async function EditarEquipamentoPage({ params }: Props) {
     modelo: string | null
     numeroSerie: string | null
     tipoEquipamento: string
+    potencia: string | null
     dataInstalacao: string | null
     condicao: string | null
     diagnosticoInicial: string | null
@@ -49,6 +50,7 @@ export default async function EditarEquipamentoPage({ params }: Props) {
           modelo={eq.modelo}
           numeroSerie={eq.numeroSerie}
           tipoEquipamento={eq.tipoEquipamento}
+          potencia={eq.potencia}
           dataInstalacao={eq.dataInstalacao}
           condicao={eq.condicao}
           diagnosticoInicial={eq.diagnosticoInicial}

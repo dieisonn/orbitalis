@@ -109,6 +109,7 @@ model Equipamento {
   modelo             String?   @db.VarChar(100)
   numeroSerie        String?   @map("numero_serie") @db.VarChar(100)
   tipoEquipamento    String    @map("tipo_equipamento") @db.VarChar(100)
+  potencia           String?   @db.VarChar(50)
   dataInstalacao     DateTime? @map("data_instalacao")
   condicao           String?   @db.VarChar(20)
   diagnosticoInicial String?   @map("diagnostico_inicial") @db.Text

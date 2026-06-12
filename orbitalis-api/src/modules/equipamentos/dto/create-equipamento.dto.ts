@@ -28,6 +28,11 @@ export class CreateEquipamentoDto {
   tipoEquipamento: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  potencia?: string;
+
+  @IsOptional()
   @IsDateString()
   dataInstalacao?: string;
 

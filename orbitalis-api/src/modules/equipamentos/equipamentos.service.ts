@@ -10,6 +10,7 @@ type UpdateEquipamentoData = {
   modelo?: string | null;
   numeroSerie?: string | null;
   tipoEquipamento?: string;
+  potencia?: string | null;
   dataInstalacao?: string | null;
   condicao?: string | null;
   diagnosticoInicial?: string | null;
@@ -35,6 +36,7 @@ export class EquipamentosService {
         modelo: dto.modelo,
         numeroSerie: dto.numeroSerie,
         tipoEquipamento: dto.tipoEquipamento,
+        potencia: dto.potencia,
         dataInstalacao: dto.dataInstalacao ? new Date(dto.dataInstalacao) : null,
         condicao: dto.condicao,
         diagnosticoInicial: dto.diagnosticoInicial,

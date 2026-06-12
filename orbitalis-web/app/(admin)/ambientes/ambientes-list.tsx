@@ -27,7 +27,9 @@ type Grupo = {
 
 export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
   const [query, setQuery] = useState('')
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [collapsed, setCollapsed] = useState<Set<string>>(
+    () => new Set(grupos.map((g) => g.cliente.id)),
+  )
 
   function toggle(clienteId: string) {
     setCollapsed((prev) => {

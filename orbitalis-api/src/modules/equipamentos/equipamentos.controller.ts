@@ -64,7 +64,7 @@ export class EquipamentosController {
     @Param('id') id: string,
     @Body() body: {
       nome?: string; marca?: string; modelo?: string | null;
-      numeroSerie?: string | null; tipoEquipamento?: string;
+      numeroSerie?: string | null; tipoEquipamento?: string; potencia?: string | null;
       dataInstalacao?: string | null; condicao?: string | null;
       diagnosticoInicial?: string | null; valorAquisicao?: number | null;
     },

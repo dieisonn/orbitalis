@@ -10,6 +10,7 @@ export async function editarEquipamento(
     modelo: string
     numeroSerie: string
     tipoEquipamento: string
+    potencia: string
     dataInstalacao: string
     condicao: string
     diagnosticoInicial: string
@@ -22,6 +23,7 @@ export async function editarEquipamento(
     modelo: data.modelo || null,
     numeroSerie: data.numeroSerie || null,
     tipoEquipamento: data.tipoEquipamento,
+    potencia: data.potencia || null,
     dataInstalacao: data.dataInstalacao || null,
     condicao: data.condicao || null,
     diagnosticoInicial: data.diagnosticoInicial || null,
