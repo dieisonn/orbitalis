@@ -103,11 +103,13 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
   return (
     <>
       <style>{`
-        @page { size: A4; margin: 12mm 12mm 10mm 12mm; }
+        @page { size: A4 landscape; margin: 10mm 12mm 8mm 12mm; }
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .page-break { page-break-before: always; }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
         }
         body { margin: 0; font-family: Arial, sans-serif; font-size: 9pt; color: #1a1a1a; }
       `}</style>
@@ -329,23 +331,28 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
               {itensChecklist.length === 0 ? (
                 <p style={{ color: '#9ca3af', fontSize: '8pt', fontStyle: 'italic' }}>Nenhum checklist vinculado a este plano.</p>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '7.5pt' }}>
+                <div style={{ overflow: 'visible' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '7pt', tableLayout: 'fixed' }}>
+                    <colgroup>
+                      <col style={{ width: '22px' }} />
+                      <col style={{ width: `${Math.max(30, 100 - meses.length * 4)}%` }} />
+                      {meses.map((mes) => (
+                        <col key={mes} style={{ width: `${Math.min(9, Math.floor((100 - Math.max(30, 100 - meses.length * 4)) / meses.length))}%` }} />
+                      ))}
+                    </colgroup>
                     <thead>
                       <tr>
                         <th style={{
-                          width: '32px',
-                          padding: '5px 4px',
+                          padding: '4px 3px',
                           textAlign: 'center',
-                          fontSize: '6.5pt',
+                          fontSize: '6pt',
                           fontWeight: 700,
-                          textTransform: 'uppercase',
                           color: '#9ca3af',
                           border: '1px solid #e5e7eb',
                           backgroundColor: '#f9fafb',
                         }}>Nº</th>
                         <th style={{
-                          padding: '5px 8px',
+                          padding: '4px 6px',
                           textAlign: 'left',
                           fontSize: '6.5pt',
                           fontWeight: 700,
@@ -356,15 +363,15 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
                         }}>Serviço / Verificação</th>
                         {meses.map((mes) => (
                           <th key={mes} style={{
-                            padding: '5px 3px',
+                            padding: '4px 2px',
                             textAlign: 'center',
-                            fontSize: '6.5pt',
+                            fontSize: '6pt',
                             fontWeight: 700,
                             color: cor,
                             border: '1px solid #e5e7eb',
                             backgroundColor: cor + '08',
                             whiteSpace: 'nowrap',
-                            minWidth: '38px',
+                            overflow: 'hidden',
                           }}>
                             {fmtMesAno(mes + '-01')}
                           </th>
@@ -379,11 +386,11 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
                     <tbody>
                       {itensChecklist.map((item, idx) => (
                         <tr key={item.id} style={{ backgroundColor: idx % 2 === 1 ? '#fafafa' : 'white' }}>
-                          <td style={{ padding: '4px', textAlign: 'center', color: '#9ca3af', fontSize: '6.5pt', border: '1px solid #e5e7eb' }}>
+                          <td style={{ padding: '3px 2px', textAlign: 'center', color: '#9ca3af', fontSize: '6pt', border: '1px solid #e5e7eb' }}>
                             {idx + 1}
                           </td>
-                          <td style={{ padding: '4px 8px', border: '1px solid #e5e7eb' }}>
-                            <span style={{ fontWeight: item.obrigatorio ? 600 : 400 }}>
+                          <td style={{ padding: '3px 6px', border: '1px solid #e5e7eb', lineHeight: '1.3' }}>
+                            <span style={{ fontWeight: item.obrigatorio ? 600 : 400, fontSize: '7pt' }}>
                               {item.descricao}
                             </span>
                             {item.obrigatorio && (
@@ -394,9 +401,9 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
                             const entry = osMap[mes]
                             return (
                               <td key={mes} style={{
-                                padding: '4px 3px',
+                                padding: '3px 2px',
                                 textAlign: 'center',
-                                fontSize: '7pt',
+                                fontSize: '6.5pt',
                                 border: '1px solid #e5e7eb',
                                 ...(entry?.status === 'concluida'
                                   ? { backgroundColor: '#f0fdf4', color: '#16a34a', fontWeight: 700 }

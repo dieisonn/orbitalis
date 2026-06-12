@@ -7,9 +7,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const config = await api.get<Config>('/configuracao').catch(() => null)
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar config={config} />
-      <main className="flex-1 p-4 pt-16 md:p-8 md:pt-8 overflow-y-auto print:p-0">
+    <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
+      <div className="print:hidden">
+        <Sidebar config={config} />
+      </div>
+      <main className="flex-1 p-4 pt-16 md:p-8 md:pt-8 overflow-y-auto print:p-0 print:w-full print:overflow-visible">
         {children}
       </main>
     </div>
