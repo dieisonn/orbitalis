@@ -72,11 +72,11 @@ export class OrdensServicoController {
     return this.ordensServicoService.painel();
   }
 
-  // GET /api/v1/ordens-servico/historico — Admin (gráfico últimos 12 meses)
+  // GET /api/v1/ordens-servico/historico?ano=XXXX — Admin
   @Get('historico')
   @Roles(UsuarioTipo.admin)
-  historico() {
-    return this.ordensServicoService.historico();
+  historico(@Query('ano') ano?: string) {
+    return this.ordensServicoService.historico(ano ? Number(ano) : undefined);
   }
 
   // GET /api/v1/ordens-servico/tecnico/:tecnicoId — Técnico

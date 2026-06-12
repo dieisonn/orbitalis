@@ -59,7 +59,7 @@ function CustomTick({ x, y, payload, atualLabel }: {
   )
 }
 
-export function OsChart({ data }: { data: Ponto[] }) {
+export function OsChart({ data, ano }: { data: Ponto[]; ano: number }) {
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
@@ -70,6 +70,8 @@ export function OsChart({ data }: { data: Ponto[] }) {
 
   const atual = mesAtual()
   const atualLabel = formatMes(atual)
+  const anoAtual = new Date().getFullYear()
+  const mostrarLinha = ano === anoAtual
   const formatted = data.map((d) => ({ ...d, mes: formatMes(d.mes) }))
 
   return (
@@ -78,7 +80,7 @@ export function OsChart({ data }: { data: Ponto[] }) {
         <CartesianGrid strokeDasharray="3 3" stroke="#dde3f5" />
         <XAxis
           dataKey="mes"
-          tick={(props) => <CustomTick {...props} atualLabel={atualLabel} />}
+          tick={(props) => <CustomTick {...props} atualLabel={mostrarLinha ? atualLabel : ''} />}
           interval={0}
         />
         <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
@@ -87,7 +89,9 @@ export function OsChart({ data }: { data: Ponto[] }) {
           contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #dde3f5' }}
         />
         <Legend formatter={(name) => LABEL[name] ?? name} wrapperStyle={{ fontSize: 12 }} />
-        <ReferenceLine x={atualLabel} stroke="#0505ad" strokeDasharray="4 2" strokeWidth={1.5} />
+        {mostrarLinha && (
+          <ReferenceLine x={atualLabel} stroke="#0505ad" strokeDasharray="4 2" strokeWidth={1.5} />
+        )}
         {Object.keys(COR).map((key) => (
           <Bar key={key} dataKey={key} fill={COR[key]} stackId="a" radius={key === 'cancelada' ? [4, 4, 0, 0] : undefined} />
         ))}

@@ -398,9 +398,14 @@ export class OrdensServicoService {
     return { message: 'O.S. excluída permanentemente' };
   }
 
-  // GET /ordens-servico/historico — janela de 12 meses (6 passados + atual + 5 futuros)
-  // Agrupa por data_agendamento para refletir a distribuição de trabalho por mês
-  async historico() {
+  // GET /ordens-servico/historico?ano=XXXX
+  // Sem parâmetro: Jan-Dez do ano corrente.
+  // Com ano=XXXX: Jan-Dez daquele ano.
+  async historico(ano?: number) {
+    const anoAlvo = ano && ano > 2000 && ano < 2100 ? ano : new Date().getFullYear();
+    const dataInicio = `${anoAlvo}-01-01`;
+    const dataFim    = `${anoAlvo}-12-31`;
+
     const rows = await this.prisma.$queryRaw<
       { mes: string; status: string; total: bigint }[]
     >`
@@ -409,28 +414,25 @@ export class OrdensServicoService {
         status::text,
         COUNT(*)::bigint AS total
       FROM ordens_servico
-      WHERE "data_agendamento" >= DATE_TRUNC('month', NOW()) - INTERVAL '6 months'
-        AND "data_agendamento" <  DATE_TRUNC('month', NOW()) + INTERVAL '6 months'
+      WHERE "data_agendamento" >= ${dataInicio}::date
+        AND "data_agendamento" <= ${dataFim}::date
       GROUP BY mes, status
       ORDER BY mes ASC
     `;
 
-    // Pivot: mes → { status → total }
     const byMes: Record<string, Record<string, number>> = {};
     for (const r of rows) {
       if (!byMes[r.mes]) byMes[r.mes] = {};
       byMes[r.mes][r.status] = Number(r.total);
     }
 
-    // Gera todos os 12 meses da janela (inclusive os zerados)
     const result: {
       mes: string; aberta: number; agendada: number;
       em_andamento: number; concluida: number; cancelada: number;
     }[] = [];
-    const now = new Date();
-    for (let i = -6; i <= 5; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+    for (let m = 1; m <= 12; m++) {
+      const mes = `${anoAlvo}-${String(m).padStart(2, '0')}`;
       const counts = byMes[mes] ?? {};
       result.push({
         mes,

@@ -1,9 +1,11 @@
+import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import {
   ClipboardList, Clock, AlertTriangle, CheckCircle,
   XCircle, AlertCircle, TrendingUp, User,
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
+import { YearSelector } from '@/components/ui/year-selector'
 
 type TaxaConclusao = { concluidas: number; total: number; percentual: number }
 type Tecnico = {
@@ -38,7 +40,13 @@ function TecnicoBar({ value, max }: { value: number; max: number }) {
   )
 }
 
-export default async function DashboardPage() {
+type Props = { searchParams: Promise<{ ano?: string }> }
+
+export default async function DashboardPage({ searchParams }: Props) {
+  const { ano: anoParam } = await searchParams
+  const anoAtual = new Date().getFullYear()
+  const ano = anoParam ? Math.max(2020, Math.min(anoAtual + 1, Number(anoParam))) : anoAtual
+
   const [painel, historico] = await Promise.all([
     api.get<Painel>('/ordens-servico/painel').catch((): Painel => ({
       porStatus: {},
@@ -46,7 +54,7 @@ export default async function DashboardPage() {
       taxaConclusao: { concluidas: 0, total: 0, percentual: 0 },
       porTecnico: [],
     })),
-    api.get<Historico[]>('/ordens-servico/historico').catch(() => [] as Historico[]),
+    api.get<Historico[]>(`/ordens-servico/historico?ano=${ano}`).catch(() => [] as Historico[]),
   ])
 
   const { porStatus, atrasadas, taxaConclusao, porTecnico } = painel
@@ -114,7 +122,6 @@ export default async function DashboardPage() {
             <p className="text-xs text-gray-400 mt-1">
               {taxaConclusao.concluidas} de {taxaConclusao.total} O.S. do mês concluídas
             </p>
-            {/* Barra de progresso */}
             <div className="w-full bg-gray-100 rounded-full h-2 mt-3">
               <div
                 className={`h-2 rounded-full transition-all ${
@@ -136,9 +143,11 @@ export default async function DashboardPage() {
         <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-border">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-700">O.S. por mês de agendamento</h2>
-            <span className="text-xs text-gray-400">6 anteriores · atual · 5 futuros</span>
+            <Suspense>
+              <YearSelector ano={ano} />
+            </Suspense>
           </div>
-          <OsChart data={historico} />
+          <OsChart data={historico} ano={ano} />
         </div>
 
         {/* Ranking de técnicos */}
