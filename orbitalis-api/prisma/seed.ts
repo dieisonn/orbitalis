@@ -10,6 +10,7 @@ async function main() {
   await prisma.auditoriaConflitoSincronizacao.deleteMany();
   await prisma.ordemServicoItem.deleteMany();
   await prisma.ordemServico.deleteMany();
+  await prisma.planoEquipamentoConfig.deleteMany();
   await prisma.planoManutencao.deleteMany();
   await prisma.equipamento.deleteMany();
   await prisma.ambiente.deleteMany();
@@ -98,13 +99,30 @@ async function main() {
 
   // ── Planos de Manutenção ──────────────────────────────────────────────────
   const agora = new Date();
-  await prisma.planoManutencao.createMany({
-    data: [
-      { ambienteId: ambienteTI.id, tecnicoId: tecnico.id, modeloChecklistId: checklist.id, frequenciaDias: 30, ativo: true, proximaGeracao: agora },
-      { ambienteId: ambienteRH.id, tecnicoId: tecnico.id, modeloChecklistId: checklist.id, frequenciaDias: 30, ativo: true, proximaGeracao: agora },
-    ],
+
+  const plano = await prisma.planoManutencao.create({
+    data: {
+      clienteId: cliente.id,
+      tecnicoId: tecnico.id,
+      frequenciaDias: 30,
+      ativo: true,
+      proximaGeracao: agora,
+    },
   });
-  console.log('✓ Planos preventivos: TI + RH (30d, vencidos para teste)');
+
+  const equipamentos = await prisma.equipamento.findMany({
+    where: { ambienteId: { in: [ambienteTI.id, ambienteRH.id] } },
+    select: { id: true },
+  });
+
+  await prisma.planoEquipamentoConfig.createMany({
+    data: equipamentos.map((eq) => ({
+      planoId: plano.id,
+      equipamentoId: eq.id,
+      modeloChecklistId: checklist.id,
+    })),
+  });
+  console.log(`✓ Plano preventivo: Frigocenter (${equipamentos.length} equipamentos, 30d)`);
 
   console.log('\n📋 Credenciais:');
   console.log('  Admin:   admin@orbitalis.app          / Admin@2026');

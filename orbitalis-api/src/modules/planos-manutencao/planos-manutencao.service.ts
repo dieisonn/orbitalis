@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CronService } from '../cron/cron.service';
 import { CreatePlanoManutencaoDto } from './dto/create-plano.dto';
@@ -178,7 +179,7 @@ export class PlanosManutencaoService {
     if (!plano) throw new NotFoundException('Plano não encontrado');
 
     // Agrupa equipment por ambienteId
-    const ambienteMap = new Map<string, { equipamentoId: string; snapshot: unknown }[]>();
+    const ambienteMap = new Map<string, { equipamentoId: string; snapshot: Prisma.InputJsonValue }[]>();
     for (const config of plano.equipamentosConfig) {
       const ambienteId = config.equipamento.ambienteId;
       if (!ambienteMap.has(ambienteId)) ambienteMap.set(ambienteId, []);

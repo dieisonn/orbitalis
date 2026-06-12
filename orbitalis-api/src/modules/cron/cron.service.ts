@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -38,7 +39,7 @@ export class CronService {
     for (const plano of planos) {
       try {
         // Agrupa equipamentos por ambienteId
-        const ambienteMap = new Map<string, { equipamentoId: string; snapshot: unknown }[]>();
+        const ambienteMap = new Map<string, { equipamentoId: string; snapshot: Prisma.InputJsonValue }[]>();
         for (const config of plano.equipamentosConfig) {
           const ambienteId = config.equipamento.ambienteId;
           if (!ambienteMap.has(ambienteId)) ambienteMap.set(ambienteId, []);
