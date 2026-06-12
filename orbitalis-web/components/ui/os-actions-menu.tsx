@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   MoreVertical, UserCheck, RefreshCw, DollarSign,
-  FileText, Trash2, XCircle, ChevronLeft, Check,
+  FileText, Trash2, XCircle, ChevronLeft, Check, ClipboardList,
 } from 'lucide-react'
 import { triarOs, cancelarOs, alterarStatusOs } from '@/app/(admin)/ordens-servico/actions'
 import { registrarFinanceiro } from '@/app/(admin)/ordens-servico/financeiro-action'
@@ -294,6 +294,16 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
 
             {panel === 'menu' && (
               <div className="py-1">
+                {/* Detalhe — always visible */}
+                <a
+                  href={`/ordens-servico/${osId}`}
+                  onClick={close}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-surface transition-colors"
+                >
+                  <ClipboardList size={14} className="text-primary shrink-0" />
+                  Ver Detalhe
+                </a>
+
                 {/* PDF — always visible */}
                 <a
                   href={`/ordens-servico/${osId}/pdf`}

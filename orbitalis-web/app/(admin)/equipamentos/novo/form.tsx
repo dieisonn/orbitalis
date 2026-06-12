@@ -28,7 +28,6 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
   const [error, setError] = useState<string | null>(null)
   const [clienteId, setClienteId] = useState('')
 
-  // Clientes únicos a partir dos ambientes
   const clientes = Array.from(
     new Map(
       ambientes
@@ -44,17 +43,23 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    const ambienteId      = fd.get('ambienteId') as string
-    const nome            = fd.get('nome') as string
-    const marca           = fd.get('marca') as string
-    const modelo          = fd.get('modelo') as string
-    const numeroSerie     = fd.get('numeroSerie') as string
-    const tipoEquipamento = fd.get('tipoEquipamento') as string
+    const valorRaw = fd.get('valorAquisicao') as string
 
     setError(null)
     startTransition(async () => {
       try {
-        await criarEquipamento(ambienteId, nome, marca, modelo, numeroSerie, tipoEquipamento)
+        await criarEquipamento({
+          ambienteId:         fd.get('ambienteId') as string,
+          nome:               fd.get('nome') as string,
+          marca:              fd.get('marca') as string,
+          modelo:             fd.get('modelo') as string,
+          numeroSerie:        fd.get('numeroSerie') as string,
+          tipoEquipamento:    fd.get('tipoEquipamento') as string,
+          dataInstalacao:     fd.get('dataInstalacao') as string,
+          condicao:           fd.get('condicao') as string,
+          diagnosticoInicial: fd.get('diagnosticoInicial') as string,
+          valorAquisicao:     valorRaw ? Number(valorRaw) : undefined,
+        })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar equipamento'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)
@@ -66,9 +71,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Cliente */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Cliente
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <select
           value={clienteId}
           onChange={(e) => setClienteId(e.target.value)}
@@ -76,9 +79,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         >
           <option value="">Todos os clientes…</option>
           {clientes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nomeFantasia ?? c.razaoSocial}
-            </option>
+            <option key={c.id} value={c.id}>{c.nomeFantasia ?? c.razaoSocial}</option>
           ))}
         </select>
       </div>
@@ -104,6 +105,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         </select>
       </div>
 
+      {/* Nome */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Nome do Equipamento <span className="text-destructive">*</span>
@@ -117,6 +119,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         />
       </div>
 
+      {/* Tipo */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Tipo <span className="text-destructive">*</span>
@@ -133,6 +136,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         </select>
       </div>
 
+      {/* Marca + Modelo */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -146,9 +150,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Modelo
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
           <input
             name="modelo"
             placeholder="Ex: FTXS35LVMA (opcional)"
@@ -157,15 +159,67 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         </div>
       </div>
 
+      {/* Nº Série */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Número de Série
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Número de Série</label>
         <input
           name="numeroSerie"
           placeholder="Nº série da placa (opcional)"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 font-mono"
         />
+      </div>
+
+      {/* Ciclo de Vida */}
+      <div className="border-t border-border pt-5">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
+          Ciclo de Vida &amp; Histórico
+        </p>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data de Instalação</label>
+            <input
+              name="dataInstalacao"
+              type="date"
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Condição na Chegada</label>
+            <select
+              name="condicao"
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+            >
+              <option value="">Não informado</option>
+              <option value="novo">Novo</option>
+              <option value="usado">Usado</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Valor de Aquisição (R$)</label>
+          <input
+            name="valorAquisicao"
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0,00"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Diagnóstico Inicial / Observações de Entrada
+          </label>
+          <textarea
+            name="diagnosticoInicial"
+            rows={3}
+            placeholder="Estado do equipamento ao ser recebido, problemas já existentes, observações do técnico…"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+          />
+        </div>
       </div>
 
       {error && (
