@@ -188,7 +188,6 @@ export function NovoPlanoForm({
               name="proximaGeracao"
               type="date"
               required
-              min={hoje}
               defaultValue={hoje}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />

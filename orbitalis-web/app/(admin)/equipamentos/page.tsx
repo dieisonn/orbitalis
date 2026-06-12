@@ -1,6 +1,10 @@
 import { api } from '@/lib/api'
 import { EquipamentosView, type EquipamentoItem } from './equipamentos-view'
 import { deletarEquipamento } from './actions'
+import {
+  ExportarEquipamentosButton,
+  ImportarEquipamentosButton,
+} from '@/components/ui/equipamentos-import-export'
 
 type ApiResponse = {
   data: EquipamentoItem[]
@@ -34,12 +38,16 @@ export default async function EquipamentosPage() {
           <h1 className="text-2xl font-bold text-primary">Equipamentos</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} ativo(s) cadastrado(s)</p>
         </div>
-        <a
-          href="/equipamentos/novo"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors"
-        >
-          + Novo Equipamento
-        </a>
+        <div className="flex items-center gap-2">
+          <ExportarEquipamentosButton />
+          <ImportarEquipamentosButton />
+          <a
+            href="/equipamentos/novo"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors"
+          >
+            + Novo Equipamento
+          </a>
+        </div>
       </div>
 
       <EquipamentosView equipamentos={equipamentos} stats={stats} deletarAction={deletarEquipamento} />
