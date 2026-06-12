@@ -4,20 +4,26 @@ import { PrintPMOC } from './print-pmoc'
 
 type Props = { params: Promise<{ id: string }> }
 
+type Config = {
+  nomeEmpresa: string
+  nomeFantasia: string | null
+  logoUrl: string | null
+  corPrimaria: string | null
+  cnpj: string | null
+  telefone: string | null
+  endereco: string | null
+} | null
+
 export default async function PmocPage({ params }: Props) {
   const { id } = await params
 
-  let plano: Parameters<typeof PrintPMOC>[0]['plano']
-  let config: Parameters<typeof PrintPMOC>[0]['config']
-
   try {
-    ;[plano, config] = await Promise.all([
-      api.get(`/planos-manutencao/${id}`),
-      api.get(`/configuracao`).catch(() => null),
+    const [plano, config] = await Promise.all([
+      api.get<Parameters<typeof PrintPMOC>[0]['plano']>(`/planos-manutencao/${id}`),
+      api.get<Exclude<Config, null>>(`/configuracao`).catch(() => null),
     ])
+    return <PrintPMOC plano={plano} config={config} />
   } catch {
     notFound()
   }
-
-  return <PrintPMOC plano={plano} config={config} />
 }
