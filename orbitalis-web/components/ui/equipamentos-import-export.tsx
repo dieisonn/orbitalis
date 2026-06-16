@@ -60,7 +60,7 @@ const CSV_TEMPLATE =
   '﻿' +
   EXPORT_HEADERS +
   '\r\n' +
-  ';Split Hi-Wall;9000 BTU/h;Daikin;FTXV09AXVJU;ABC123;Recepção;Nome Fantasia do Cliente;2024-01-15;novo;2500;Equipamento em boas condições\r\n'
+  ';Ar Cond. Sala de Reuniões;Split Hi-Wall;9000 BTU/h;Daikin;FTXV09AXVJU;ABC123;Recepção;Nome Fantasia do Cliente;2024-01-15;novo;2500;Equipamento em boas condições\r\n'
 
 // ─── CSV parser ───────────────────────────────────────────────────────────────
 

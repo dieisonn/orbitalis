@@ -154,9 +154,19 @@ export class PlanosManutencaoService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, deleteOs = false) {
     const plano = await this.prisma.planoManutencao.findUnique({ where: { id } });
     if (!plano) throw new NotFoundException('Plano não encontrado');
+
+    if (deleteOs) {
+      await this.prisma.ordemServico.deleteMany({
+        where: {
+          planoId: id,
+          status: { notIn: ['concluida', 'cancelada'] },
+        },
+      });
+    }
+
     return this.prisma.planoManutencao.delete({ where: { id } });
   }
 
@@ -178,22 +188,19 @@ export class PlanosManutencaoService {
     });
     if (!plano) throw new NotFoundException('Plano não encontrado');
 
-    // Agrupa equipment por ambienteId
-    const ambienteMap = new Map<string, { equipamentoId: string; snapshot: Prisma.InputJsonValue }[]>();
-    for (const config of plano.equipamentosConfig) {
-      const ambienteId = config.equipamento.ambienteId;
-      if (!ambienteMap.has(ambienteId)) ambienteMap.set(ambienteId, []);
-      ambienteMap.get(ambienteId)!.push({
-        equipamentoId: config.equipamentoId,
-        snapshot: config.modeloChecklist ? JSON.parse(JSON.stringify(config.modeloChecklist.itens)) : [],
-      });
-    }
+    const configs = plano.equipamentosConfig.map((c) => ({
+      equipamentoId: c.equipamentoId,
+      ambienteId: c.equipamento.ambienteId,
+      snapshot: c.modeloChecklist
+        ? (JSON.parse(JSON.stringify(c.modeloChecklist.itens)) as Prisma.InputJsonValue)
+        : ([] as Prisma.InputJsonValue),
+    }));
 
     const datasParaGerar: Date[] = [];
     let cursor = new Date(plano.proximaGeracao);
 
     if (plano.dataFim) {
-      while (cursor <= plano.dataFim) {
+      while (cursor < plano.dataFim) {
         datasParaGerar.push(new Date(cursor));
         cursor = new Date(cursor);
         cursor.setDate(cursor.getDate() + plano.frequenciaDias);
@@ -209,29 +216,28 @@ export class PlanosManutencaoService {
     let totalGeradas = 0;
 
     for (const dataGeracao of datasParaGerar) {
-      for (const [ambienteId, equipamentos] of ambienteMap) {
+      for (const config of configs) {
         await this.prisma.$transaction(async (tx) => {
           const os = await tx.ordemServico.create({
             data: {
-              ambienteId,
+              ambienteId: config.ambienteId,
               planoId: plano.id,
               tecnicoId: plano.tecnicoId,
               status: 'agendada',
+              tipo: 'preventiva',
               origem: 'preventiva_automatica',
               dataAgendamento: dataGeracao,
             },
           });
 
-          if (equipamentos.length > 0) {
-            await tx.ordemServicoItem.createMany({
-              data: equipamentos.map((eq) => ({
-                ordemServicoId: os.id,
-                equipamentoId: eq.equipamentoId,
-                statusItem: 'pendente' as const,
-                checklistSnapshot: eq.snapshot,
-              })),
-            });
-          }
+          await tx.ordemServicoItem.create({
+            data: {
+              ordemServicoId: os.id,
+              equipamentoId: config.equipamentoId,
+              statusItem: 'pendente',
+              checklistSnapshot: config.snapshot,
+            },
+          });
         });
         totalGeradas++;
       }

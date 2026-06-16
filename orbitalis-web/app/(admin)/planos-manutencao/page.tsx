@@ -1,8 +1,7 @@
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
-import { DeleteButton } from '@/components/ui/delete-button'
+import { DeletePlanoButton } from '@/components/ui/delete-plano-button'
 import { ListPagination } from '@/components/ui/list-pagination'
-import { deletarPlano } from './actions'
 import { CalendarClock, CheckCircle, XCircle, ClipboardList, Pencil } from 'lucide-react'
 
 type Plano = {
@@ -96,7 +95,7 @@ export default async function PlanosPage({ searchParams }: Props) {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-action/10 text-action text-xs font-semibold rounded-lg hover:bg-action/20 transition-colors">
                         <Pencil size={13} />Editar
                       </a>
-                      <DeleteButton action={deletarPlano.bind(null, p.id)} />
+                      <DeletePlanoButton planoId={p.id} />
                     </div>
                   </td>
                 </tr>

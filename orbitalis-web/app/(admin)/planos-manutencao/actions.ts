@@ -2,8 +2,9 @@
 import { api } from '@/lib/api'
 import { revalidatePath } from 'next/cache'
 
-export async function deletarPlano(id: string) {
-  await api.delete(`/planos-manutencao/${id}`)
+export async function deletarPlano(id: string, deleteOs = false) {
+  await api.delete(`/planos-manutencao/${id}?deleteOs=${deleteOs}`)
+  revalidatePath('/planos-manutencao')
 }
 
 export async function gerarOsPlano(planoId: string) {

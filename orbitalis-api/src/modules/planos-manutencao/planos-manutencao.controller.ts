@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+
 import { UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -52,10 +53,10 @@ export class PlanosManutencaoController {
     return this.planosService.update(id, body);
   }
 
-  // DELETE /api/v1/planos-manutencao/:id
+  // DELETE /api/v1/planos-manutencao/:id?deleteOs=true
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.planosService.remove(id);
+  remove(@Param('id') id: string, @Query('deleteOs') deleteOs?: string) {
+    return this.planosService.remove(id, deleteOs === 'true');
   }
 
   // POST /api/v1/planos-manutencao/disparar-agora — força execução do cron (todos os planos elegíveis)

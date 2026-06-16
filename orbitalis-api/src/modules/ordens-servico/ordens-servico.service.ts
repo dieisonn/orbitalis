@@ -27,7 +27,17 @@ export class OrdensServicoService {
     });
     if (!ambiente) throw new NotFoundException('Ambiente não encontrado');
 
+    let equipamentosParaItens = ambiente.equipamentos;
+    if (dto.equipamentoId) {
+      const eq = ambiente.equipamentos.find((e) => e.id === dto.equipamentoId);
+      if (!eq) throw new NotFoundException('Equipamento não encontrado neste ambiente');
+      equipamentosParaItens = [eq];
+    }
+
     const modeloChecklist = await this.prisma.modeloChecklist.findFirst();
+    const snapshot = modeloChecklist
+      ? JSON.parse(JSON.stringify(modeloChecklist.itens))
+      : [];
 
     return this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.create({
@@ -35,25 +45,23 @@ export class OrdensServicoService {
           ambienteId: dto.ambienteId,
           tecnicoId: dto.tecnicoId,
           status: 'aberta',
+          tipo: dto.tipo ?? 'corretiva',
           origem: dto.origem,
           dataAgendamento: new Date(dto.dataAgendamento),
           observacoesGerais: dto.observacoesGerais,
         },
       });
 
-      // Deep copy do checklist para cada equipamento do ambiente (§6.2)
-      const snapshot = modeloChecklist
-        ? JSON.parse(JSON.stringify(modeloChecklist.itens))
-        : [];
-
-      await tx.ordemServicoItem.createMany({
-        data: ambiente.equipamentos.map((eq) => ({
-          ordemServicoId: os.id,
-          equipamentoId: eq.id,
-          statusItem: 'pendente',
-          checklistSnapshot: snapshot,
-        })),
-      });
+      if (equipamentosParaItens.length > 0) {
+        await tx.ordemServicoItem.createMany({
+          data: equipamentosParaItens.map((eq) => ({
+            ordemServicoId: os.id,
+            equipamentoId: eq.id,
+            statusItem: 'pendente',
+            checklistSnapshot: snapshot,
+          })),
+        });
+      }
 
       return tx.ordemServico.findUnique({
         where: { id: os.id },

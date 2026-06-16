@@ -1,4 +1,4 @@
-import { OsOrigem } from '@prisma/client';
+import { OsOrigem, OsTipo } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
@@ -17,6 +17,14 @@ export class CreateOrdemServicoDto {
 
   @IsEnum(OsOrigem)
   origem: OsOrigem;
+
+  @IsOptional()
+  @IsEnum(OsTipo)
+  tipo?: OsTipo;
+
+  @IsOptional()
+  @IsUUID()
+  equipamentoId?: string;
 
   @IsDateString()
   dataAgendamento: string;

@@ -33,6 +33,11 @@ enum OsOrigem {
   portal_cliente
 }
 
+enum OsTipo {
+  preventiva
+  corretiva
+}
+
 enum OsItemStatus {
   pendente
   concluido
@@ -188,6 +193,7 @@ model OrdemServico {
   planoId           String?   @map("plano_id") @db.Uuid
   tecnicoId         String?   @map("tecnico_id") @db.Uuid
   status            OsStatus
+  tipo              OsTipo   @default(corretiva)
   origem            OsOrigem
   assinaturaUrl     String?   @map("assinatura_url") @db.VarChar(512)
   observacoesGerais String?   @map("observacoes_gerais") @db.Text

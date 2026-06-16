@@ -2,6 +2,9 @@
 
 import { useTransition, useState } from 'react'
 import { criarOs } from './actions'
+import { Wrench, ShieldCheck } from 'lucide-react'
+
+type Equipamento = { id: string; nome: string; tipoEquipamento: string }
 
 type Ambiente = {
   id: string
@@ -9,7 +12,7 @@ type Ambiente = {
   localizacaoInterna: string
   clienteId: string
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
-  equipamentos: { id: string; nome: string; tipoEquipamento: string }[]
+  equipamentos: Equipamento[]
 }
 
 type Tecnico = { id: string; email: string; nome: string | null }
@@ -22,13 +25,14 @@ export function NovaOsForm({
   tecnicos: Tecnico[]
 }) {
   const [isPending, startTransition] = useTransition()
-  const [error, setError]       = useState<string | null>(null)
-  const [clienteId, setClienteId] = useState('')
+  const [error, setError]           = useState<string | null>(null)
+  const [clienteId, setClienteId]   = useState('')
   const [ambienteId, setAmbienteId] = useState('')
+  const [equipamentoId, setEquipamentoId] = useState('')
+  const [tipo, setTipo]             = useState<'corretiva' | 'preventiva'>('corretiva')
 
   const hoje = new Date().toISOString().split('T')[0]
 
-  // Clientes únicos derivados dos ambientes
   const clientes = Array.from(
     new Map(
       ambientes
@@ -49,14 +53,14 @@ export function NovaOsForm({
     e.preventDefault()
     if (!ambienteId) return
     const fd = new FormData(e.currentTarget)
-    const tecnicoId         = fd.get('tecnicoId') as string
-    const dataAgendamento   = fd.get('dataAgendamento') as string
+    const tecnicoId         = fd.get('tecnicoId')        as string
+    const dataAgendamento   = fd.get('dataAgendamento')  as string
     const observacoesGerais = fd.get('observacoesGerais') as string
 
     setError(null)
     startTransition(async () => {
       try {
-        await criarOs(ambienteId, tecnicoId, dataAgendamento, observacoesGerais)
+        await criarOs(ambienteId, tecnicoId, dataAgendamento, observacoesGerais, tipo, equipamentoId)
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar O.S.'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)
@@ -66,6 +70,40 @@ export function NovaOsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+
+      {/* Tipo da O.S. */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tipo de Manutenção <span className="text-destructive">*</span>
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setTipo('corretiva')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+              tipo === 'corretiva'
+                ? 'bg-destructive/10 border-destructive/40 text-destructive'
+                : 'border-border text-gray-500 hover:bg-surface'
+            }`}
+          >
+            <Wrench size={15} />
+            Corretiva
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipo('preventiva')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+              tipo === 'preventiva'
+                ? 'bg-action/10 border-action/40 text-action'
+                : 'border-border text-gray-500 hover:bg-surface'
+            }`}
+          >
+            <ShieldCheck size={15} />
+            Preventiva
+          </button>
+        </div>
+      </div>
+
       {/* Cliente */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -73,7 +111,7 @@ export function NovaOsForm({
         </label>
         <select
           value={clienteId}
-          onChange={(e) => { setClienteId(e.target.value); setAmbienteId('') }}
+          onChange={(e) => { setClienteId(e.target.value); setAmbienteId(''); setEquipamentoId('') }}
           required
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
@@ -93,7 +131,7 @@ export function NovaOsForm({
         </label>
         <select
           value={ambienteId}
-          onChange={(e) => setAmbienteId(e.target.value)}
+          onChange={(e) => { setAmbienteId(e.target.value); setEquipamentoId('') }}
           required
           disabled={!clienteId}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white disabled:opacity-50"
@@ -107,29 +145,35 @@ export function NovaOsForm({
             </option>
           ))}
         </select>
-
-        {/* Equipamentos do ambiente selecionado */}
-        {ambienteSelecionado && ambienteSelecionado.equipamentos.length > 0 && (
-          <div className="mt-2 px-3 py-2 bg-surface rounded-lg">
-            <p className="text-xs font-medium text-gray-500 mb-1">
-              Equipamentos neste ambiente:
-            </p>
-            <ul className="space-y-0.5">
-              {ambienteSelecionado.equipamentos.map((eq) => (
-                <li key={eq.id} className="text-xs text-gray-600">
-                  · {eq.nome} <span className="text-gray-400">({eq.tipoEquipamento})</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {ambienteSelecionado && ambienteSelecionado.equipamentos.length === 0 && (
-          <p className="mt-1.5 text-xs text-amber-600">
-            Nenhum equipamento cadastrado neste ambiente.
-          </p>
-        )}
       </div>
+
+      {/* Equipamento específico */}
+      {ambienteSelecionado && ambienteSelecionado.equipamentos.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Equipamento
+            <span className="ml-1 text-xs font-normal text-gray-400">(opcional — deixe em branco para todos)</span>
+          </label>
+          <select
+            value={equipamentoId}
+            onChange={(e) => setEquipamentoId(e.target.value)}
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+          >
+            <option value="">Todos os equipamentos do ambiente</option>
+            {ambienteSelecionado.equipamentos.map((eq) => (
+              <option key={eq.id} value={eq.id}>
+                {eq.nome} — {eq.tipoEquipamento}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {ambienteSelecionado && ambienteSelecionado.equipamentos.length === 0 && (
+        <p className="text-xs text-amber-600">
+          Nenhum equipamento cadastrado neste ambiente.
+        </p>
+      )}
 
       {/* Técnico */}
       <div>
@@ -156,7 +200,6 @@ export function NovaOsForm({
           name="dataAgendamento"
           type="date"
           required
-          min={hoje}
           defaultValue={hoje}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         />

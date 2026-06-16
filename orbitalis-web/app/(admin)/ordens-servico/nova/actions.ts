@@ -8,13 +8,17 @@ export async function criarOs(
   tecnicoId: string,
   dataAgendamento: string,
   observacoesGerais: string,
+  tipo: string,
+  equipamentoId: string,
 ) {
   await api.post('/ordens-servico', {
     ambienteId,
-    tecnicoId: tecnicoId || undefined,
-    origem: 'manual_admin',
+    tecnicoId:          tecnicoId    || undefined,
+    tipo:               tipo         || 'corretiva',
+    equipamentoId:      equipamentoId || undefined,
+    origem:             'manual_admin',
     dataAgendamento,
-    observacoesGerais: observacoesGerais || undefined,
+    observacoesGerais:  observacoesGerais || undefined,
   })
   redirect('/ordens-servico')
 }
