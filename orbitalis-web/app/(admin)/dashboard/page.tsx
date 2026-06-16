@@ -78,9 +78,6 @@ export default async function DashboardPage({ searchParams }: Props) {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 8)
 
-  const totalPlanosVencendo =
-    planosVencendo.vermelho.length + planosVencendo.amarelo.length + planosVencendo.verde.length
-
   return (
     <div>
       <div className="mb-8">
@@ -157,8 +154,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       </div>
 
       {/* ── Linha 3: alertas de planos vencendo ── */}
-      {totalPlanosVencendo > 0 && (
-        <div className="mb-6">
+      <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
             <CalendarClock size={16} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">Planos preventivos vencendo</h2>
@@ -236,7 +232,6 @@ export default async function DashboardPage({ searchParams }: Props) {
 
           </div>
         </div>
-      )}
 
       {/* ── Linha 4: gráfico + ranking técnicos ── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
@@ -300,13 +295,15 @@ export default async function DashboardPage({ searchParams }: Props) {
 
       </div>
 
-      {/* ── Linha 5: manutenções por tipo de equipamento ── */}
-      {tiposOrdenados.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
-          <div className="flex items-center gap-2 mb-5">
-            <Wrench size={16} className="text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700">Manutenções concluídas por tipo de equipamento</h2>
-          </div>
+      {/* ── Linha 5: O.S. por tipo de equipamento ── */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
+        <div className="flex items-center gap-2 mb-5">
+          <Wrench size={16} className="text-gray-400" />
+          <h2 className="text-sm font-semibold text-gray-700">O.S. por tipo de equipamento</h2>
+        </div>
+        {tiposOrdenados.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">Nenhuma O.S. com equipamento registrada.</p>
+        ) : (
           <div className="space-y-3">
             {tiposOrdenados.map(([tipo, count]) => {
               const maxCount = tiposOrdenados[0][1]
@@ -324,8 +321,8 @@ export default async function DashboardPage({ searchParams }: Props) {
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

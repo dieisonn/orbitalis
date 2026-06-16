@@ -130,9 +130,8 @@ export class OrdensServicoService {
           },
         }),
 
-        // O.S. items concluídas com tipo do equipamento (para contagem por tipo)
+        // O.S. items com tipo do equipamento (todas as O.S., para contagem por tipo)
         this.prisma.ordemServicoItem.findMany({
-          where: { ordemServico: { status: 'concluida' } },
           select: { equipamento: { select: { tipoEquipamento: true } } },
         }),
 
