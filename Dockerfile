@@ -28,4 +28,4 @@ COPY orbitalis-api/prisma ./prisma/
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma db push && node dist/src/main"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/src/main"]
