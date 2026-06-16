@@ -200,9 +200,12 @@ export class PlanosManutencaoService {
     let cursor = new Date(plano.proximaGeracao);
 
     if (plano.dataFim) {
-      while (cursor <= plano.dataFim) {
+      while (true) {
+        const next = new Date(cursor);
+        next.setDate(next.getDate() + plano.frequenciaDias);
+        if (next > plano.dataFim) break;
         datasParaGerar.push(new Date(cursor));
-        cursor.setDate(cursor.getDate() + plano.frequenciaDias);
+        cursor = next;
       }
     } else {
       datasParaGerar.push(new Date(cursor));
