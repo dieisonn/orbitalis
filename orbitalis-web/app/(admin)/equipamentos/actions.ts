@@ -164,3 +164,117 @@ export async function importarEquipamentos(
   revalidatePath('/equipamentos')
   return results
 }
+
+// ─── Validação prévia (preview) ───────────────────────────────────────────────
+
+export type EquipamentoValidacaoRow = {
+  nome: string
+  marca: string
+  ambienteResolvidoNome: string | null
+  clienteResolvidoNome: string | null
+  erro: string | null
+}
+
+export async function validarEquipamentosImport(
+  rows: EquipamentoImportRow[],
+): Promise<EquipamentoValidacaoRow[]> {
+  let ambientes: AmbienteRef[] = []
+  try {
+    const res = await api.get<{ data: AmbienteRef[] }>('/ambientes?perPage=9999')
+    ambientes = res.data
+  } catch {
+    return rows.map((r) => ({
+      nome: r.nome,
+      marca: r.marca,
+      ambienteResolvidoNome: null,
+      clienteResolvidoNome: null,
+      erro: 'Falha ao buscar ambientes',
+    }))
+  }
+
+  return rows.map((row) => {
+    let ambienteId = row.ambienteId?.trim()
+
+    if (ambienteId) {
+      const match = ambientes.find((a) => a.id === ambienteId)
+      if (!match) {
+        return {
+          nome: row.nome,
+          marca: row.marca,
+          ambienteResolvidoNome: null,
+          clienteResolvidoNome: null,
+          erro: `ID de ambiente não encontrado: ${ambienteId}`,
+        }
+      }
+      return {
+        nome: row.nome,
+        marca: row.marca,
+        ambienteResolvidoNome: match.nome,
+        clienteResolvidoNome: match.cliente.nomeFantasia ?? match.cliente.razaoSocial,
+        erro: null,
+      }
+    }
+
+    const nameQ = row.ambienteNome?.toLowerCase().trim() ?? ''
+    const clienteQ = row.clienteNome?.toLowerCase().trim() ?? ''
+
+    if (!nameQ) {
+      return {
+        nome: row.nome,
+        marca: row.marca,
+        ambienteResolvidoNome: null,
+        clienteResolvidoNome: null,
+        erro: 'Ambiente não informado (preencha ambiente_id ou ambiente_nome)',
+      }
+    }
+
+    let matches = ambientes.filter((a) => a.nome.toLowerCase().trim() === nameQ)
+
+    if (matches.length === 0) {
+      return {
+        nome: row.nome,
+        marca: row.marca,
+        ambienteResolvidoNome: null,
+        clienteResolvidoNome: null,
+        erro: `Ambiente "${row.ambienteNome}" não cadastrado`,
+      }
+    }
+
+    if (matches.length > 1 && clienteQ) {
+      matches = matches.filter(
+        (a) =>
+          a.cliente.razaoSocial.toLowerCase().includes(clienteQ) ||
+          (a.cliente.nomeFantasia ?? '').toLowerCase().includes(clienteQ),
+      )
+    }
+
+    if (matches.length === 0) {
+      return {
+        nome: row.nome,
+        marca: row.marca,
+        ambienteResolvidoNome: null,
+        clienteResolvidoNome: null,
+        erro: `Ambiente "${row.ambienteNome}" não encontrado para cliente "${row.clienteNome}"`,
+      }
+    }
+
+    if (matches.length > 1) {
+      return {
+        nome: row.nome,
+        marca: row.marca,
+        ambienteResolvidoNome: null,
+        clienteResolvidoNome: null,
+        erro: `Nome de ambiente ambíguo: "${row.ambienteNome}". Adicione a coluna cliente_nome.`,
+      }
+    }
+
+    const m = matches[0]
+    return {
+      nome: row.nome,
+      marca: row.marca,
+      ambienteResolvidoNome: m.nome,
+      clienteResolvidoNome: m.cliente.nomeFantasia ?? m.cliente.razaoSocial,
+      erro: null,
+    }
+  })
+}

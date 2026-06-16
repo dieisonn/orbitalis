@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import {
   ClipboardList, Clock, AlertTriangle, CheckCircle,
-  XCircle, AlertCircle, TrendingUp, User,
+  XCircle, AlertCircle, TrendingUp, User, Wrench, CalendarClock,
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
 import { YearSelector } from '@/components/ui/year-selector'
@@ -10,13 +10,17 @@ import { YearSelector } from '@/components/ui/year-selector'
 type TaxaConclusao = { concluidas: number; total: number; percentual: number }
 type Tecnico = {
   tecnicoId: string; nome: string; email: string
-  aberta: number; agendada: number; em_andamento: number; total: number
+  total: number; concluiuUltimoMes: number; atrasadas: number; aIniciar: number
 }
+type PlanoVencendo = { id: string; dataFim: string | null; cliente: string }
+type PlanosVencendo = { vermelho: PlanoVencendo[]; amarelo: PlanoVencendo[]; verde: PlanoVencendo[] }
 type Painel = {
   porStatus: Record<string, number>
   atrasadas: number
   taxaConclusao: TaxaConclusao
   porTecnico: Tecnico[]
+  porTipoEquipamento: Record<string, number>
+  planosVencendo: PlanosVencendo
 }
 type Historico = {
   mes: string; aberta: number; agendada: number
@@ -40,6 +44,11 @@ function TecnicoBar({ value, max }: { value: number; max: number }) {
   )
 }
 
+function formatarData(iso: string | null) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('pt-BR')
+}
+
 type Props = { searchParams: Promise<{ ano?: string }> }
 
 export default async function DashboardPage({ searchParams }: Props) {
@@ -47,19 +56,30 @@ export default async function DashboardPage({ searchParams }: Props) {
   const anoAtual = new Date().getFullYear()
   const ano = anoParam ? Math.max(2020, Math.min(anoAtual + 1, Number(anoParam))) : anoAtual
 
+  const defaultPainel: Painel = {
+    porStatus: {},
+    atrasadas: 0,
+    taxaConclusao: { concluidas: 0, total: 0, percentual: 0 },
+    porTecnico: [],
+    porTipoEquipamento: {},
+    planosVencendo: { vermelho: [], amarelo: [], verde: [] },
+  }
+
   const [painel, historico] = await Promise.all([
-    api.get<Painel>('/ordens-servico/painel').catch((): Painel => ({
-      porStatus: {},
-      atrasadas: 0,
-      taxaConclusao: { concluidas: 0, total: 0, percentual: 0 },
-      porTecnico: [],
-    })),
+    api.get<Painel>('/ordens-servico/painel').catch(() => defaultPainel),
     api.get<Historico[]>(`/ordens-servico/historico?ano=${ano}`).catch(() => [] as Historico[]),
   ])
 
-  const { porStatus, atrasadas, taxaConclusao, porTecnico } = painel
+  const { porStatus, atrasadas, taxaConclusao, porTecnico, porTipoEquipamento, planosVencendo } = painel
   const total = Object.values(porStatus).reduce<number>((s, n) => s + (n ?? 0), 0)
   const maxTecnico = porTecnico[0]?.total ?? 1
+
+  const tiposOrdenados = Object.entries(porTipoEquipamento)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+
+  const totalPlanosVencendo =
+    planosVencendo.vermelho.length + planosVencendo.amarelo.length + planosVencendo.verde.length
 
   return (
     <div>
@@ -136,8 +156,90 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
       </div>
 
-      {/* ── Linha 3: gráfico + ranking técnicos ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* ── Linha 3: alertas de planos vencendo ── */}
+      {totalPlanosVencendo > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarClock size={16} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700">Planos preventivos vencendo</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            {/* Vermelho — vence em até 30 dias */}
+            <div className={`rounded-2xl p-5 border ${planosVencendo.vermelho.length > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-border opacity-50'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-xs font-semibold uppercase tracking-wide ${planosVencendo.vermelho.length > 0 ? 'text-red-600' : 'text-gray-400'}`}>
+                  Vence em até 1 mês
+                </span>
+                <span className={`text-2xl font-bold ${planosVencendo.vermelho.length > 0 ? 'text-red-600' : 'text-gray-300'}`}>
+                  {planosVencendo.vermelho.length}
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {planosVencendo.vermelho.slice(0, 4).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-2">
+                    <a href={`/planos-manutencao?id=${p.id}`} className="text-xs text-red-700 hover:underline truncate">{p.cliente}</a>
+                    <span className="text-[10px] text-red-500 shrink-0">{formatarData(p.dataFim)}</span>
+                  </li>
+                ))}
+                {planosVencendo.vermelho.length > 4 && (
+                  <li className="text-[10px] text-red-400">+{planosVencendo.vermelho.length - 4} mais</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Amarelo — vence em 1–2 meses */}
+            <div className={`rounded-2xl p-5 border ${planosVencendo.amarelo.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-border opacity-50'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-xs font-semibold uppercase tracking-wide ${planosVencendo.amarelo.length > 0 ? 'text-yellow-700' : 'text-gray-400'}`}>
+                  Vence em 1–2 meses
+                </span>
+                <span className={`text-2xl font-bold ${planosVencendo.amarelo.length > 0 ? 'text-yellow-600' : 'text-gray-300'}`}>
+                  {planosVencendo.amarelo.length}
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {planosVencendo.amarelo.slice(0, 4).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-2">
+                    <a href={`/planos-manutencao?id=${p.id}`} className="text-xs text-yellow-800 hover:underline truncate">{p.cliente}</a>
+                    <span className="text-[10px] text-yellow-600 shrink-0">{formatarData(p.dataFim)}</span>
+                  </li>
+                ))}
+                {planosVencendo.amarelo.length > 4 && (
+                  <li className="text-[10px] text-yellow-500">+{planosVencendo.amarelo.length - 4} mais</li>
+                )}
+              </ul>
+            </div>
+
+            {/* Verde — vence em 2–3 meses */}
+            <div className={`rounded-2xl p-5 border ${planosVencendo.verde.length > 0 ? 'bg-green-50 border-green-200' : 'bg-white border-border opacity-50'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-xs font-semibold uppercase tracking-wide ${planosVencendo.verde.length > 0 ? 'text-green-700' : 'text-gray-400'}`}>
+                  Vence em 2–3 meses
+                </span>
+                <span className={`text-2xl font-bold ${planosVencendo.verde.length > 0 ? 'text-green-600' : 'text-gray-300'}`}>
+                  {planosVencendo.verde.length}
+                </span>
+              </div>
+              <ul className="space-y-1.5">
+                {planosVencendo.verde.slice(0, 4).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-2">
+                    <a href={`/planos-manutencao?id=${p.id}`} className="text-xs text-green-800 hover:underline truncate">{p.cliente}</a>
+                    <span className="text-[10px] text-green-600 shrink-0">{formatarData(p.dataFim)}</span>
+                  </li>
+                ))}
+                {planosVencendo.verde.length > 4 && (
+                  <li className="text-[10px] text-green-500">+{planosVencendo.verde.length - 4} mais</li>
+                )}
+              </ul>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ── Linha 4: gráfico + ranking técnicos ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
 
         {/* Gráfico histórico */}
         <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-border">
@@ -173,20 +275,20 @@ export default async function DashboardPage({ searchParams }: Props) {
                     <span className="text-sm font-bold text-primary ml-2 shrink-0">{t.total}</span>
                   </div>
                   <TecnicoBar value={t.total} max={maxTecnico} />
-                  <div className="flex gap-3 mt-1.5">
-                    {t.aberta > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-1.5">
+                    {t.concluiuUltimoMes > 0 && (
+                      <span className="text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
+                        {t.concluiuUltimoMes} concluídas/mês
+                      </span>
+                    )}
+                    {t.atrasadas > 0 && (
+                      <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                        {t.atrasadas} atrasadas
+                      </span>
+                    )}
+                    {t.aIniciar > 0 && (
                       <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                        {t.aberta} abertas
-                      </span>
-                    )}
-                    {t.agendada > 0 && (
-                      <span className="text-[10px] text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
-                        {t.agendada} agend.
-                      </span>
-                    )}
-                    {t.em_andamento > 0 && (
-                      <span className="text-[10px] text-yellow-700 bg-yellow-50 px-1.5 py-0.5 rounded">
-                        {t.em_andamento} em and.
+                        {t.aIniciar} a iniciar
                       </span>
                     )}
                   </div>
@@ -197,6 +299,33 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
 
       </div>
+
+      {/* ── Linha 5: manutenções por tipo de equipamento ── */}
+      {tiposOrdenados.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
+          <div className="flex items-center gap-2 mb-5">
+            <Wrench size={16} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700">Manutenções concluídas por tipo de equipamento</h2>
+          </div>
+          <div className="space-y-3">
+            {tiposOrdenados.map(([tipo, count]) => {
+              const maxCount = tiposOrdenados[0][1]
+              const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0
+              return (
+                <div key={tipo}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-gray-700">{tipo}</span>
+                    <span className="text-sm font-bold text-primary">{count}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div className="bg-primary/60 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

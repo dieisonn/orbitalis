@@ -1,13 +1,15 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { Upload, Download, X, CheckCircle2, XCircle, FileDown, Loader2 } from 'lucide-react'
+import { Upload, Download, X, CheckCircle2, XCircle, FileDown, Loader2, AlertTriangle, Info } from 'lucide-react'
 import {
   exportarEquipamentosData,
   importarEquipamentos,
+  validarEquipamentosImport,
   type EquipamentoImportRow,
   type EquipamentoImportResult,
   type EquipamentoExportRow,
+  type EquipamentoValidacaoRow,
 } from '@/app/(admin)/equipamentos/actions'
 
 // ─── CSV helpers ──────────────────────────────────────────────────────────────
@@ -155,19 +157,20 @@ export function ExportarEquipamentosButton() {
 
 // ─── Import modal ──────────────────────────────────────────────────────────────
 
-type Step = 'idle' | 'preview' | 'importing' | 'done'
+type Step = 'idle' | 'validating' | 'preview' | 'importing' | 'done'
 
 export function ImportarEquipamentosButton() {
-  const [open, setOpen]       = useState(false)
-  const [step, setStep]       = useState<Step>('idle')
-  const [rows, setRows]       = useState<EquipamentoImportRow[]>([])
-  const [results, setResults] = useState<EquipamentoImportResult[]>([])
-  const [error, setError]     = useState<string | null>(null)
+  const [open, setOpen]         = useState(false)
+  const [step, setStep]         = useState<Step>('idle')
+  const [rows, setRows]         = useState<EquipamentoImportRow[]>([])
+  const [validacoes, setValidacoes] = useState<EquipamentoValidacaoRow[]>([])
+  const [results, setResults]   = useState<EquipamentoImportResult[]>([])
+  const [error, setError]       = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const fileRef = useRef<HTMLInputElement>(null)
 
   function reset() {
-    setStep('idle'); setRows([]); setResults([]); setError(null)
+    setStep('idle'); setRows([]); setValidacoes([]); setResults([]); setError(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -186,7 +189,12 @@ export function ImportarEquipamentosButton() {
         return
       }
       setRows(parsed)
-      setStep('preview')
+      setStep('validating')
+      startTransition(async () => {
+        const val = await validarEquipamentosImport(parsed)
+        setValidacoes(val)
+        setStep('preview')
+      })
     }
     reader.readAsText(file, 'utf-8')
   }
@@ -208,8 +216,10 @@ export function ImportarEquipamentosButton() {
     downloadBlob('﻿' + [header, ...lines].join('\r\n'), 'resultado_importacao_equipamentos.csv')
   }
 
-  const okCount  = results.filter((r) => r.status === 'ok').length
-  const errCount = results.filter((r) => r.status === 'erro').length
+  const okCount    = results.filter((r) => r.status === 'ok').length
+  const errCount   = results.filter((r) => r.status === 'erro').length
+  const errosVal   = validacoes.filter((v) => v.erro !== null).length
+  const canImport  = step === 'preview' && errosVal === 0
 
   return (
     <>
@@ -236,6 +246,21 @@ export function ImportarEquipamentosButton() {
 
             <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
 
+              {/* Banner de aviso — sempre visível antes da importação */}
+              {step !== 'done' && (
+                <div className="flex gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-800 space-y-0.5">
+                    <p className="font-semibold">Pré-requisito: cliente e ambiente já cadastrados</p>
+                    <p className="text-xs text-amber-700">
+                      Cada equipamento deve ser vinculado a um ambiente existente. Cadastre o cliente e o ambiente antes
+                      de importar — valores digitados livremente na planilha que não correspondam a registros existentes
+                      serão rejeitados.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {step === 'idle' && (
                 <div className="space-y-4">
                   <div className="text-sm text-gray-600 space-y-1">
@@ -251,9 +276,14 @@ export function ImportarEquipamentosButton() {
                       <strong>Colunas opcionais:</strong>{' '}
                       <code className="bg-surface px-1 rounded text-xs">potencia · modelo · numero_serie · cliente_nome · data_instalacao · condicao · valor_aquisicao · diagnostico_inicial</code>
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Use <strong>ambiente_id</strong> (mais preciso) ou <strong>ambiente_nome</strong> + <strong>cliente_nome</strong> para identificar o ambiente. Exporte a lista atual para ver os IDs.
-                    </p>
+                    <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-2">
+                      <Info size={14} className="text-blue-500 shrink-0 mt-0.5" />
+                      <p className="text-xs text-blue-700">
+                        Use <strong>ambiente_id</strong> (mais preciso, obtido ao exportar) ou{' '}
+                        <strong>ambiente_nome</strong> + <strong>cliente_nome</strong> para identificar o ambiente.
+                        Os nomes precisam corresponder <em>exatamente</em> aos cadastros existentes.
+                      </p>
+                    </div>
                   </div>
 
                   <label className="flex flex-col items-center justify-center gap-3 border-2 border-dashed border-border rounded-xl p-8 cursor-pointer hover:border-primary/40 hover:bg-surface/50 transition-colors">
@@ -277,16 +307,37 @@ export function ImportarEquipamentosButton() {
                 </div>
               )}
 
+              {step === 'validating' && (
+                <div className="flex flex-col items-center justify-center py-10 gap-3">
+                  <Loader2 size={32} className="animate-spin text-primary" />
+                  <p className="text-sm text-gray-600">Validando {rows.length} equipamento(s)…</p>
+                </div>
+              )}
+
               {step === 'preview' && (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">
-                    <strong>{rows.length}</strong> equipamento(s) encontrado(s). Confira antes de importar:
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-gray-600">
+                      <strong>{rows.length}</strong> equipamento(s) encontrado(s). Confira antes de importar:
+                    </p>
+                    {errosVal > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
+                        <XCircle size={12} />
+                        {errosVal} com erro de vínculo
+                      </span>
+                    )}
+                    {errosVal === 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                        <CheckCircle2 size={12} />
+                        Todos os ambientes encontrados
+                      </span>
+                    )}
+                  </div>
                   <div className="overflow-x-auto rounded-lg border border-border">
                     <table className="w-full text-xs">
                       <thead className="bg-surface">
                         <tr>
-                          {['Nome', 'Tipo', 'Potência', 'Marca', 'Ambiente / ID'].map((h) => (
+                          {['Nome', 'Tipo', 'Potência', 'Marca', 'Ambiente vinculado', 'Cliente'].map((h) => (
                             <th key={h} className="text-left px-3 py-2 font-semibold text-gray-500 uppercase tracking-wide">
                               {h}
                             </th>
@@ -294,26 +345,42 @@ export function ImportarEquipamentosButton() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {rows.slice(0, 12).map((r, i) => (
-                          <tr key={i} className="hover:bg-surface/60">
-                            <td className="px-3 py-2 font-medium text-gray-900">{r.nome}</td>
-                            <td className="px-3 py-2 text-gray-600">{r.tipoEquipamento}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.potencia || '—'}</td>
-                            <td className="px-3 py-2 text-gray-600">{r.marca}</td>
-                            <td className="px-3 py-2 text-gray-500 max-w-[160px] truncate font-mono text-[10px]">
-                              {r.ambienteId
-                                ? r.ambienteId
-                                : r.ambienteNome
-                                  ? `${r.ambienteNome}${r.clienteNome ? ` · ${r.clienteNome}` : ''}`
-                                  : <span className="text-destructive font-sans">não informado</span>}
-                            </td>
-                          </tr>
-                        ))}
+                        {rows.slice(0, 12).map((r, i) => {
+                          const val = validacoes[i]
+                          const temErro = val?.erro != null
+                          return (
+                            <tr key={i} className={temErro ? 'bg-red-50' : 'hover:bg-surface/60'}>
+                              <td className="px-3 py-2 font-medium text-gray-900">{r.nome}</td>
+                              <td className="px-3 py-2 text-gray-600">{r.tipoEquipamento}</td>
+                              <td className="px-3 py-2 text-gray-500">{r.potencia || '—'}</td>
+                              <td className="px-3 py-2 text-gray-600">{r.marca}</td>
+                              <td className="px-3 py-2 max-w-[140px]">
+                                {temErro ? (
+                                  <span className="text-destructive font-medium truncate block" title={val.erro ?? ''}>
+                                    {val.erro}
+                                  </span>
+                                ) : (
+                                  <span className="text-green-700 truncate block">{val?.ambienteResolvidoNome ?? '—'}</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-gray-500 max-w-[120px] truncate">
+                                {val?.clienteResolvidoNome ?? '—'}
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
                   {rows.length > 12 && (
                     <p className="text-xs text-gray-400">… e mais {rows.length - 12} linha(s) não exibidas.</p>
+                  )}
+                  {errosVal > 0 && (
+                    <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+                      Corrija os erros na planilha e selecione o arquivo novamente antes de importar.
+                      Certifique-se de que o nome do ambiente e do cliente correspondem <strong>exatamente</strong> ao que
+                      está cadastrado no sistema, ou use a coluna <code>ambiente_id</code>.
+                    </p>
                   )}
                 </div>
               )}
@@ -407,8 +474,9 @@ export function ImportarEquipamentosButton() {
                     <button
                       type="button"
                       onClick={handleImport}
-                      disabled={pending}
-                      className="px-5 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 disabled:opacity-60 transition-colors"
+                      disabled={!canImport || pending}
+                      className="px-5 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      title={!canImport ? 'Corrija os erros antes de importar' : undefined}
                     >
                       Importar {rows.length} equipamento(s)
                     </button>

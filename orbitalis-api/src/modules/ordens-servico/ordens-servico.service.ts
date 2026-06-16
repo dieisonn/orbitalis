@@ -75,49 +75,81 @@ export class OrdensServicoService {
     const agora = new Date();
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
     const fimMes   = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999);
+    const ha30Dias = new Date(agora);
+    ha30Dias.setDate(ha30Dias.getDate() - 30);
+    const em30Dias = new Date(agora);
+    em30Dias.setDate(em30Dias.getDate() + 30);
+    const em60Dias = new Date(agora);
+    em60Dias.setDate(em60Dias.getDate() + 60);
+    const em90Dias = new Date(agora);
+    em90Dias.setDate(em90Dias.getDate() + 90);
 
-    const [contagens, atrasadas, totalMes, concluidasMes, tecnicos] = await Promise.all([
-      // Contagem por status (total geral)
-      this.prisma.ordemServico.groupBy({
-        by: ['status'],
-        _count: { _all: true },
-      }),
+    const [contagens, atrasadas, totalMes, concluidasMes, tecnicos, itensComTipo, planosRaw] =
+      await Promise.all([
+        // Contagem por status (total geral)
+        this.prisma.ordemServico.groupBy({
+          by: ['status'],
+          _count: { _all: true },
+        }),
 
-      // O.S. com dataAgendamento no passado e ainda abertas/agendadas
-      this.prisma.ordemServico.count({
-        where: {
-          dataAgendamento: { lt: agora },
-          status: { in: ['aberta', 'agendada'] },
-        },
-      }),
-
-      // Total de O.S. agendadas para o mês atual
-      this.prisma.ordemServico.count({
-        where: { dataAgendamento: { gte: inicioMes, lte: fimMes } },
-      }),
-
-      // O.S. concluídas com agendamento no mês atual
-      this.prisma.ordemServico.count({
-        where: {
-          dataAgendamento: { gte: inicioMes, lte: fimMes },
-          status: 'concluida',
-        },
-      }),
-
-      // Técnicos com O.S. ativas (aberta | agendada | em_andamento)
-      this.prisma.usuario.findMany({
-        where: { tipo: 'tecnico' },
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          ordensComoTecnico: {
-            where: { status: { in: ['aberta', 'agendada', 'em_andamento'] } },
-            select: { status: true },
+        // O.S. com dataAgendamento no passado e ainda abertas/agendadas
+        this.prisma.ordemServico.count({
+          where: {
+            dataAgendamento: { lt: agora },
+            status: { in: ['aberta', 'agendada'] },
           },
-        },
-      }),
-    ]);
+        }),
+
+        // Total de O.S. agendadas para o mês atual
+        this.prisma.ordemServico.count({
+          where: { dataAgendamento: { gte: inicioMes, lte: fimMes } },
+        }),
+
+        // O.S. concluídas com agendamento no mês atual
+        this.prisma.ordemServico.count({
+          where: {
+            dataAgendamento: { gte: inicioMes, lte: fimMes },
+            status: 'concluida',
+          },
+        }),
+
+        // Técnicos: todas as O.S. para calcular carga detalhada
+        this.prisma.usuario.findMany({
+          where: { tipo: 'tecnico' },
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            ordensComoTecnico: {
+              select: {
+                status: true,
+                dataAgendamento: true,
+                dataConclusao: true,
+              },
+            },
+          },
+        }),
+
+        // O.S. items concluídas com tipo do equipamento (para contagem por tipo)
+        this.prisma.ordemServicoItem.findMany({
+          where: { ordemServico: { status: 'concluida' } },
+          select: { equipamento: { select: { tipoEquipamento: true } } },
+        }),
+
+        // Planos vencendo em até 90 dias
+        this.prisma.planoManutencao.findMany({
+          where: {
+            ativo: true,
+            dataFim: { gte: agora, lte: em90Dias },
+          },
+          select: {
+            id: true,
+            dataFim: true,
+            cliente: { select: { nomeFantasia: true, razaoSocial: true } },
+          },
+          orderBy: { dataFim: 'asc' },
+        }),
+      ]);
 
     const porStatus = contagens.reduce(
       (acc, item) => ({ ...acc, [item.status]: item._count._all }),
@@ -125,17 +157,53 @@ export class OrdensServicoService {
     );
 
     const porTecnico = tecnicos
-      .map((t) => ({
-        tecnicoId: t.id,
-        nome: t.nome ?? t.email,
-        email: t.email,
-        aberta:      t.ordensComoTecnico.filter((o) => o.status === 'aberta').length,
-        agendada:    t.ordensComoTecnico.filter((o) => o.status === 'agendada').length,
-        em_andamento:t.ordensComoTecnico.filter((o) => o.status === 'em_andamento').length,
-        total:       t.ordensComoTecnico.length,
-      }))
-      .filter((t) => t.total > 0)
+      .map((t) => {
+        const ativas    = t.ordensComoTecnico.filter((o) =>
+          ['aberta', 'agendada', 'em_andamento'].includes(o.status),
+        );
+        const concluídasUltimoMes = t.ordensComoTecnico.filter(
+          (o) => o.status === 'concluida' && o.dataConclusao && o.dataConclusao >= ha30Dias,
+        ).length;
+        const atrasadasTec = ativas.filter(
+          (o) => ['aberta', 'agendada'].includes(o.status) && o.dataAgendamento < agora,
+        ).length;
+        const aIniciar = ativas.filter(
+          (o) => o.status === 'agendada' && o.dataAgendamento >= agora,
+        ).length;
+
+        return {
+          tecnicoId: t.id,
+          nome: t.nome ?? t.email,
+          email: t.email,
+          total: ativas.length,
+          concluiuUltimoMes: concluídasUltimoMes,
+          atrasadas: atrasadasTec,
+          aIniciar,
+        };
+      })
+      .filter((t) => t.total > 0 || t.concluiuUltimoMes > 0)
       .sort((a, b) => b.total - a.total);
+
+    const porTipoEquipamento = itensComTipo.reduce(
+      (acc, item) => {
+        const tipo = item.equipamento?.tipoEquipamento ?? 'Outros';
+        acc[tipo] = (acc[tipo] ?? 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    const planosVencendo = {
+      vermelho: planosRaw
+        .filter((p) => p.dataFim! <= em30Dias)
+        .map((p) => ({ id: p.id, dataFim: p.dataFim, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
+      amarelo: planosRaw
+        .filter((p) => p.dataFim! > em30Dias && p.dataFim! <= em60Dias)
+        .map((p) => ({ id: p.id, dataFim: p.dataFim, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
+      verde: planosRaw
+        .filter((p) => p.dataFim! > em60Dias)
+        .map((p) => ({ id: p.id, dataFim: p.dataFim, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
+    };
 
     return {
       porStatus,
@@ -146,6 +214,8 @@ export class OrdensServicoService {
         percentual: totalMes > 0 ? Math.round((concluidasMes / totalMes) * 100) : 0,
       },
       porTecnico,
+      porTipoEquipamento,
+      planosVencendo,
     };
   }
 
