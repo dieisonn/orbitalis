@@ -200,10 +200,12 @@ export class PlanosManutencaoService {
     let cursor = new Date(plano.proximaGeracao);
 
     if (plano.dataFim) {
-      while (cursor < plano.dataFim) {
+      while (true) {
+        const next = new Date(cursor);
+        next.setDate(next.getDate() + plano.frequenciaDias);
+        if (next > plano.dataFim) break;
         datasParaGerar.push(new Date(cursor));
-        cursor = new Date(cursor);
-        cursor.setDate(cursor.getDate() + plano.frequenciaDias);
+        cursor = next;
       }
     } else {
       datasParaGerar.push(new Date(cursor));
@@ -246,7 +248,9 @@ export class PlanosManutencaoService {
     const ultimaData = datasParaGerar[datasParaGerar.length - 1];
     const proxima = new Date(ultimaData);
     proxima.setDate(proxima.getDate() + plano.frequenciaDias);
-    const esgotado = plano.dataFim ? proxima > plano.dataFim : false;
+    const proximaNext = new Date(proxima);
+    proximaNext.setDate(proximaNext.getDate() + plano.frequenciaDias);
+    const esgotado = plano.dataFim ? proximaNext > plano.dataFim : false;
 
     await this.prisma.planoManutencao.update({
       where: { id },
