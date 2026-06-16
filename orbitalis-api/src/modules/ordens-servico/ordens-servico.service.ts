@@ -135,14 +135,14 @@ export class OrdensServicoService {
           select: { equipamento: { select: { tipoEquipamento: true } } },
         }),
 
-        // Planos vencendo em até 90 dias
+        // Planos vencendo em até 90 dias (inclui inativos para alertar renovação)
         this.prisma.planoManutencao.findMany({
           where: {
-            ativo: true,
             dataFim: { gte: agora, lte: em90Dias },
           },
           select: {
             id: true,
+            ativo: true,
             dataFim: true,
             cliente: { select: { nomeFantasia: true, razaoSocial: true } },
           },
@@ -195,13 +195,13 @@ export class OrdensServicoService {
     const planosVencendo = {
       vermelho: planosRaw
         .filter((p) => p.dataFim! <= em30Dias)
-        .map((p) => ({ id: p.id, dataFim: p.dataFim, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
+        .map((p) => ({ id: p.id, dataFim: p.dataFim, ativo: p.ativo, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
       amarelo: planosRaw
         .filter((p) => p.dataFim! > em30Dias && p.dataFim! <= em60Dias)
-        .map((p) => ({ id: p.id, dataFim: p.dataFim, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
+        .map((p) => ({ id: p.id, dataFim: p.dataFim, ativo: p.ativo, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
       verde: planosRaw
         .filter((p) => p.dataFim! > em60Dias)
-        .map((p) => ({ id: p.id, dataFim: p.dataFim, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
+        .map((p) => ({ id: p.id, dataFim: p.dataFim, ativo: p.ativo, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
     };
 
     return {

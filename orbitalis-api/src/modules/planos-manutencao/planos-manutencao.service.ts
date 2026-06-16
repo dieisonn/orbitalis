@@ -248,9 +248,7 @@ export class PlanosManutencaoService {
     const ultimaData = datasParaGerar[datasParaGerar.length - 1];
     const proxima = new Date(ultimaData);
     proxima.setDate(proxima.getDate() + plano.frequenciaDias);
-    const proximaNext = new Date(proxima);
-    proximaNext.setDate(proximaNext.getDate() + plano.frequenciaDias);
-    const esgotado = plano.dataFim ? proximaNext > plano.dataFim : false;
+    const esgotado = plano.dataFim ? proxima > plano.dataFim : false;
 
     await this.prisma.planoManutencao.update({
       where: { id },

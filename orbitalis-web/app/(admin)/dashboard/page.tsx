@@ -12,7 +12,7 @@ type Tecnico = {
   tecnicoId: string; nome: string; email: string
   total: number; concluiuUltimoMes: number; atrasadas: number; aIniciar: number
 }
-type PlanoVencendo = { id: string; dataFim: string | null; cliente: string }
+type PlanoVencendo = { id: string; dataFim: string | null; ativo: boolean; cliente: string }
 type PlanosVencendo = { vermelho: PlanoVencendo[]; amarelo: PlanoVencendo[]; verde: PlanoVencendo[] }
 type Painel = {
   porStatus: Record<string, number>
@@ -174,8 +174,11 @@ export default async function DashboardPage({ searchParams }: Props) {
               <ul className="space-y-1.5">
                 {planosVencendo.vermelho.slice(0, 4).map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-2">
-                    <a href={`/planos-manutencao?id=${p.id}`} className="text-xs text-red-700 hover:underline truncate">{p.cliente}</a>
-                    <span className="text-[10px] text-red-500 shrink-0">{formatarData(p.dataFim)}</span>
+                    <a href={`/planos-manutencao/${p.id}`} className="text-xs text-red-700 hover:underline truncate">{p.cliente}</a>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!p.ativo && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded">inativo</span>}
+                      <span className="text-[10px] text-red-500">{formatarData(p.dataFim)}</span>
+                    </div>
                   </li>
                 ))}
                 {planosVencendo.vermelho.length > 4 && (
@@ -197,8 +200,11 @@ export default async function DashboardPage({ searchParams }: Props) {
               <ul className="space-y-1.5">
                 {planosVencendo.amarelo.slice(0, 4).map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-2">
-                    <a href={`/planos-manutencao?id=${p.id}`} className="text-xs text-yellow-800 hover:underline truncate">{p.cliente}</a>
-                    <span className="text-[10px] text-yellow-600 shrink-0">{formatarData(p.dataFim)}</span>
+                    <a href={`/planos-manutencao/${p.id}`} className="text-xs text-yellow-800 hover:underline truncate">{p.cliente}</a>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!p.ativo && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded">inativo</span>}
+                      <span className="text-[10px] text-yellow-600">{formatarData(p.dataFim)}</span>
+                    </div>
                   </li>
                 ))}
                 {planosVencendo.amarelo.length > 4 && (
@@ -220,8 +226,11 @@ export default async function DashboardPage({ searchParams }: Props) {
               <ul className="space-y-1.5">
                 {planosVencendo.verde.slice(0, 4).map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-2">
-                    <a href={`/planos-manutencao?id=${p.id}`} className="text-xs text-green-800 hover:underline truncate">{p.cliente}</a>
-                    <span className="text-[10px] text-green-600 shrink-0">{formatarData(p.dataFim)}</span>
+                    <a href={`/planos-manutencao/${p.id}`} className="text-xs text-green-800 hover:underline truncate">{p.cliente}</a>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!p.ativo && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded">inativo</span>}
+                      <span className="text-[10px] text-green-600">{formatarData(p.dataFim)}</span>
+                    </div>
                   </li>
                 ))}
                 {planosVencendo.verde.length > 4 && (

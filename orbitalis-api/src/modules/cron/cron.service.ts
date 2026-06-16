@@ -61,6 +61,16 @@ export class CronService {
           datasParaGerar.push(new Date(cursor));
         }
 
+        if (datasParaGerar.length === 0) {
+          // Nenhum ciclo cabe mais dentro do prazo → encerra o plano
+          await this.prisma.planoManutencao.update({
+            where: { id: plano.id },
+            data: { ativo: false },
+          });
+          this.logger.log(`Plano ${plano.id}: sem ciclos restantes — marcado como concluído`);
+          continue;
+        }
+
         for (const dataGeracao of datasParaGerar) {
           for (const config of configs) {
             await this.prisma.$transaction(async (tx) => {
