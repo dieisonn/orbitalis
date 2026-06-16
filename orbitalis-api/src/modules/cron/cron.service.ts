@@ -50,12 +50,9 @@ export class CronService {
         let cursor = new Date(plano.proximaGeracao);
 
         if (plano.dataFim) {
-          while (true) {
-            const next = new Date(cursor);
-            next.setDate(next.getDate() + plano.frequenciaDias);
-            if (next > plano.dataFim) break;
+          while (cursor <= plano.dataFim) {
             datasParaGerar.push(new Date(cursor));
-            cursor = next;
+            cursor.setDate(cursor.getDate() + plano.frequenciaDias);
           }
         } else {
           datasParaGerar.push(new Date(cursor));
@@ -102,7 +99,7 @@ export class CronService {
         const ultimaData = datasParaGerar[datasParaGerar.length - 1];
         const proximaGeracao = new Date(ultimaData);
         proximaGeracao.setDate(proximaGeracao.getDate() + plano.frequenciaDias);
-        const esgotado = plano.dataFim ? proximaGeracao >= plano.dataFim : false;
+        const esgotado = plano.dataFim ? proximaGeracao > plano.dataFim : false;
 
         await this.prisma.planoManutencao.update({
           where: { id: plano.id },
