@@ -189,6 +189,7 @@ model PlanoEquipamentoConfig {
 // ─────────────────────────────────────────
 model OrdemServico {
   id                String    @id @default(uuid()) @db.Uuid
+  numero            Int       @default(autoincrement()) @unique
   ambienteId        String    @map("ambiente_id") @db.Uuid
   planoId           String?   @map("plano_id") @db.Uuid
   tecnicoId         String?   @map("tecnico_id") @db.Uuid

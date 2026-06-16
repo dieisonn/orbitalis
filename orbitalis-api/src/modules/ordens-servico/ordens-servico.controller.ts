@@ -51,6 +51,7 @@ export class OrdensServicoController {
     @Query('q') q?: string,
     @Query('page') page?: string,
     @Query('perPage') perPage?: string,
+    @Query('orderBy') orderBy?: string,
   ) {
     return this.ordensServicoService.findAll({
       status,
@@ -62,6 +63,7 @@ export class OrdensServicoController {
       q,
       page: page ? parseInt(page, 10) : 1,
       perPage: perPage ? parseInt(perPage, 10) : 20,
+      orderBy,
     });
   }
 

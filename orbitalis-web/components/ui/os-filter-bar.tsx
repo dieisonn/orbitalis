@@ -14,6 +14,7 @@ type Props = {
   currentClienteId?: string
   currentDataInicio?: string
   currentDataFim?:   string
+  currentOrderBy?:   string
   atrasadas?:        boolean
   tecnicos:          Tecnico[]
   clientes:          Cliente[]
@@ -28,9 +29,16 @@ const STATUS_OPTIONS = [
   { value: 'cancelada',   label: 'Canceladas' },
 ]
 
+const ORDER_OPTIONS = [
+  { value: 'numero_desc', label: 'Mais recentes primeiro' },
+  { value: 'numero_asc',  label: 'Mais antigas primeiro' },
+  { value: 'data_desc',   label: 'Data agend. ↓' },
+  { value: 'data_asc',    label: 'Data agend. ↑' },
+]
+
 export function OsFilterBar({
   currentStatus, currentQ, currentTecnicoId, currentClienteId,
-  currentDataInicio, currentDataFim, atrasadas,
+  currentDataInicio, currentDataFim, currentOrderBy, atrasadas,
   tecnicos, clientes,
 }: Props) {
   const router = useRouter()
@@ -45,6 +53,7 @@ export function OsFilterBar({
       clienteId: currentClienteId,
       dataInicio:currentDataInicio,
       dataFim:   currentDataFim,
+      orderBy:   currentOrderBy,
       atrasadas: atrasadas ? '1' : undefined,
       // reset page when any filter changes
       page: undefined,
@@ -96,6 +105,16 @@ export function OsFilterBar({
           className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-w-[160px]"
         >
           {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+
+        <select
+          value={currentOrderBy ?? 'numero_desc'}
+          onChange={(e) => router.push(buildUrl({ orderBy: e.target.value }))}
+          className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-w-[180px]"
+        >
+          {ORDER_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>

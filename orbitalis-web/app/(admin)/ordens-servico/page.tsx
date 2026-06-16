@@ -8,6 +8,7 @@ import { ClipboardList } from 'lucide-react'
 
 type OrdemServico = {
   id: string
+  numero: number | null
   status: 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'
   origem: string
   dataAgendamento: string
@@ -47,13 +48,14 @@ type Props = {
     dataInicio?: string
     dataFim?: string
     atrasadas?: string
+    orderBy?: string
     page?: string
   }>
 }
 
 export default async function OrdensServicoPage({ searchParams }: Props) {
   const sp = await searchParams
-  const { status, q, tecnicoId, clienteId, dataInicio, dataFim, atrasadas, page } = sp
+  const { status, q, tecnicoId, clienteId, dataInicio, dataFim, atrasadas, orderBy, page } = sp
 
   const qs = new URLSearchParams()
   if (status)     qs.set('status', status)
@@ -63,6 +65,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
   if (dataInicio) qs.set('dataInicio', dataInicio)
   if (dataFim)    qs.set('dataFim', dataFim)
   if (atrasadas)  qs.set('atrasadas', atrasadas)
+  if (orderBy)    qs.set('orderBy', orderBy)
   if (page)       qs.set('page', page)
   qs.set('perPage', '20')
 
@@ -122,6 +125,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
         currentClienteId={clienteId}
         currentDataInicio={dataInicio}
         currentDataFim={dataFim}
+        currentOrderBy={orderBy}
         atrasadas={atrasadas === '1' || atrasadas === 'true'}
         tecnicos={tecnicos}
         clientes={clientes}
@@ -155,8 +159,8 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                 const clienteNome = cliente?.nomeFantasia ?? cliente?.razaoSocial
                 return (
                   <tr key={os.id} className="hover:bg-surface transition-colors align-middle">
-                    <td className="px-4 py-4 font-mono text-xs text-gray-400 whitespace-nowrap">
-                      OS-{os.id.slice(0, 6).toUpperCase()}
+                    <td className="px-4 py-4 font-mono text-xs text-gray-500 whitespace-nowrap font-semibold">
+                      {os.numero != null ? `OS-${String(os.numero).padStart(4, '0')}` : `OS-${os.id.slice(0, 6).toUpperCase()}`}
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-medium text-gray-900">{os.ambiente?.nome ?? '—'}</div>

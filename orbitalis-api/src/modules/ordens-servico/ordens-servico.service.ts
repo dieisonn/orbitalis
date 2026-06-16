@@ -224,9 +224,10 @@ export class OrdensServicoService {
     return this.prisma.ordemServico.findMany({
       where: {
         tecnicoId,
-        status: { in: ['aberta', 'em_andamento'] },
+        status: { in: ['aberta', 'agendada', 'em_andamento'] },
       },
       include: { itens: { include: { equipamento: true } }, ambiente: true },
+      orderBy: { dataAgendamento: 'asc' },
     });
   }
 
@@ -322,11 +323,12 @@ export class OrdensServicoService {
     q?: string;
     page?: number;
     perPage?: number;
+    orderBy?: string;
   }) {
     const {
       status, tecnicoId, clienteId,
       dataInicio, dataFim, atrasadas,
-      q, page = 1, perPage = 20,
+      q, page = 1, perPage = 20, orderBy = 'numero_desc',
     } = filters;
 
     const agora = new Date();
@@ -376,7 +378,7 @@ export class OrdensServicoService {
           tecnico: { select: { id: true, email: true, nome: true } },
           itens: { select: { id: true, statusItem: true } },
         },
-        orderBy: { dataAgendamento: 'desc' },
+        orderBy: this.resolveOrderBy(orderBy),
         skip: (page - 1) * perPage,
         take: perPage,
       }),
@@ -384,6 +386,15 @@ export class OrdensServicoService {
     ]);
 
     return { data, total, page, perPage };
+  }
+
+  private resolveOrderBy(orderBy: string): object {
+    switch (orderBy) {
+      case 'numero_asc':  return { numero: 'asc' };
+      case 'data_asc':    return { dataAgendamento: 'asc' };
+      case 'data_desc':   return { dataAgendamento: 'desc' };
+      default:            return { numero: 'desc' };
+    }
   }
 
   findOne(id: string) {
