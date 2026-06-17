@@ -12,6 +12,8 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { ModelosChecklistModule } from './modules/modelos-checklist/modelos-checklist.module';
 import { ConfiguracaoEmpresaModule } from './modules/configuracao-empresa/configuracao-empresa.module';
 import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
+import { ContratosModule } from './modules/contratos/contratos.module';
+import { AlertasModule } from './modules/alertas/alertas.module';
 
 @Module({
   controllers: [HealthController],
@@ -28,6 +30,8 @@ import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
     ModelosChecklistModule,
     ConfiguracaoEmpresaModule,
     NotificacoesModule,
+    ContratosModule,
+    AlertasModule,
   ],
 })
 export class AppModule {}

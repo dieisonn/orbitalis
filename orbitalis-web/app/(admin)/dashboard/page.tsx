@@ -3,6 +3,7 @@ import { api } from '@/lib/api'
 import {
   ClipboardList, Clock, AlertTriangle, CheckCircle,
   XCircle, AlertCircle, TrendingUp, User, Wrench, CalendarClock,
+  DollarSign, Timer, BarChart2,
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
 import { YearSelector } from '@/components/ui/year-selector'
@@ -21,6 +22,10 @@ type Painel = {
   porTecnico: Tecnico[]
   porTipoEquipamento: Record<string, number>
   planosVencendo: PlanosVencendo
+  custoTotalMes: number
+  taxaCorretivas: number
+  tempoMedioAtendimento: number | null
+  totalConcluidasRecente: number
 }
 type Historico = {
   mes: string; aberta: number; agendada: number
@@ -70,7 +75,8 @@ export default async function DashboardPage({ searchParams }: Props) {
     api.get<Historico[]>(`/ordens-servico/historico?ano=${ano}`).catch(() => [] as Historico[]),
   ])
 
-  const { porStatus, atrasadas, taxaConclusao, porTecnico, porTipoEquipamento, planosVencendo } = painel
+  const { porStatus, atrasadas, taxaConclusao, porTecnico, porTipoEquipamento, planosVencendo,
+          custoTotalMes, taxaCorretivas, tempoMedioAtendimento } = painel
   const total = Object.values(porStatus).reduce<number>((s, n) => s + (n ?? 0), 0)
   const maxTecnico = porTecnico[0]?.total ?? 1
 
@@ -95,6 +101,52 @@ export default async function DashboardPage({ searchParams }: Props) {
             <p className={`text-xs font-medium uppercase tracking-wide ${text} opacity-80`}>{label}</p>
           </a>
         ))}
+      </div>
+
+      {/* ── Linha 1b: KPIs gerenciais ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-border flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+              <DollarSign size={10} /> Custo total do mês
+            </p>
+            <p className="text-3xl font-bold text-gray-900">
+              {custoTotalMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">O.S. concluídas com valor registrado</p>
+          </div>
+          <DollarSign size={36} className="text-green-200 shrink-0" />
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-border flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+              <BarChart2 size={10} /> Taxa de corretivas
+            </p>
+            <p className="text-3xl font-bold text-gray-900">{taxaCorretivas}%</p>
+            <p className="text-xs text-gray-400 mt-0.5">das O.S. do mês são corretivas</p>
+            <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+              <div
+                className={`h-1.5 rounded-full ${taxaCorretivas >= 60 ? 'bg-red-400' : taxaCorretivas >= 40 ? 'bg-yellow-400' : 'bg-green-400'}`}
+                style={{ width: `${taxaCorretivas}%` }}
+              />
+            </div>
+          </div>
+          <BarChart2 size={36} className="text-orange-200 shrink-0" />
+        </div>
+
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-border flex items-center justify-between">
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+              <Timer size={10} /> Tempo médio de atend.
+            </p>
+            <p className="text-3xl font-bold text-gray-900">
+              {tempoMedioAtendimento != null ? `${tempoMedioAtendimento}d` : '—'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">dias do agendamento à conclusão (mês)</p>
+          </div>
+          <Timer size={36} className="text-blue-200 shrink-0" />
+        </div>
       </div>
 
       {/* ── Linha 2: total + atrasadas + taxa de conclusão ── */}

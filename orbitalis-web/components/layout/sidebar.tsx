@@ -17,18 +17,26 @@ import {
   Menu,
   X,
   Settings,
+  Bell,
+  FileText,
+  BarChart2,
+  FileSpreadsheet,
 } from 'lucide-react'
 
 const NAV = [
-  { href: '/dashboard',         label: 'Cockpit',           icon: LayoutDashboard },
-  { href: '/clientes',          label: 'Clientes',          icon: Users },
-  { href: '/ambientes',         label: 'Ambientes',         icon: Building2 },
-  { href: '/equipamentos',      label: 'Equipamentos',      icon: Cpu },
-  { href: '/ordens-servico',    label: 'Ordens de Serviço', icon: ClipboardList },
-  { href: '/planos-manutencao', label: 'Planos Prev.',      icon: CalendarClock },
-  { href: '/checklists',        label: 'Checklists',        icon: ClipboardCheck },
-  { href: '/usuarios',          label: 'Técnicos',          icon: UserCog },
-  { href: '/configuracoes',     label: 'Configurações',     icon: Settings },
+  { href: '/dashboard',              label: 'Cockpit',           icon: LayoutDashboard },
+  { href: '/alertas',                label: 'Alertas',           icon: Bell },
+  { href: '/clientes',               label: 'Clientes',          icon: Users },
+  { href: '/contratos',              label: 'Contratos',         icon: FileText },
+  { href: '/ambientes',              label: 'Ambientes',         icon: Building2 },
+  { href: '/equipamentos',           label: 'Equipamentos',      icon: Cpu },
+  { href: '/ordens-servico',         label: 'Ordens de Serviço', icon: ClipboardList },
+  { href: '/planos-manutencao',      label: 'Planos Prev.',      icon: CalendarClock },
+  { href: '/checklists',             label: 'Checklists',        icon: ClipboardCheck },
+  { href: '/tecnicos/produtividade', label: 'Produtividade',     icon: BarChart2 },
+  { href: '/relatorios',             label: 'Relatórios',        icon: FileSpreadsheet },
+  { href: '/usuarios',               label: 'Técnicos',          icon: UserCog },
+  { href: '/configuracoes',          label: 'Configurações',     icon: Settings },
 ]
 
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null } | null

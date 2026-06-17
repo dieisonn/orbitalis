@@ -33,6 +33,20 @@ enum OsOrigem {
   portal_cliente
 }
 
+enum AlertaTipo {
+  os_atrasada
+  os_sem_atualizacao
+  equipamento_reincidente
+  contrato_vencendo
+  plano_vencendo
+}
+
+enum AlertaSeveridade {
+  info
+  aviso
+  critico
+}
+
 enum OsTipo {
   preventiva
   corretiva
@@ -79,6 +93,7 @@ model Cliente {
   usuario          Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   ambientes        Ambiente[]
   planosManutencao PlanoManutencao[]
+  contratos        Contrato[]
 
   @@map("clientes")
 }
@@ -249,6 +264,59 @@ model ConfiguracaoEmpresa {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("configuracao_empresa")
+}
+
+// ─────────────────────────────────────────
+// contratos
+// ─────────────────────────────────────────
+model Contrato {
+  id             String    @id @default(uuid()) @db.Uuid
+  clienteId      String    @map("cliente_id") @db.Uuid
+  descricao      String    @db.VarChar(255)
+  valorMensal    Decimal?  @map("valor_mensal") @db.Decimal(10, 2)
+  vigenciaInicio DateTime  @map("vigencia_inicio")
+  vigenciaFim    DateTime  @map("vigencia_fim")
+  numOsIncluidas Int?      @map("num_os_incluidas")
+  observacoes    String?   @db.Text
+  ativo          Boolean   @default(true)
+  criadoEm       DateTime  @default(now()) @map("criado_em")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+
+  @@index([clienteId, vigenciaFim])
+  @@map("contratos")
+}
+
+// ─────────────────────────────────────────
+// alerta_config  (configuração dos limiares)
+// ─────────────────────────────────────────
+model AlertaConfig {
+  id                      String @id @default(uuid()) @db.Uuid
+  osSemAtualizacaoDias    Int    @default(3)  @map("os_sem_atualizacao_dias")
+  equipamentoCorretivasMes Int   @default(3)  @map("equipamento_corretivas_mes")
+  contratoVencendoDias    Int    @default(30) @map("contrato_vencendo_dias")
+  planoVencendoDias       Int    @default(30) @map("plano_vencendo_dias")
+
+  @@map("alerta_config")
+}
+
+// ─────────────────────────────────────────
+// alerta_ocorrencias
+// ─────────────────────────────────────────
+model AlertaOcorrencia {
+  id           String           @id @default(uuid()) @db.Uuid
+  tipo         AlertaTipo
+  severidade   AlertaSeveridade
+  titulo       String           @db.VarChar(255)
+  descricao    String           @db.Text
+  referenciaId String?          @map("referencia_id") @db.VarChar(255)
+  resolvido    Boolean          @default(false)
+  criadoEm    DateTime          @default(now()) @map("criado_em")
+  resolvidoEm DateTime?         @map("resolvido_em")
+
+  @@index([resolvido, criadoEm])
+  @@map("alerta_ocorrencias")
 }
 
 model AuditoriaConflitoSincronizacao {

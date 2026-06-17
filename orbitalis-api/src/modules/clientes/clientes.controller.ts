@@ -51,6 +51,12 @@ export class ClientesController {
   }
 
   // GET /api/v1/clientes/:id
+  @Get(':id/dashboard')
+  @Roles(UsuarioTipo.admin)
+  dashboard(@Param('id') id: string) {
+    return this.clientesService.dashboard(id);
+  }
+
   @Get(':id')
   @Roles(UsuarioTipo.admin)
   findOne(@Param('id') id: string) {

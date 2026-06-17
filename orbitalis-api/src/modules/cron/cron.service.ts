@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
+import { AlertasService } from '../alertas/alertas.service';
 
 @Injectable()
 export class CronService {
@@ -11,6 +12,7 @@ export class CronService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificacoes: NotificacoesService,
+    private readonly alertas: AlertasService,
   ) {}
 
   // Executa diariamente às 00:00:01 (§US05)
@@ -163,5 +165,12 @@ export class CronService {
     if (atrasadas.length > 0) {
       this.logger.log(`Notificações de atraso enviadas: ${atrasadas.length} O.S.`);
     }
+  }
+
+  // Executa diariamente às 07:00 — avalia regras de alerta
+  @Cron('0 0 7 * * *')
+  async avaliarAlertas() {
+    const criados = await this.alertas.avaliarRegras();
+    if (criados > 0) this.logger.log(`Alertas criados: ${criados}`);
   }
 }

@@ -83,6 +83,82 @@ export class ClientesService {
     return cliente;
   }
 
+  async dashboard(id: string) {
+    const agora = new Date();
+    const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const cliente = await this.findOne(id);
+
+    const ambienteIds = cliente.ambientes.map((a: any) => a.id);
+
+    const [osResumo, custoTotal, contrato, proximaOs] = await Promise.all([
+      this.prisma.ordemServico.groupBy({
+        by: ['status'],
+        where: { ambienteId: { in: ambienteIds } },
+        _count: { _all: true },
+      }),
+      this.prisma.ordemServico.findMany({
+        where: { ambienteId: { in: ambienteIds }, status: 'concluida' },
+        select: { valorMaoObra: true, valorPecas: true },
+      }),
+      this.prisma.contrato.findFirst({
+        where: { clienteId: id, ativo: true },
+        orderBy: { vigenciaFim: 'desc' },
+      }),
+      this.prisma.ordemServico.findFirst({
+        where: {
+          ambienteId: { in: ambienteIds },
+          status: { in: ['agendada', 'em_andamento'] },
+          dataAgendamento: { gte: agora },
+        },
+        orderBy: { dataAgendamento: 'asc' },
+        select: { id: true, dataAgendamento: true, tipo: true, ambiente: { select: { nome: true } } },
+      }),
+    ]);
+
+    const porStatus = osResumo.reduce((acc: Record<string, number>, item) => {
+      acc[item.status] = item._count._all;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const custoTotalGeral = custoTotal.reduce(
+      (s, o) => s + Number(o.valorMaoObra ?? 0) + Number(o.valorPecas ?? 0),
+      0,
+    );
+
+    const osDoMes = await this.prisma.ordemServico.count({
+      where: { ambienteId: { in: ambienteIds }, dataAgendamento: { gte: inicioMes, lte: fimMes } },
+    });
+
+    const ultimasOs = await this.prisma.ordemServico.findMany({
+      where: { ambienteId: { in: ambienteIds } },
+      orderBy: { dataAgendamento: 'desc' },
+      take: 5,
+      select: {
+        id: true, numero: true, status: true, tipo: true, dataAgendamento: true, dataConclusao: true,
+        ambiente: { select: { nome: true } },
+        tecnico: { select: { nome: true, email: true } },
+      },
+    });
+
+    const totalEquipamentos = cliente.ambientes.reduce(
+      (s: number, a: any) => s + (a.equipamentos?.length ?? 0),
+      0,
+    );
+
+    return {
+      porStatus,
+      custoTotalGeral,
+      osDoMes,
+      contrato,
+      proximaOs,
+      ultimasOs,
+      totalAmbientes: cliente.ambientes.length,
+      totalEquipamentos,
+    };
+  }
+
   async remove(id: string) {
     await this.findOne(id);
     // Soft delete (§6.5) — UPDATE deleted_at em vez de DELETE

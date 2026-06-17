@@ -88,7 +88,7 @@ export class OrdensServicoService {
     const em90Dias = new Date(agora);
     em90Dias.setDate(em90Dias.getDate() + 90);
 
-    const [contagens, atrasadas, totalMes, concluidasMes, tecnicos, itensComTipo, planosRaw] =
+    const [contagens, atrasadas, totalMes, concluidasMes, tecnicos, itensComTipo, planosRaw, custoMesRaw, osCorretivas, osConcluidas180, tempoMedioRaw] =
       await Promise.all([
         // Contagem por status (total geral)
         this.prisma.ordemServico.groupBy({
@@ -152,6 +152,32 @@ export class OrdensServicoService {
           },
           orderBy: { dataFim: 'asc' },
         }),
+
+        // Custo total do mês (O.S. concluídas com dataAgendamento no mês)
+        this.prisma.ordemServico.findMany({
+          where: { dataAgendamento: { gte: inicioMes, lte: fimMes }, status: 'concluida' },
+          select: { valorMaoObra: true, valorPecas: true },
+        }),
+
+        // Contagem de O.S. corretivas concluídas este mês
+        this.prisma.ordemServico.count({
+          where: { dataAgendamento: { gte: inicioMes, lte: fimMes }, tipo: 'corretiva' },
+        }),
+
+        // Total de O.S. concluídas nos últimos 180 dias (para taxa corretiva geral)
+        this.prisma.ordemServico.count({
+          where: { status: 'concluida', dataConclusao: { gte: ha30Dias } },
+        }),
+
+        // Tempo médio de atendimento (agendamento → conclusão) do mês
+        this.prisma.ordemServico.findMany({
+          where: {
+            status: 'concluida',
+            dataConclusao: { gte: inicioMes, lte: fimMes },
+            dataInicio: { not: null },
+          },
+          select: { dataAgendamento: true, dataConclusao: true },
+        }),
       ]);
 
     const porStatus = contagens.reduce(
@@ -208,6 +234,21 @@ export class OrdensServicoService {
         .map((p) => ({ id: p.id, dataFim: p.dataFim, ativo: p.ativo, cliente: p.cliente.nomeFantasia ?? p.cliente.razaoSocial })),
     };
 
+    const custoTotalMes = custoMesRaw.reduce((s, o) => {
+      return s + Number(o.valorMaoObra ?? 0) + Number(o.valorPecas ?? 0);
+    }, 0);
+
+    const taxaCorretivas = totalMes > 0 ? Math.round((osCorretivas / totalMes) * 100) : 0;
+
+    const tempoMedioAtendimento = tempoMedioRaw.length > 0
+      ? Math.round(
+          tempoMedioRaw.reduce((s, o) => {
+            const dias = (o.dataConclusao!.getTime() - o.dataAgendamento.getTime()) / 86_400_000;
+            return s + dias;
+          }, 0) / tempoMedioRaw.length,
+        )
+      : null;
+
     return {
       porStatus,
       atrasadas,
@@ -219,6 +260,10 @@ export class OrdensServicoService {
       porTecnico,
       porTipoEquipamento,
       planosVencendo,
+      custoTotalMes,
+      taxaCorretivas,
+      tempoMedioAtendimento,
+      totalConcluidasRecente: osConcluidas180,
     };
   }
 
