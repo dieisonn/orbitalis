@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { ConfiguracaoForm } from './form'
 
 type Config = {
@@ -23,12 +23,12 @@ export default async function ConfiguracoesPage() {
   return (
     <div className="max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-primary">Configurações da Empresa</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Configurações da Empresa</h1>
         <p className="text-gray-500 text-sm mt-1">
           Personalize a identidade visual da plataforma — aparece no sidebar, nos PDFs e na tela de login.
         </p>
       </div>
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
+      <div className="bg-white rounded-xl p-6 border border-border">
         <ConfiguracaoForm config={config} />
       </div>
     </div>

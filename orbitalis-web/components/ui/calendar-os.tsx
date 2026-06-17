@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -89,7 +89,7 @@ export function CalendarOs({ events }: { events: OsEvent[] }) {
   return (
     <div className="flex gap-6 flex-col xl:flex-row">
       {/* Calendário */}
-      <div className="flex-1 bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+      <div className="flex-1 bg-white rounded-xl border border-border overflow-hidden">
         {/* Navegação */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-surface transition-colors">
@@ -160,7 +160,7 @@ export function CalendarOs({ events }: { events: OsEvent[] }) {
       {/* Painel lateral */}
       <div className="w-full xl:w-80 shrink-0 flex flex-col gap-3">
         {selected ? (
-          <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-border overflow-hidden">
             <div className="px-5 py-4 border-b border-border bg-surface">
               <p className="text-sm font-bold text-gray-800">
                 {new Date(selected + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
@@ -198,13 +198,13 @@ export function CalendarOs({ events }: { events: OsEvent[] }) {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-border shadow-sm p-6 text-center">
+          <div className="bg-white rounded-xl border border-border shadow-sm p-6 text-center">
             <p className="text-sm text-gray-400">Clique em um dia para ver as O.S. agendadas.</p>
           </div>
         )}
 
         {/* Legenda — sempre visível */}
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-4">
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4">
           <div className="space-y-2">
             {Object.entries(STATUS_LABEL).map(([k, v]) => (
               <div key={k} className="flex items-center gap-2">

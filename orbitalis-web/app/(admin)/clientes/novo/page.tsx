@@ -1,4 +1,4 @@
-import { NovoClienteForm } from './form'
+﻿import { NovoClienteForm } from './form'
 
 export default function NovoClientePage() {
   return (
@@ -8,10 +8,10 @@ export default function NovoClientePage() {
           ← Clientes
         </a>
         <span className="text-gray-300">/</span>
-        <h1 className="text-2xl font-bold text-primary">Novo Cliente</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Novo Cliente</h1>
       </div>
       <div className="max-w-xl">
-        <div className="bg-white rounded-2xl shadow-sm border border-border p-6">
+        <div className="bg-white rounded-xl border border-border p-6">
           <NovoClienteForm />
         </div>
       </div>

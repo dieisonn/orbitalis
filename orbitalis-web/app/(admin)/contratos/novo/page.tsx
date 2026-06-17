@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { criarContrato } from '../actions'
 import { FileText } from 'lucide-react'
 
@@ -19,7 +19,7 @@ export default async function NovoContratoPage({ searchParams }: Props) {
         <a href="/contratos" className="text-gray-500 hover:text-primary transition-colors">← Contratos</a>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-border p-6">
+      <div className="bg-white rounded-xl border border-border p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <FileText size={18} className="text-primary" />

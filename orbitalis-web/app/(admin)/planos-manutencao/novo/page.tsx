@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { NovoPlanoForm } from './form'
 
 type Equipamento = {
@@ -42,11 +42,11 @@ export default async function NovoPlanoPage() {
           ← Planos Preventivos
         </a>
         <span className="text-gray-300">/</span>
-        <h1 className="text-2xl font-bold text-primary">Novo Plano Preventivo</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Novo Plano Preventivo</h1>
       </div>
 
       {!temCliente ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border max-w-lg">
+        <div className="bg-white rounded-xl p-12 text-center border border-border max-w-lg">
           <p className="text-sm text-gray-500">
             Nenhum ambiente cadastrado.{' '}
             <a href="/ambientes/novo" className="text-primary font-semibold hover:underline">

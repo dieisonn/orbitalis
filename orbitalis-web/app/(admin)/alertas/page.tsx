@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { Bell } from 'lucide-react'
 import { AlertaCard } from './alerta-card'
 import { AlertaConfigForm } from './alerta-config-form'
@@ -40,7 +40,7 @@ export default async function AlertasPage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             <Bell size={22} />
             Central de Alertas
             {criticos > 0 && (
@@ -71,7 +71,7 @@ export default async function AlertasPage({ searchParams }: Props) {
       {tab === 'config' ? (
         <AlertaConfigForm config={config} />
       ) : alertas.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-16 text-center border border-border">
           <Bell size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">
             {showResolvidos ? 'Nenhum alerta resolvido.' : 'Nenhum alerta ativo no momento.'}

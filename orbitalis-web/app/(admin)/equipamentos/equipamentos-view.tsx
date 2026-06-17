@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import {
@@ -172,7 +172,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
     <div>
       {/* ── Stats ─────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <Cpu size={18} className="text-primary" />
           </div>
@@ -182,7 +182,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
             <Layers size={18} className="text-indigo-500" />
           </div>
@@ -192,7 +192,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
             <Sparkles size={18} className="text-green-500" />
           </div>
@@ -202,7 +202,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-4 flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-border shadow-sm p-4 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
             <TrendingUp size={18} className="text-emerald-500" />
           </div>
@@ -216,7 +216,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
       </div>
 
       {/* ── Filtros ───────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-border shadow-sm p-4 mb-4 space-y-3">
+      <div className="bg-white rounded-xl border border-border shadow-sm p-4 mb-4 space-y-3">
         <div className="relative">
           <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
@@ -279,7 +279,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
 
       {/* ── Grupos ────────────────────────────────────── */}
       {grupos.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-12 text-center border border-border">
           <Cpu size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">
             {hasFilters ? 'Nenhum equipamento corresponde aos filtros.' : 'Nenhum equipamento cadastrado.'}
@@ -298,7 +298,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
             const grupoSelected = items.every((e) => selecionados.has(e.id))
 
             return (
-              <div key={clienteId} className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+              <div key={clienteId} className="bg-white rounded-xl border border-border overflow-hidden">
                 {/* Cabeçalho do grupo */}
                 <button
                   type="button"
@@ -456,7 +456,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
 
           {/* Bulk bar */}
           {selecionados.size > 0 && (
-            <div className="sticky bottom-0 bg-primary text-white px-6 py-3 flex items-center justify-between rounded-2xl shadow-lg">
+            <div className="sticky bottom-0 bg-primary text-white px-6 py-3 flex items-center justify-between rounded-xl shadow-lg">
               <span className="text-sm font-semibold">
                 {selecionados.size} equipamento{selecionados.size !== 1 ? 's' : ''} selecionado{selecionados.size !== 1 ? 's' : ''}
               </span>

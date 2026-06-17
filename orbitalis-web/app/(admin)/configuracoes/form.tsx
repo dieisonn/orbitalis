@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useTransition, useState } from 'react'
 import { salvarConfiguracao } from './actions'
 
@@ -41,15 +41,15 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Preview */}
-      <div className="rounded-2xl overflow-hidden border border-border shadow-sm">
+      <div className="rounded-xl overflow-hidden border border-border shadow-sm">
         <div className="flex items-center gap-4 p-5" style={{ backgroundColor: cor }}>
           {logoPreview ? (
-            <div className="bg-white rounded-2xl p-2 shrink-0">
+            <div className="bg-white rounded-xl p-2 shrink-0">
               <img src={logoPreview} alt="Logo" className="h-12 w-auto object-contain"
                 onError={() => setLogoPreview('')} />
             </div>
           ) : (
-            <div className="bg-white/20 rounded-2xl px-4 py-2">
+            <div className="bg-white/20 rounded-xl px-4 py-2">
               <span className="text-white font-black text-lg">LOGO</span>
             </div>
           )}

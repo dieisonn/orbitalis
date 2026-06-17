@@ -1,10 +1,6 @@
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
-import {
-  ClipboardList, Clock, AlertTriangle, CheckCircle,
-  XCircle, AlertCircle, TrendingUp, User, Wrench, CalendarClock,
-  DollarSign, Timer, BarChart2,
-} from 'lucide-react'
+import { CalendarClock, User, Wrench } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
 import { YearSelector } from '@/components/ui/year-selector'
 
@@ -32,26 +28,22 @@ type Historico = {
   em_andamento: number; concluida: number; cancelada: number
 }
 
-const STATUS_CARDS = [
-  { key: 'aberta',       label: 'Abertas',      icon: ClipboardList, bg: 'bg-blue-600',    text: 'text-white' },
-  { key: 'agendada',     label: 'Agendadas',     icon: Clock,         bg: 'bg-orange-100',  text: 'text-orange-700' },
-  { key: 'em_andamento', label: 'Em Andamento',  icon: AlertTriangle, bg: 'bg-yellow-100',  text: 'text-yellow-700' },
-  { key: 'concluida',    label: 'Concluídas',    icon: CheckCircle,   bg: 'bg-green-600',   text: 'text-white' },
-  { key: 'cancelada',    label: 'Canceladas',    icon: XCircle,       bg: 'bg-red-600',     text: 'text-white' },
+const STATUS = [
+  { key: 'aberta',       label: 'Abertas',      dot: 'bg-blue-500' },
+  { key: 'agendada',     label: 'Agendadas',    dot: 'bg-amber-400' },
+  { key: 'em_andamento', label: 'Em andamento', dot: 'bg-violet-500' },
+  { key: 'concluida',    label: 'Concluídas',   dot: 'bg-emerald-500' },
+  { key: 'cancelada',    label: 'Canceladas',   dot: 'bg-red-400' },
 ]
 
-function TecnicoBar({ value, max }: { value: number; max: number }) {
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0
-  return (
-    <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
-      <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
-    </div>
-  )
-}
-
-function formatarData(iso: string | null) {
+function fmtData(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('pt-BR')
+}
+
+function fmtBRL(v: number) {
+  if (v === 0) return '—'
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }
 
 type Props = { searchParams: Promise<{ ano?: string }> }
@@ -62,16 +54,12 @@ export default async function DashboardPage({ searchParams }: Props) {
   const ano = anoParam ? Math.max(2020, Math.min(anoAtual + 1, Number(anoParam))) : anoAtual
 
   const defaultPainel: Painel = {
-    porStatus: {},
-    atrasadas: 0,
+    porStatus: {}, atrasadas: 0,
     taxaConclusao: { concluidas: 0, total: 0, percentual: 0 },
-    porTecnico: [],
-    porTipoEquipamento: {},
+    porTecnico: [], porTipoEquipamento: {},
     planosVencendo: { vermelho: [], amarelo: [], verde: [] },
-    custoTotalMes: 0,
-    taxaCorretivas: 0,
-    tempoMedioAtendimento: null,
-    totalConcluidasRecente: 0,
+    custoTotalMes: 0, taxaCorretivas: 0,
+    tempoMedioAtendimento: null, totalConcluidasRecente: 0,
   }
 
   const [painel, historico] = await Promise.all([
@@ -81,6 +69,7 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   const { porStatus, atrasadas, taxaConclusao, porTecnico, porTipoEquipamento, planosVencendo,
           custoTotalMes, taxaCorretivas, tempoMedioAtendimento } = painel
+
   const total = Object.values(porStatus).reduce<number>((s, n) => s + (n ?? 0), 0)
   const maxTecnico = porTecnico[0]?.total ?? 1
 
@@ -88,223 +77,111 @@ export default async function DashboardPage({ searchParams }: Props) {
     .sort(([, a], [, b]) => b - a)
     .slice(0, 8)
 
+  const todosPlanosVencendo = [
+    ...planosVencendo.vermelho.map(p => ({ ...p, zone: 'red' as const })),
+    ...planosVencendo.amarelo.map(p => ({ ...p, zone: 'yellow' as const })),
+    ...planosVencendo.verde.map(p => ({ ...p, zone: 'green' as const })),
+  ]
+
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-primary">Cockpit</h1>
-        <p className="text-gray-500 text-sm mt-1">Visão em tempo real das Ordens de Serviço</p>
+    <div className="max-w-[1400px] space-y-5">
+
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-semibold text-gray-900">Cockpit</h1>
+        <p className="text-sm text-gray-400 mt-0.5">Visão em tempo real das Ordens de Serviço</p>
       </div>
 
-      {/* ── Linha 1: contadores de status ── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
-        {STATUS_CARDS.map(({ key, label, icon: Icon, bg, text }) => (
+      {/* Status — barra conectada */}
+      <div className="grid grid-cols-5 divide-x divide-border border border-border rounded-xl overflow-hidden bg-white">
+        {STATUS.map(({ key, label, dot }) => (
           <a key={key} href={`/ordens-servico?status=${key}`}
-            className={`rounded-2xl p-5 flex flex-col gap-2 shadow-sm ${bg} hover:opacity-90 transition-opacity cursor-pointer`}>
-            <Icon size={20} className={text} />
-            <p className={`text-3xl font-bold ${text}`}>{porStatus[key] ?? 0}</p>
-            <p className={`text-xs font-medium uppercase tracking-wide ${text} opacity-80`}>{label}</p>
+            className="flex flex-col gap-1 p-5 hover:bg-surface transition-colors group">
+            <span className="text-3xl font-bold tabular-nums text-gray-900 group-hover:text-primary transition-colors">
+              {porStatus[key] ?? 0}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${dot} shrink-0`} />
+              <span className="text-xs text-gray-500">{label}</span>
+            </div>
           </a>
         ))}
       </div>
 
-      {/* ── Linha 1b: KPIs gerenciais ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-border flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-              <DollarSign size={10} /> Custo total do mês
-            </p>
-            <p className="text-3xl font-bold text-gray-900">
-              {custoTotalMes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">O.S. concluídas com valor registrado</p>
-          </div>
-          <DollarSign size={36} className="text-green-200 shrink-0" />
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-border flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-              <BarChart2 size={10} /> Taxa de corretivas
-            </p>
-            <p className="text-3xl font-bold text-gray-900">{taxaCorretivas}%</p>
-            <p className="text-xs text-gray-400 mt-0.5">das O.S. do mês são corretivas</p>
-            <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
-              <div
-                className={`h-1.5 rounded-full ${taxaCorretivas >= 60 ? 'bg-red-400' : taxaCorretivas >= 40 ? 'bg-yellow-400' : 'bg-green-400'}`}
-                style={{ width: `${taxaCorretivas}%` }}
-              />
-            </div>
-          </div>
-          <BarChart2 size={36} className="text-orange-200 shrink-0" />
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-border flex items-center justify-between">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
-              <Timer size={10} /> Tempo médio de atend.
-            </p>
-            <p className="text-3xl font-bold text-gray-900">
-              {tempoMedioAtendimento != null ? `${tempoMedioAtendimento}d` : '—'}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">dias do agendamento à conclusão (mês)</p>
-          </div>
-          <Timer size={36} className="text-blue-200 shrink-0" />
-        </div>
-      </div>
-
-      {/* ── Linha 2: total + atrasadas + taxa de conclusão ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-        {/* Total */}
+      {/* Métricas principais */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <a href="/ordens-servico"
-          className="bg-white rounded-2xl p-6 shadow-sm border border-border flex items-center justify-between hover:bg-surface transition-colors">
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Total cadastradas</p>
-            <p className="text-4xl font-bold text-primary">{total}</p>
-          </div>
-          <ClipboardList size={40} className="text-primary/20" />
+          className="bg-white border border-border rounded-xl p-4 hover:bg-surface transition-colors">
+          <p className="text-xs text-gray-400 mb-1.5">Total de O.S.</p>
+          <p className="text-2xl font-bold tabular-nums text-gray-900">{total}</p>
         </a>
 
-        {/* O.S. atrasadas */}
         <a href="/ordens-servico?atrasadas=1"
-          className={`rounded-2xl p-6 shadow-sm border flex items-center justify-between hover:opacity-90 transition-opacity ${
-            atrasadas > 0
-              ? 'bg-red-50 border-red-200'
-              : 'bg-white border-border'
+          className={`border rounded-xl p-4 transition-colors ${
+            atrasadas > 0 ? 'bg-red-50 border-red-200 hover:bg-red-100/60' : 'bg-white border-border hover:bg-surface'
           }`}>
-          <div>
-            <p className={`text-xs uppercase tracking-widest mb-1 font-medium ${atrasadas > 0 ? 'text-red-500' : 'text-gray-400'}`}>
-              Atrasadas
-            </p>
-            <p className={`text-4xl font-bold ${atrasadas > 0 ? 'text-red-600' : 'text-gray-300'}`}>
-              {atrasadas}
-            </p>
-            <p className={`text-xs mt-1 ${atrasadas > 0 ? 'text-red-400' : 'text-gray-400'}`}>
-              {atrasadas > 0 ? 'O.S. passaram da data sem conclusão' : 'Tudo em dia!'}
-            </p>
-          </div>
-          <AlertCircle size={40} className={atrasadas > 0 ? 'text-red-300' : 'text-gray-200'} />
+          <p className={`text-xs mb-1.5 ${atrasadas > 0 ? 'text-red-400' : 'text-gray-400'}`}>Atrasadas</p>
+          <p className={`text-2xl font-bold tabular-nums ${atrasadas > 0 ? 'text-red-600' : 'text-gray-300'}`}>
+            {atrasadas}
+          </p>
         </a>
 
-        {/* Taxa de conclusão do mês */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-border flex items-center justify-between">
-          <div className="flex-1">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Taxa de conclusão</p>
-            <p className="text-4xl font-bold text-primary">{taxaConclusao.percentual}%</p>
-            <p className="text-xs text-gray-400 mt-1">
-              {taxaConclusao.concluidas} de {taxaConclusao.total} O.S. do mês concluídas
-            </p>
-            <div className="w-full bg-gray-100 rounded-full h-2 mt-3">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  taxaConclusao.percentual >= 80 ? 'bg-green-500' :
-                  taxaConclusao.percentual >= 50 ? 'bg-yellow-400' : 'bg-red-400'
-                }`}
-                style={{ width: `${taxaConclusao.percentual}%` }}
-              />
-            </div>
+        <div className="bg-white border border-border rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1.5">Taxa de conclusão (mês)</p>
+          <p className="text-2xl font-bold tabular-nums text-gray-900">{taxaConclusao.percentual}%</p>
+          <div className="mt-2.5 h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${
+                taxaConclusao.percentual >= 80 ? 'bg-emerald-500' :
+                taxaConclusao.percentual >= 50 ? 'bg-amber-400' : 'bg-red-400'
+              }`}
+              style={{ width: `${taxaConclusao.percentual}%` }}
+            />
           </div>
-          <TrendingUp size={40} className="text-primary/20 ml-4 shrink-0" />
+          <p className="text-[11px] text-gray-400 mt-1.5">
+            {taxaConclusao.concluidas}/{taxaConclusao.total} concluídas
+          </p>
+        </div>
+
+        <div className="bg-white border border-border rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1.5">Custo do mês</p>
+          <p className="text-2xl font-bold tabular-nums text-gray-900">{fmtBRL(custoTotalMes)}</p>
         </div>
       </div>
 
-      {/* ── Linha 3: alertas de planos vencendo ── */}
-      <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarClock size={16} className="text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700">Planos preventivos vencendo</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            {/* Vermelho — vence em até 30 dias */}
-            <div className={`rounded-2xl p-5 border ${planosVencendo.vermelho.length > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-border opacity-50'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-semibold uppercase tracking-wide ${planosVencendo.vermelho.length > 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                  Vence em até 1 mês
-                </span>
-                <span className={`text-2xl font-bold ${planosVencendo.vermelho.length > 0 ? 'text-red-600' : 'text-gray-300'}`}>
-                  {planosVencendo.vermelho.length}
-                </span>
-              </div>
-              <ul className="space-y-1.5">
-                {planosVencendo.vermelho.slice(0, 4).map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-2">
-                    <a href={`/planos-manutencao/${p.id}`} className="text-xs text-red-700 hover:underline truncate">{p.cliente}</a>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!p.ativo && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded">inativo</span>}
-                      <span className="text-[10px] text-red-500">{formatarData(p.dataFim)}</span>
-                    </div>
-                  </li>
-                ))}
-                {planosVencendo.vermelho.length > 4 && (
-                  <li className="text-[10px] text-red-400">+{planosVencendo.vermelho.length - 4} mais</li>
-                )}
-              </ul>
-            </div>
-
-            {/* Amarelo — vence em 1–2 meses */}
-            <div className={`rounded-2xl p-5 border ${planosVencendo.amarelo.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-border opacity-50'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-semibold uppercase tracking-wide ${planosVencendo.amarelo.length > 0 ? 'text-yellow-700' : 'text-gray-400'}`}>
-                  Vence em 1–2 meses
-                </span>
-                <span className={`text-2xl font-bold ${planosVencendo.amarelo.length > 0 ? 'text-yellow-600' : 'text-gray-300'}`}>
-                  {planosVencendo.amarelo.length}
-                </span>
-              </div>
-              <ul className="space-y-1.5">
-                {planosVencendo.amarelo.slice(0, 4).map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-2">
-                    <a href={`/planos-manutencao/${p.id}`} className="text-xs text-yellow-800 hover:underline truncate">{p.cliente}</a>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!p.ativo && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded">inativo</span>}
-                      <span className="text-[10px] text-yellow-600">{formatarData(p.dataFim)}</span>
-                    </div>
-                  </li>
-                ))}
-                {planosVencendo.amarelo.length > 4 && (
-                  <li className="text-[10px] text-yellow-500">+{planosVencendo.amarelo.length - 4} mais</li>
-                )}
-              </ul>
-            </div>
-
-            {/* Verde — vence em 2–3 meses */}
-            <div className={`rounded-2xl p-5 border ${planosVencendo.verde.length > 0 ? 'bg-green-50 border-green-200' : 'bg-white border-border opacity-50'}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`text-xs font-semibold uppercase tracking-wide ${planosVencendo.verde.length > 0 ? 'text-green-700' : 'text-gray-400'}`}>
-                  Vence em 2–3 meses
-                </span>
-                <span className={`text-2xl font-bold ${planosVencendo.verde.length > 0 ? 'text-green-600' : 'text-gray-300'}`}>
-                  {planosVencendo.verde.length}
-                </span>
-              </div>
-              <ul className="space-y-1.5">
-                {planosVencendo.verde.slice(0, 4).map((p) => (
-                  <li key={p.id} className="flex items-center justify-between gap-2">
-                    <a href={`/planos-manutencao/${p.id}`} className="text-xs text-green-800 hover:underline truncate">{p.cliente}</a>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {!p.ativo && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded">inativo</span>}
-                      <span className="text-[10px] text-green-600">{formatarData(p.dataFim)}</span>
-                    </div>
-                  </li>
-                ))}
-                {planosVencendo.verde.length > 4 && (
-                  <li className="text-[10px] text-green-500">+{planosVencendo.verde.length - 4} mais</li>
-                )}
-              </ul>
-            </div>
-
+      {/* KPIs secundários */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-white border border-border rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1.5">Taxa de corretivas (mês)</p>
+          <p className="text-2xl font-bold tabular-nums text-gray-900">{taxaCorretivas}%</p>
+          <div className="mt-2.5 h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${taxaCorretivas >= 60 ? 'bg-red-400' : taxaCorretivas >= 40 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+              style={{ width: `${taxaCorretivas}%` }}
+            />
           </div>
         </div>
+        <div className="bg-white border border-border rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1.5">Tempo médio de atend. (mês)</p>
+          <p className="text-2xl font-bold tabular-nums text-gray-900">
+            {tempoMedioAtendimento != null ? `${tempoMedioAtendimento} d` : '—'}
+          </p>
+          {tempoMedioAtendimento != null && (
+            <p className="text-[11px] text-gray-400 mt-1">agendamento → conclusão</p>
+          )}
+        </div>
+        <div className="bg-white border border-border rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1.5">Concluídas (últimos 30 dias)</p>
+          <p className="text-2xl font-bold tabular-nums text-gray-900">{painel.totalConcluidasRecente}</p>
+        </div>
+      </div>
 
-      {/* ── Linha 4: gráfico + ranking técnicos ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+      {/* Gráfico + técnicos */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
-        {/* Gráfico histórico */}
-        <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-border">
+        <div className="xl:col-span-2 bg-white rounded-xl border border-border p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">O.S. por mês de agendamento</h2>
+            <h2 className="text-sm font-semibold text-gray-700">O.S. por mês</h2>
             <Suspense>
               <YearSelector ano={ano} />
             </Suspense>
@@ -312,32 +189,35 @@ export default async function DashboardPage({ searchParams }: Props) {
           <OsChart data={historico} ano={ano} />
         </div>
 
-        {/* Ranking de técnicos */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
-          <div className="flex items-center gap-2 mb-5">
-            <User size={16} className="text-gray-400" />
+        <div className="bg-white rounded-xl border border-border p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <User size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">Carga por técnico</h2>
           </div>
-
           {porTecnico.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">
-              Nenhum técnico com O.S. ativa.
-            </p>
+            <p className="text-sm text-gray-400 text-center py-8">Nenhum técnico com O.S. ativa.</p>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {porTecnico.map((t, idx) => (
                 <div key={t.tecnicoId}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs text-gray-400 w-4 shrink-0">#{idx + 1}</span>
-                      <span className="text-sm font-medium text-gray-800 truncate">{t.nome}</span>
+                      <span className="text-[11px] text-gray-300 tabular-nums w-4 shrink-0">
+                        {String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <span className="text-sm text-gray-700 truncate">{t.nome}</span>
                     </div>
-                    <span className="text-sm font-bold text-primary ml-2 shrink-0">{t.total}</span>
+                    <span className="text-sm font-bold tabular-nums text-gray-900 ml-2 shrink-0">{t.total}</span>
                   </div>
-                  <TecnicoBar value={t.total} max={maxTecnico} />
-                  <div className="flex flex-wrap gap-2 mt-1.5">
+                  <div className="w-full bg-gray-100 rounded-full h-1 mt-1">
+                    <div
+                      className="bg-primary/50 h-1 rounded-full transition-all"
+                      style={{ width: `${maxTecnico > 0 ? Math.round((t.total / maxTecnico) * 100) : 0}%` }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {t.concluiuUltimoMes > 0 && (
-                      <span className="text-[10px] text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
                         {t.concluiuUltimoMes} concluídas/mês
                       </span>
                     )}
@@ -346,48 +226,81 @@ export default async function DashboardPage({ searchParams }: Props) {
                         {t.atrasadas} atrasadas
                       </span>
                     )}
-                    {t.aIniciar > 0 && (
-                      <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                        {t.aIniciar} a iniciar
-                      </span>
-                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
       </div>
 
-      {/* ── Linha 5: O.S. por tipo de equipamento ── */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
-        <div className="flex items-center gap-2 mb-5">
-          <Wrench size={16} className="text-gray-400" />
-          <h2 className="text-sm font-semibold text-gray-700">O.S. por tipo de equipamento</h2>
-        </div>
-        {tiposOrdenados.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">Nenhuma O.S. com equipamento registrada.</p>
-        ) : (
-          <div className="space-y-3">
-            {tiposOrdenados.map(([tipo, count]) => {
-              const maxCount = tiposOrdenados[0][1]
-              const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0
-              return (
-                <div key={tipo}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700">{tipo}</span>
-                    <span className="text-sm font-bold text-primary">{count}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div className="bg-primary/60 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              )
-            })}
+      {/* Planos vencendo + tipos de equipamento */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+        {/* Planos */}
+        <div className="bg-white rounded-xl border border-border p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarClock size={14} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700">Planos preventivos vencendo</h2>
+            <span className="ml-auto text-xs text-gray-400 tabular-nums">
+              {todosPlanosVencendo.length} total
+            </span>
           </div>
-        )}
+          {todosPlanosVencendo.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">Todos os planos estão em dia.</p>
+          ) : (
+            <div className="divide-y divide-border/60">
+              {todosPlanosVencendo.slice(0, 10).map((p) => (
+                <div key={p.id} className="flex items-center gap-3 py-2">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    p.zone === 'red' ? 'bg-red-400' :
+                    p.zone === 'yellow' ? 'bg-amber-400' : 'bg-emerald-400'
+                  }`} />
+                  <a href={`/planos-manutencao/${p.id}`}
+                    className="text-sm text-gray-700 hover:text-primary flex-1 truncate">
+                    {p.cliente}
+                    {!p.ativo && <span className="ml-1.5 text-[10px] text-gray-400 font-normal">inativo</span>}
+                  </a>
+                  <span className="text-[11px] text-gray-400 tabular-nums shrink-0">{fmtData(p.dataFim)}</span>
+                </div>
+              ))}
+              {todosPlanosVencendo.length > 10 && (
+                <p className="text-xs text-gray-400 pt-2">+{todosPlanosVencendo.length - 10} mais</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Tipos de equipamento */}
+        <div className="bg-white rounded-xl border border-border p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Wrench size={14} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700">O.S. por tipo de equipamento</h2>
+          </div>
+          {tiposOrdenados.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">Nenhuma O.S. com equipamento registrada.</p>
+          ) : (
+            <div className="space-y-3">
+              {tiposOrdenados.map(([tipo, count]) => {
+                const maxCount = tiposOrdenados[0][1]
+                const pct = maxCount > 0 ? Math.round((count / maxCount) * 100) : 0
+                return (
+                  <div key={tipo}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-gray-600">{tipo}</span>
+                      <span className="text-sm font-bold tabular-nums text-gray-900">{count}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1">
+                      <div className="bg-primary/40 h-1 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
+
     </div>
   )
 }

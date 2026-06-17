@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { FileText, Plus, AlertTriangle } from 'lucide-react'
 
 type Contrato = {
@@ -24,7 +24,7 @@ export default async function ContratosPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Contratos</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Contratos</h1>
           <p className="text-gray-500 text-sm mt-1">{contratos.length} contrato(s) cadastrado(s)</p>
         </div>
         <a href="/contratos/novo"
@@ -34,12 +34,12 @@ export default async function ContratosPage() {
       </div>
 
       {contratos.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-16 text-center border border-border">
           <FileText size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400">Nenhum contrato cadastrado.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">

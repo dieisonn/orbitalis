@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -36,7 +36,7 @@ export function AlertaConfigForm({ config }: { config: Config }) {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-border p-6 max-w-lg">
+    <div className="bg-white rounded-xl border border-border p-6 max-w-lg">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
           <Settings size={18} className="text-primary" />

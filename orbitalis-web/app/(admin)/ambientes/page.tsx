@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+﻿import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { AmbientesList } from './ambientes-list'
@@ -52,7 +52,7 @@ export default async function AmbientesPage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Ambientes</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Ambientes</h1>
           <p className="text-gray-500 text-sm mt-1">
             {result.total} ambiente(s) em {grupos.length} cliente(s)
           </p>
@@ -68,7 +68,7 @@ export default async function AmbientesPage({ searchParams }: Props) {
       <AmbientesList grupos={grupos} />
 
       {result.total > result.perPage && (
-        <div className="mt-4 bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+        <div className="mt-4 bg-white rounded-xl border border-border overflow-hidden">
           <Suspense>
             <ListPagination page={currentPage} total={result.total} perPage={result.perPage} basePath="/ambientes" />
           </Suspense>

@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { NovaOsForm } from './form'
 
 type Ambiente = {
@@ -26,10 +26,10 @@ export default async function NovaOsPage() {
           ← Ordens de Serviço
         </a>
         <span className="text-gray-300">/</span>
-        <h1 className="text-2xl font-bold text-primary">Criar O.S. Manual</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Criar O.S. Manual</h1>
       </div>
       <div className="max-w-xl">
-        <div className="bg-white rounded-2xl shadow-sm border border-border p-6">
+        <div className="bg-white rounded-xl border border-border p-6">
           {ambientes.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-gray-500">

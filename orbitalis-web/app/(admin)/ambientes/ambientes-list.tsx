@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useMemo } from 'react'
 import { Building2, Cpu, ChevronDown, Search, X } from 'lucide-react'
@@ -84,7 +84,7 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-12 text-center border border-border">
           <Building2 size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">
             {query ? `Nenhum resultado para "${query}"` : 'Nenhum ambiente cadastrado.'}
@@ -103,7 +103,7 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
             const totalEqs = ambs.reduce((s, a) => s + (a.equipamentos?.length ?? 0), 0)
 
             return (
-              <div key={cliente.id} className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+              <div key={cliente.id} className="bg-white rounded-xl border border-border overflow-hidden">
                 {/* Cabeçalho clicável */}
                 <button
                   type="button"

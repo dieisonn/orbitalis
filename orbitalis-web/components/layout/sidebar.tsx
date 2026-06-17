@@ -47,68 +47,51 @@ export default function Sidebar({ config }: { config?: Config }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
 
-  const logoSrc = config?.logoUrl || '/logo.png'
+  const logoSrc    = config?.logoUrl || '/logo.png'
   const nomeExibido = config?.nomeFantasia || config?.nomeEmpresa || 'Orbitalis'
 
   return (
     <>
-      {/* Hamburger button — mobile only */}
+      {/* Hamburger — mobile */}
       <button
-        className="fixed top-4 left-4 z-50 md:hidden p-2 bg-primary text-white rounded-lg shadow-lg"
+        className="fixed top-4 left-4 z-50 md:hidden p-2 bg-primary text-white rounded-lg shadow"
         onClick={() => setOpen(true)}
         aria-label="Abrir menu"
       >
-        <Menu size={20} />
+        <Menu size={18} />
       </button>
 
-      {/* Overlay — mobile only */}
+      {/* Overlay — mobile */}
       {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={() => setOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside
         className={[
-          'relative flex flex-col bg-primary text-white shrink-0 print:hidden overflow-hidden',
-          'fixed inset-y-0 left-0 z-50 w-64 md:w-56',
+          'flex flex-col bg-primary text-white shrink-0 print:hidden',
+          'fixed inset-y-0 left-0 z-50 w-60 md:w-52',
           'md:static md:translate-x-0',
           'transition-transform duration-200',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
       >
-        {/* Círculos decorativos */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full border border-white/10" />
-          <div className="absolute -top-20 -right-20 w-36 h-36 rounded-full bg-white/5" />
-          <div className="absolute top-1/2 -left-16  w-48 h-48 rounded-full bg-white/5" />
-          <div className="absolute -bottom-16 -right-12 w-52 h-52 rounded-full border border-white/10" />
-          <div className="absolute -bottom-16 -right-12 w-32 h-32 rounded-full bg-white/5" />
-        </div>
-
         {/* Logo */}
-        <div className="relative z-10 px-4 py-5 border-b border-white/10 flex items-center justify-between">
-          <div className="bg-white rounded-3xl p-3 flex items-center shadow-md">
-            <img
-              src={logoSrc}
-              alt={nomeExibido}
-              className="h-16 w-auto object-contain"
-            />
+        <div className="px-4 py-5 border-b border-white/10 flex items-center justify-between">
+          <div className="bg-white/95 rounded-xl px-3 py-2 flex items-center">
+            <img src={logoSrc} alt={nomeExibido} className="h-12 w-auto object-contain" />
           </div>
-          {/* Close button — mobile only */}
           <button
-            className="md:hidden p-1 text-white/60 hover:text-white transition-colors"
+            className="md:hidden p-1 text-white/50 hover:text-white"
             onClick={() => setOpen(false)}
             aria-label="Fechar menu"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="relative z-10 flex-1 py-4 overflow-y-auto">
+        <nav className="flex-1 py-3 overflow-y-auto">
           {NAV.map(({ href, label, icon: Icon }) => {
             const exactMatch = href === '/dashboard' || href === '/ordens-servico/agenda'
             const active = path === href || (!exactMatch && path.startsWith(href))
@@ -118,13 +101,13 @@ export default function Sidebar({ config }: { config?: Config }) {
                 href={href}
                 onClick={() => setOpen(false)}
                 className={[
-                  'flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-5 py-2 text-[13px] font-medium transition-colors',
                   active
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/65 hover:bg-white/10 hover:text-white',
+                    ? 'bg-white/12 text-white'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white/90',
                 ].join(' ')}
               >
-                <Icon size={16} />
+                <Icon size={15} className="shrink-0" />
                 {label}
               </Link>
             )
@@ -132,13 +115,13 @@ export default function Sidebar({ config }: { config?: Config }) {
         </nav>
 
         {/* Logout */}
-        <div className="relative z-10 p-4 border-t border-white/10">
+        <div className="p-3 border-t border-white/10">
           <form action={logout}>
             <button
               type="submit"
-              className="flex items-center gap-3 w-full px-2 py-2 text-sm text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+              className="flex items-center gap-3 w-full px-3 py-2 text-[13px] text-white/50 hover:text-white/80 transition-colors rounded-lg hover:bg-white/8"
             >
-              <LogOut size={16} />
+              <LogOut size={14} />
               Sair
             </button>
           </form>

@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { EquipamentosView, type EquipamentoItem } from './equipamentos-view'
 import { deletarEquipamento } from './actions'
 import {
@@ -35,7 +35,7 @@ export default async function EquipamentosPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Equipamentos</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Equipamentos</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} ativo(s) cadastrado(s)</p>
         </div>
         <div className="flex items-center gap-2">

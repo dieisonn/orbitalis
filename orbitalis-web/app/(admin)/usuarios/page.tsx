@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+﻿import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
@@ -33,7 +33,7 @@ export default async function UsuariosPage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Técnicos</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Técnicos</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} técnico(s) cadastrado(s)</p>
         </div>
         <a href="/usuarios/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
@@ -42,7 +42,7 @@ export default async function UsuariosPage({ searchParams }: Props) {
       </div>
 
       {tecnicos.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-12 text-center border border-border">
           <UserCog size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhum técnico cadastrado ainda.</p>
         </div>
@@ -50,7 +50,7 @@ export default async function UsuariosPage({ searchParams }: Props) {
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {tecnicos.map((t) => (
-              <div key={t.id} className="bg-white rounded-2xl p-5 shadow-sm border border-border">
+              <div key={t.id} className="bg-white rounded-xl p-5 border border-border">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="font-semibold text-gray-900">{t.nome ?? '—'}</p>
@@ -83,7 +83,7 @@ export default async function UsuariosPage({ searchParams }: Props) {
             ))}
           </div>
           {result.total > result.perPage && (
-            <div className="mt-4 bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+            <div className="mt-4 bg-white rounded-xl border border-border overflow-hidden">
               <Suspense>
                 <ListPagination page={currentPage} total={result.total} perPage={result.perPage} basePath="/usuarios" />
               </Suspense>

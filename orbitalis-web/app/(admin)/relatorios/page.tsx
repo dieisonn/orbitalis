@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { ExportOsBtn } from './export-os-btn'
 import { FileSpreadsheet } from 'lucide-react'
 
@@ -14,11 +14,11 @@ export default async function RelatoriosPage() {
   return (
     <div className="max-w-3xl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-primary">Relatórios</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Relatórios</h1>
         <p className="text-gray-500 text-sm mt-1">Exporte dados para análise externa</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-border p-6">
+      <div className="bg-white rounded-xl border border-border p-6">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
             <FileSpreadsheet size={20} className="text-green-600" />

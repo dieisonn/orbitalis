@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { Printer } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
@@ -53,7 +53,7 @@ export function BatchPrintLabels({ equipamentos, config, empresaNome }: Props) {
             const cliente  = eq.ambiente.cliente.nomeFantasia ?? eq.ambiente.cliente.razaoSocial
             const qrValue  = `${APP_URL}/e/${eq.codigoQr}`
             return (
-              <div key={eq.id} className="label-item bg-white rounded-2xl print:rounded-none shadow-md print:shadow-none border border-border print:border-0">
+              <div key={eq.id} className="label-item bg-white rounded-xl print:rounded-none shadow-md print:shadow-none border border-border print:border-0">
                 {/* Cabeçalho */}
                 <div className="flex items-center justify-between mb-2 border-b border-gray-100 pb-1.5">
                   <div className="flex items-center gap-1.5">

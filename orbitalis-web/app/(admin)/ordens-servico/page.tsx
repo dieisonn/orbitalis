@@ -91,7 +91,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Ordens de Serviço</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Ordens de Serviço</h1>
           <p className="text-gray-500 text-sm mt-1">
             {isFiltered ? (
               <span>
@@ -141,8 +141,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
       />
 
       {ordens.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
-          <ClipboardList size={40} className="mx-auto text-primary/20 mb-3" />
+        <div className="bg-white rounded-xl p-12 text-center border border-border">
           <p className="text-gray-400 text-sm">Nenhuma O.S. encontrada.</p>
           {isFiltered && (
             <a href="/ordens-servico" className="text-sm text-primary underline mt-2 block">
@@ -151,7 +150,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden mt-4">
+        <div className="bg-white rounded-xl border border-border overflow-hidden mt-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">

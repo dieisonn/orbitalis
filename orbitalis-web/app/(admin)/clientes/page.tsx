@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+﻿import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
@@ -35,7 +35,7 @@ export default async function ClientesPage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Clientes</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Clientes</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} cliente(s) cadastrado(s)</p>
         </div>
         <div className="flex items-center gap-2">
@@ -48,12 +48,12 @@ export default async function ClientesPage({ searchParams }: Props) {
       </div>
 
       {clientes.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-12 text-center border border-border">
           <Users size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhum cliente cadastrado ainda.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">

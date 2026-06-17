@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useTransition, useState, useMemo } from 'react'
 import { criarPlano } from './actions'
@@ -123,7 +123,7 @@ export function NovoPlanoForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-8 max-w-3xl">
       {/* ── Seção 1: Configurações do plano ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-border p-6 space-y-5">
+      <div className="bg-white rounded-xl border border-border p-6 space-y-5">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Configurações do Plano</h2>
 
         {/* Cliente */}
@@ -208,7 +208,7 @@ export function NovoPlanoForm({
       </div>
 
       {/* ── Seção 2: Equipamentos e checklists ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+      <div className="bg-white rounded-xl border border-border overflow-hidden">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Equipamentos e Checklists</h2>
           {clienteId && (

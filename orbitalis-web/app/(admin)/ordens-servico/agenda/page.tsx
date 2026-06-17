@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { CalendarOs } from '@/components/ui/calendar-os'
 import { CalendarDays, List } from 'lucide-react'
 
@@ -46,7 +46,7 @@ export default async function AgendaPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             <CalendarDays size={22} />
             Agenda de O.S.
           </h1>

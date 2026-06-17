@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+﻿import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
@@ -34,7 +34,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Checklists PMOC</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Checklists PMOC</h1>
           <p className="text-gray-500 text-sm mt-1">Templates de itens de manutenção usados nas O.S.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -65,7 +65,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
       </div>
 
       {modelos.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-12 text-center border border-border">
           <ClipboardCheck size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhum checklist criado ainda.</p>
           <p className="text-xs text-gray-400 mt-1">Use o botão "PMOC Split Hi-Wall (ABRAVA)" para importar o checklist padrão.</p>
@@ -76,7 +76,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
             {modelos.map((m) => {
               const itens = Array.isArray(m.itens) ? m.itens : []
               return (
-                <div key={m.id} className="bg-white rounded-2xl shadow-sm border border-border p-5">
+                <div key={m.id} className="bg-white rounded-xl border border-border p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <p className="font-semibold text-gray-900">{m.nome}</p>
@@ -114,7 +114,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
             })}
           </div>
           {result.total > result.perPage && (
-            <div className="mt-4 bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+            <div className="mt-4 bg-white rounded-xl border border-border overflow-hidden">
               <Suspense>
                 <ListPagination page={currentPage} total={result.total} perPage={result.perPage} basePath="/checklists" />
               </Suspense>

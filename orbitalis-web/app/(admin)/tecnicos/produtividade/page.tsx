@@ -1,4 +1,4 @@
-import { api } from '@/lib/api'
+﻿import { api } from '@/lib/api'
 import { MonthSelector } from './month-selector'
 import { Users, CheckCircle, AlertTriangle, Clock, Wrench, TrendingUp } from 'lucide-react'
 
@@ -45,7 +45,7 @@ export default async function ProdutividadePage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Produtividade dos Técnicos</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Produtividade dos Técnicos</h1>
           <p className="text-gray-500 text-sm mt-1">
             {MESES[mes - 1]}/{ano} · {tecnicos.length} técnico(s) com atividade
           </p>
@@ -54,14 +54,14 @@ export default async function ProdutividadePage({ searchParams }: Props) {
       </div>
 
       {tecnicos.length === 0 ? (
-        <div className="bg-white rounded-2xl p-16 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-16 text-center border border-border">
           <Users size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400">Nenhum técnico com O.S. neste período.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {tecnicos.map((t, idx) => (
-            <div key={t.id} className="bg-white rounded-2xl shadow-sm border border-border p-5">
+            <div key={t.id} className="bg-white rounded-xl border border-border p-5">
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${

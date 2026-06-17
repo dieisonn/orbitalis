@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+﻿import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeletePlanoButton } from '@/components/ui/delete-plano-button'
 import { ListPagination } from '@/components/ui/list-pagination'
@@ -38,7 +38,7 @@ export default async function PlanosPage({ searchParams }: Props) {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-primary">Planos Preventivos</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Planos Preventivos</h1>
           <p className="text-gray-500 text-sm mt-1">Motor Cron executa diariamente às 00:00:01</p>
         </div>
         <a href="/planos-manutencao/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
@@ -47,12 +47,12 @@ export default async function PlanosPage({ searchParams }: Props) {
       </div>
 
       {planos.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
+        <div className="bg-white rounded-xl p-12 text-center border border-border">
           <CalendarClock size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhum plano cadastrado.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+        <div className="bg-white rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">

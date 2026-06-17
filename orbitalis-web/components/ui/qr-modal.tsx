@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
@@ -34,7 +34,7 @@ export function QrModal({ equipamentoId, codigoQr, nome }: Props) {
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl p-6 w-72 flex flex-col items-center gap-4"
+            className="bg-white rounded-xl shadow-xl p-6 w-72 flex flex-col items-center gap-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between w-full">
