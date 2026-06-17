@@ -83,6 +83,7 @@ export class EquipamentosService {
         ordemServico: {
           select: {
             id: true,
+            tipo: true,
             status: true,
             origem: true,
             dataAgendamento: true,
@@ -96,7 +97,16 @@ export class EquipamentosService {
       orderBy: { ordemServico: { dataAgendamento: 'desc' } },
     });
 
-    return { equipamento, itens };
+    const seisAtras = new Date();
+    seisAtras.setMonth(seisAtras.getMonth() - 6);
+    const corretivasRecentes = itens.filter(
+      (i) =>
+        i.ordemServico.tipo === 'corretiva' &&
+        new Date(i.ordemServico.dataAgendamento) >= seisAtras,
+    ).length;
+    const isReincidente = corretivasRecentes >= 3;
+
+    return { equipamento, itens, isReincidente, corretivasRecentes };
   }
 
   async findByQr(codigoQr: string) {

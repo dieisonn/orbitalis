@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
-import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList } from 'lucide-react'
+import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle } from 'lucide-react'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -25,6 +25,7 @@ type Equipamento = {
 
 type OsResumo = {
   id: string
+  tipo: 'preventiva' | 'corretiva'
   status: string
   origem: string
   dataAgendamento: string
@@ -40,7 +41,7 @@ type Item = {
   ordemServico: OsResumo
 }
 
-type Historico = { equipamento: Equipamento; itens: Item[] }
+type Historico = { equipamento: Equipamento; itens: Item[]; isReincidente: boolean; corretivasRecentes: number }
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   aberta:       { label: 'Aberta',       cls: 'bg-blue-100   text-blue-700'   },
@@ -76,7 +77,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
     notFound()
   }
 
-  const { equipamento: eq, itens } = hist
+  const { equipamento: eq, itens, isReincidente, corretivasRecentes } = hist
   const cliente = eq.ambiente?.cliente?.nomeFantasia ?? eq.ambiente?.cliente?.razaoSocial ?? '—'
 
   // Custo total acumulado (somente O.S. concluídas)
@@ -95,6 +96,19 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
 
   return (
     <div className="max-w-4xl">
+      {/* Banner reincidente */}
+      {isReincidente && (
+        <div className="flex items-center gap-3 mb-5 bg-red-50 border border-red-200 rounded-xl px-5 py-3.5">
+          <AlertTriangle size={18} className="text-red-500 shrink-0" />
+          <div>
+            <p className="text-sm font-bold text-red-700">Equipamento Reincidente</p>
+            <p className="text-xs text-red-500 mt-0.5">
+              {corretivasRecentes} O.S. corretivas nos últimos 6 meses — recomenda-se revisão ou substituição.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <a href="/equipamentos" className="text-gray-500 hover:text-primary transition-colors">Equipamentos</a>
@@ -111,7 +125,14 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
             <Wrench size={20} className="text-primary" />
           </div>
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">{eq.nome}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900">{eq.nome}</h1>
+                {isReincidente && (
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                    <AlertTriangle size={10} /> Reincidente
+                  </span>
+                )}
+              </div>
             <p className="text-sm text-gray-400 mt-0.5">
               {eq.marca}{eq.modelo ? ` ${eq.modelo}` : ''} · {eq.tipoEquipamento}
             </p>
@@ -205,7 +226,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface">
-                  {['Data', 'O.S.', 'Status', 'Origem', 'M.O.', 'Peças', 'Total O.S.', 'Acumulado'].map((h) => (
+                  {['Data', 'O.S.', 'Tipo', 'Status', 'Origem', 'M.O.', 'Peças', 'Total O.S.', 'Acumulado'].map((h) => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
                       {h}
                     </th>
@@ -233,6 +254,15 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
                             {os.observacoesGerais}
                           </p>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          os.tipo === 'corretiva'
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {os.tipo === 'corretiva' ? 'Corretiva' : 'Preventiva'}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>

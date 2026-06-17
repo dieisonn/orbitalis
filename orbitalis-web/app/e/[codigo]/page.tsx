@@ -104,6 +104,16 @@ export default async function QrLandingPage({ params }: Props) {
               ambienteNome={equipamento.ambiente.nome}
             />
           )}
+
+          {/* Histórico — apenas admin */}
+          {role === 'admin' && (
+            <a
+              href={`/equipamentos/${equipamento.id}/historico`}
+              className="block w-full text-center text-sm font-semibold text-primary border border-primary/30 rounded-xl py-2.5 hover:bg-primary/5 transition-colors"
+            >
+              Ver histórico completo
+            </a>
+          )}
         </div>
 
         <div className="px-6 pb-6">

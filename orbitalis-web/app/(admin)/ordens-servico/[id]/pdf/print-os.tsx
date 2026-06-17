@@ -19,6 +19,9 @@ type OS = {
   id: string; status: string; origem: string
   dataAgendamento: string; dataInicio: string | null; dataConclusao: string | null
   observacoesGerais: string | null
+  assinaturaBase64: string | null
+  tipoGas: string | null
+  quantidadeGasGramas: number | null
   ambiente: {
     nome: string; localizacaoInterna: string; capacidadeTermica: string
     cliente: { razaoSocial: string; nomeFantasia: string | null; documento: string; endereco: string }
@@ -258,6 +261,19 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
             </div>
           </div>
 
+          {/* Carga de Gás */}
+          {os.tipoGas && (
+            <div className="mb-5 border border-blue-200 bg-blue-50 rounded-lg p-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400 mb-1">Carga de Gás Refrigerante</p>
+              <p className="text-sm font-semibold text-blue-800">
+                {os.tipoGas}
+                {os.quantidadeGasGramas != null && (
+                  <span className="ml-2 font-normal text-blue-600">{Number(os.quantidadeGasGramas).toFixed(1)} g</span>
+                )}
+              </p>
+            </div>
+          )}
+
           {/* Assinaturas */}
           <div className="grid grid-cols-2 gap-8 mt-8 pt-4 border-t border-gray-200">
             <div>
@@ -266,7 +282,14 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
               <p className="text-[10px] text-gray-400 text-center">{tecnicoLabel}</p>
             </div>
             <div>
-              <div className="border-b border-gray-400 h-14 mb-1" />
+              {os.assinaturaBase64 ? (
+                <div className="h-14 mb-1 flex items-end justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={os.assinaturaBase64} alt="Assinatura" className="max-h-12 w-auto" />
+                </div>
+              ) : (
+                <div className="border-b border-gray-400 h-14 mb-1" />
+              )}
               <p className="text-xs text-gray-500 text-center">Assinatura / Carimbo do Responsável</p>
               <p className="text-[10px] text-gray-400 text-center">{os.ambiente.cliente.razaoSocial}</p>
             </div>

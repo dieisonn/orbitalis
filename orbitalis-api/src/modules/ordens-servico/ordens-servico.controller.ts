@@ -116,6 +116,16 @@ export class OrdensServicoController {
     return this.ordensServicoService.cancelar(id);
   }
 
+  // PATCH /api/v1/ordens-servico/:id/concluir — Admin (assinatura + gás)
+  @Patch(':id/concluir')
+  @Roles(UsuarioTipo.admin)
+  concluir(
+    @Param('id') id: string,
+    @Body() body: { assinaturaBase64?: string; tipoGas?: string; quantidadeGasGramas?: number },
+  ) {
+    return this.ordensServicoService.concluir(id, body);
+  }
+
   // PATCH /api/v1/ordens-servico/:id/status — Admin ou Técnico altera status
   @Patch(':id/status')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)

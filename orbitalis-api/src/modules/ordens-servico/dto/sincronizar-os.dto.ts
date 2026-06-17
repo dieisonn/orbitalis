@@ -31,7 +31,7 @@ export class SincronizarOsDto {
 
   @IsOptional()
   @IsString()
-  assinaturaUrl?: string;
+  assinaturaBase64?: string;
 
   @IsOptional()
   @IsString()

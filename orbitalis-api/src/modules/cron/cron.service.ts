@@ -2,12 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificacoesService } from '../notificacoes/notificacoes.service';
 
 @Injectable()
 export class CronService {
   private readonly logger = new Logger(CronService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificacoes: NotificacoesService,
+  ) {}
 
   // Executa diariamente às 00:00:01 (§US05)
   @Cron('1 0 0 * * *')
@@ -123,5 +127,41 @@ export class CronService {
 
     this.logger.log(`Cron finalizado — ${geradas} O.S. gerada(s) no total`);
     return geradas;
+  }
+
+  // Executa diariamente às 08:00 — notifica admins sobre O.S. atrasadas
+  @Cron('0 0 8 * * *')
+  async notificarOsAtrasadas() {
+    const agora = new Date();
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) return;
+
+    const atrasadas = await this.prisma.ordemServico.findMany({
+      where: {
+        status: { in: ['agendada', 'em_andamento'] },
+        dataAgendamento: { lt: agora },
+      },
+      include: {
+        ambiente: { include: { cliente: true } },
+        tecnico: { select: { nome: true } },
+      },
+    });
+
+    for (const os of atrasadas) {
+      const diasAtraso = Math.floor((agora.getTime() - os.dataAgendamento.getTime()) / 86_400_000);
+      const osNumero = os.numero != null ? `OS-${String(os.numero).padStart(4, '0')}` : `OS-${os.id.slice(0, 6).toUpperCase()}`;
+      await this.notificacoes.notificarOsAtrasada({
+        adminEmail,
+        osNumero,
+        clienteNome: os.ambiente.cliente.razaoSocial,
+        ambienteNome: os.ambiente.nome,
+        tecnicoNome: os.tecnico?.nome ?? null,
+        diasAtraso,
+      }).catch(() => null);
+    }
+
+    if (atrasadas.length > 0) {
+      this.logger.log(`Notificações de atraso enviadas: ${atrasadas.length} O.S.`);
+    }
   }
 }

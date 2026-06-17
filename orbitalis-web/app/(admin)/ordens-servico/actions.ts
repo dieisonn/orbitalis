@@ -27,3 +27,15 @@ export async function alterarStatusOs(osId: string, status: string) {
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao alterar status' }
   }
 }
+
+export async function concluirOs(
+  osId: string,
+  data: { assinaturaBase64?: string | null; tipoGas?: string; quantidadeGasGramas?: number },
+) {
+  try {
+    await api.patch(`/ordens-servico/${osId}/concluir`, data)
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao concluir' }
+  }
+}

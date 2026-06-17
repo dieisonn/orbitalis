@@ -196,7 +196,9 @@ model OrdemServico {
   status            OsStatus
   tipo              OsTipo   @default(corretiva)
   origem            OsOrigem
-  assinaturaUrl     String?   @map("assinatura_url") @db.VarChar(512)
+  assinaturaBase64  String?   @map("assinatura_base64") @db.Text
+  tipoGas           String?   @map("tipo_gas") @db.VarChar(20)
+  quantidadeGasGramas Decimal? @map("quantidade_gas_gramas") @db.Decimal(8, 1)
   observacoesGerais String?   @map("observacoes_gerais") @db.Text
   dataAgendamento   DateTime  @map("data_agendamento")
   dataInicio        DateTime? @map("data_inicio")

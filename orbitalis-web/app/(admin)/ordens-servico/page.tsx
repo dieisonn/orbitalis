@@ -4,7 +4,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { OsFilterBar } from '@/components/ui/os-filter-bar'
 import { OsPagination } from '@/components/ui/os-pagination'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, CalendarDays } from 'lucide-react'
 
 type OrdemServico = {
   id: string
@@ -110,12 +110,21 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
             )}
           </p>
         </div>
-        <a
-          href="/ordens-servico/nova"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors"
-        >
-          + Criar O.S.
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href="/ordens-servico/agenda"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-border text-sm font-semibold text-gray-600 rounded-lg hover:bg-surface transition-colors"
+          >
+            <CalendarDays size={14} />
+            Agenda
+          </a>
+          <a
+            href="/ordens-servico/nova"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors"
+          >
+            + Criar O.S.
+          </a>
+        </div>
       </div>
 
       <OsFilterBar

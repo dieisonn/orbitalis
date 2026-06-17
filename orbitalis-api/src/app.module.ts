@@ -11,6 +11,7 @@ import { PlanosManutencaoModule } from './modules/planos-manutencao/planos-manut
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { ModelosChecklistModule } from './modules/modelos-checklist/modelos-checklist.module';
 import { ConfiguracaoEmpresaModule } from './modules/configuracao-empresa/configuracao-empresa.module';
+import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 
 @Module({
   controllers: [HealthController],
@@ -26,6 +27,7 @@ import { ConfiguracaoEmpresaModule } from './modules/configuracao-empresa/config
     UsuariosModule,
     ModelosChecklistModule,
     ConfiguracaoEmpresaModule,
+    NotificacoesModule,
   ],
 })
 export class AppModule {}

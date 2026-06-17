@@ -4,8 +4,9 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
 import {
   MapPin, User, Calendar, Clock, CheckSquare, Wrench,
-  FileText, DollarSign, ClipboardCheck, AlertCircle,
+  FileText, DollarSign, ClipboardCheck, AlertCircle, Wind,
 } from 'lucide-react'
+import { ConcluirOsBtn } from '@/components/ui/concluir-os-btn'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -36,6 +37,7 @@ type Tecnico = { id: string; email: string; nome: string | null }
 
 type OrdemServico = {
   id: string
+  numero: number | null
   status: 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'
   origem: string
   dataAgendamento: string
@@ -44,7 +46,9 @@ type OrdemServico = {
   valorMaoObra: number | null
   valorPecas: number | null
   observacoesGerais: string | null
-  assinaturaUrl: string | null
+  assinaturaBase64: string | null
+  tipoGas: string | null
+  quantidadeGasGramas: number | null
   ambiente: {
     id: string
     nome: string
@@ -120,7 +124,7 @@ export default async function OsDetailPage({ params }: Props) {
     notFound()
   }
 
-  const osNum    = `OS-${os.id.slice(0, 6).toUpperCase()}`
+  const osNum    = os.numero != null ? `OS-${String(os.numero).padStart(4,'0')}` : `OS-${os.id.slice(0,6).toUpperCase()}`
   const cliente  = os.ambiente?.cliente
   const clienteNome = cliente?.nomeFantasia ?? cliente?.razaoSocial ?? '—'
 
@@ -157,7 +161,10 @@ export default async function OsDetailPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {(os.status === 'em_andamento' || os.status === 'agendada') && (
+              <ConcluirOsBtn osId={os.id} osNum={osNum} />
+            )}
             <a
               href={`/ordens-servico/${os.id}/pdf`}
               target="_blank"
@@ -249,6 +256,34 @@ export default async function OsDetailPage({ params }: Props) {
             ({itensConcluidos}/{totalItens} concluído{totalItens !== 1 ? 's' : ''})
           </span>
         </h2>
+
+        {/* Dados de gás e assinatura — visíveis quando preenchidos */}
+        {(os.tipoGas || os.assinaturaBase64) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+            {os.tipoGas && (
+              <div className="bg-blue-50 rounded-xl border border-blue-100 p-4 shadow-sm">
+                <p className="text-xs text-blue-500 mb-1 flex items-center gap-1">
+                  <Wind size={11} /> Carga de Gás Refrigerante
+                </p>
+                <p className="text-sm font-bold text-blue-800">{os.tipoGas}</p>
+                {os.quantidadeGasGramas != null && (
+                  <p className="text-xs text-blue-600 mt-0.5">{Number(os.quantidadeGasGramas).toFixed(1)} g</p>
+                )}
+              </div>
+            )}
+            {os.assinaturaBase64 && (
+              <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
+                <p className="text-xs text-gray-400 mb-2">Assinatura do Responsável</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={os.assinaturaBase64}
+                  alt="Assinatura"
+                  className="max-h-16 w-auto border border-border rounded"
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {os.itens.length === 0 ? (
           <div className="bg-white rounded-2xl border border-border p-10 text-center shadow-sm">

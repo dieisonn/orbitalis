@@ -11,10 +11,14 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
+import { NotificacoesService } from '../notificacoes/notificacoes.service';
 
 @Injectable()
 export class OrdensServicoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificacoes: NotificacoesService,
+  ) {}
 
   // POST /ordens-servico (§6.1 + §6.2)
   // 1. Cria a O.S. pai para o ambiente
@@ -270,7 +274,7 @@ export class OrdensServicoService {
         where: { id },
         data: {
           status: todasConcluidas ? 'concluida' : 'em_andamento',
-          assinaturaUrl: dto.assinaturaUrl,
+          assinaturaBase64: dto.assinaturaBase64,
           observacoesGerais: dto.observacoesGerais,
           dataInicio: os.dataInicio ?? new Date(),
           dataConclusao: todasConcluidas ? new Date() : null,
@@ -278,6 +282,46 @@ export class OrdensServicoService {
         include: { itens: true },
       });
     });
+  }
+
+  // PATCH /ordens-servico/:id/concluir — Admin conclui com assinatura e dados de gás
+  async concluir(
+    id: string,
+    data: { assinaturaBase64?: string; tipoGas?: string; quantidadeGasGramas?: number },
+  ) {
+    const os = await this.prisma.ordemServico.findUnique({ where: { id } });
+    if (!os) throw new NotFoundException('O.S. não encontrada');
+
+    const updated = await this.prisma.ordemServico.update({
+      where: { id },
+      data: {
+        status: 'concluida',
+        dataConclusao: os.dataConclusao ?? new Date(),
+        ...(data.assinaturaBase64 !== undefined ? { assinaturaBase64: data.assinaturaBase64 } : {}),
+        ...(data.tipoGas !== undefined ? { tipoGas: data.tipoGas } : {}),
+        ...(data.quantidadeGasGramas !== undefined ? { quantidadeGasGramas: data.quantidadeGasGramas } : {}),
+      },
+      include: {
+        itens: true,
+        ambiente: { include: { cliente: { include: { usuario: { select: { email: true } } } } } },
+        tecnico: { select: { email: true, nome: true } },
+      },
+    });
+
+    const clienteEmail = updated.ambiente.cliente.usuario?.email;
+    if (clienteEmail) {
+      const osNumero = updated.numero != null ? `OS-${String(updated.numero).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`;
+      this.notificacoes.notificarOsConcluida({
+        clienteEmail,
+        clienteNome: updated.ambiente.cliente.razaoSocial,
+        osNumero,
+        ambienteNome: updated.ambiente.nome,
+        tecnicoNome: updated.tecnico?.nome ?? null,
+        dataConclusao: updated.dataConclusao?.toISOString() ?? new Date().toISOString(),
+      }).catch(() => null);
+    }
+
+    return updated;
   }
 
   // POST /ordens-servico/evidencias/presigned-url (§API)
@@ -424,7 +468,7 @@ export class OrdensServicoService {
     });
     if (!tecnico) throw new NotFoundException('Técnico não encontrado');
 
-    return this.prisma.ordemServico.update({
+    const updated = await this.prisma.ordemServico.update({
       where: { id },
       data: {
         status: 'agendada',
@@ -432,11 +476,23 @@ export class OrdensServicoService {
         dataAgendamento: new Date(dto.dataAgendamento),
       },
       include: {
-        ambiente: true,
-        tecnico: { select: { id: true, email: true } },
+        ambiente: { include: { cliente: true } },
+        tecnico: { select: { id: true, email: true, nome: true } },
         itens: { select: { id: true, statusItem: true } },
       },
     });
+
+    const osNumero = updated.numero != null ? `OS-${String(updated.numero).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`;
+    this.notificacoes.notificarOsAgendada({
+      tecnicoEmail: tecnico.email,
+      tecnicoNome: tecnico.nome,
+      osNumero,
+      clienteNome: updated.ambiente.cliente.razaoSocial,
+      ambienteNome: updated.ambiente.nome,
+      dataAgendamento: dto.dataAgendamento,
+    }).catch(() => null);
+
+    return updated;
   }
 
   // PATCH /ordens-servico/:id/cancelar — Admin cancela
