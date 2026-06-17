@@ -16,7 +16,7 @@ type Item = {
 }
 
 type OS = {
-  id: string; status: string; origem: string
+  id: string; numero: number | null; status: string; origem: string
   dataAgendamento: string; dataInicio: string | null; dataConclusao: string | null
   observacoesGerais: string | null
   assinaturaBase64: string | null
@@ -35,24 +35,10 @@ type Config = {
   corPrimaria: string | null; cnpj: string | null; telefone: string | null; endereco: string | null
 } | null
 
-const STATUS_LABEL: Record<string, string> = {
-  aberta: 'Aberta', agendada: 'Agendada', em_andamento: 'Em Andamento',
-  concluida: 'Concluída', cancelada: 'Cancelada',
-}
-
-const STATUS_COLOR: Record<string, string> = {
-  aberta: '#2563eb', agendada: '#d97706', em_andamento: '#7c3aed',
-  concluida: '#16a34a', cancelada: '#dc2626',
-}
-
 const ORIGEM_LABEL: Record<string, string> = {
-  manual_admin: 'Manual (Admin)',
-  preventiva_automatica: 'Preventiva Automática',
+  manual_admin: 'Manual',
+  preventiva_automatica: 'Preventiva',
   portal_cliente: 'Portal Cliente',
-}
-
-const ITEM_STATUS_LABEL: Record<string, string> = {
-  pendente: 'Pendente', concluido: 'Concluído', nao_aplicavel: 'N/A',
 }
 
 function fmt(d: string | null) {
@@ -70,7 +56,9 @@ function parseSnapshot(snapshot: unknown): ChecklistItem[] {
 }
 
 export function PrintOS({ os, config }: { os: OS; config?: Config }) {
-  const shortId = `OS-${os.id.slice(0, 6).toUpperCase()}`
+  const numero = os.numero != null
+    ? `OS-${String(os.numero).padStart(4, '0')}`
+    : `OS-${os.id.slice(0, 6).toUpperCase()}`
   const nomeEmpresa = config?.nomeFantasia ?? config?.nomeEmpresa ?? 'Orbitalis'
   const logoUrl = config?.logoUrl ?? null
   const cor = config?.corPrimaria ?? '#0505ad'
@@ -79,236 +67,249 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
   return (
     <>
       <style>{`
-        @page { size: A4; margin: 0; }
+        @page { size: A4; margin: 14mm 12mm 12mm 12mm; }
         @media print {
           .no-print { display: none !important; }
           body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .page-break { page-break-before: always; }
         }
-        body { margin: 0; font-family: sans-serif; }
+        body { margin: 0; font-family: 'Arial', sans-serif; }
+        * { box-sizing: border-box; }
       `}</style>
 
-      {/* Barra de ações — visível na tela, oculta na impressão */}
-      <div className="no-print fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-sm px-6 py-3 flex items-center justify-between">
-        <a href="/ordens-servico"
-          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg text-sm hover:bg-gray-50 transition-colors bg-white">
-          ← Voltar
-        </a>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400 font-mono">{shortId}</span>
-          <button onClick={() => window.print()}
-            className="inline-flex items-center gap-2 px-5 py-2 text-white text-sm font-semibold rounded-lg transition-colors"
-            style={{ backgroundColor: cor }}>
+      {/* Barra de ações — apenas na tela */}
+      <div className="no-print fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <a href=".." className="text-sm text-gray-600 hover:text-gray-900 font-medium">← Voltar</a>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400 font-mono">{numero}</span>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-lg"
+            style={{ backgroundColor: cor }}
+          >
             <Printer size={14} />
             Imprimir / Salvar PDF
           </button>
         </div>
       </div>
-      {/* Espaço para o conteúdo não ficar atrás da barra */}
       <div className="no-print h-14" />
 
-      <div className="bg-white text-gray-900" style={{ fontFamily: 'Arial, sans-serif', fontSize: '10pt' }}>
+      {/* ── DOCUMENTO ── */}
+      <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '9.5pt', color: '#111', background: '#fff', maxWidth: '210mm', margin: '0 auto' }}>
 
-        {/* ── CABEÇALHO COM SANGRIA ── */}
-        <div style={{ backgroundColor: cor }} className="w-full px-8 py-5 flex items-start justify-between">
-          {/* Lado esquerdo: logo + dados da empresa */}
-          <div className="flex items-center gap-4">
+        {/* Faixa de cor no topo — identidade da empresa */}
+        <div style={{ height: '5px', backgroundColor: cor, width: '100%' }} />
+
+        {/* CABEÇALHO */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '16px 0 12px 0', borderBottom: '1.5px solid #111' }}>
+          {/* Empresa */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {logoUrl ? (
-              <div className="bg-white rounded-2xl p-2 shrink-0">
-                <img src={logoUrl} alt={nomeEmpresa}
-                  style={{ height: '52px', width: 'auto', objectFit: 'contain', display: 'block' }} />
+              <img src={logoUrl} alt={nomeEmpresa}
+                style={{ height: '44px', width: 'auto', objectFit: 'contain' }} />
+            ) : (
+              <span style={{ fontWeight: 900, fontSize: '14pt', letterSpacing: '-0.5px' }}>{nomeEmpresa.toUpperCase()}</span>
+            )}
+            <div style={{ borderLeft: '1px solid #ccc', paddingLeft: '12px', lineHeight: 1.5 }}>
+              {logoUrl && <p style={{ fontWeight: 700, fontSize: '10pt', margin: 0 }}>{nomeEmpresa}</p>}
+              {config?.cnpj    && <p style={{ fontSize: '7.5pt', color: '#555', margin: 0 }}>CNPJ: {config.cnpj}</p>}
+              {config?.telefone && <p style={{ fontSize: '7.5pt', color: '#555', margin: 0 }}>{config.telefone}</p>}
+              {config?.endereco && <p style={{ fontSize: '7.5pt', color: '#555', margin: 0 }}>{config.endereco}</p>}
+            </div>
+          </div>
+
+          {/* Número da O.S. */}
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '1px', color: '#666', margin: '0 0 2px 0' }}>Ordem de Serviço</p>
+            <p style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '20pt', margin: 0, color: '#111' }}>{numero}</p>
+            <p style={{ fontSize: '7.5pt', color: '#666', margin: '2px 0 0 0' }}>{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
+          </div>
+        </div>
+
+        {/* INFORMAÇÕES PRINCIPAIS */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', padding: '14px 0', borderBottom: '1px solid #ddd' }}>
+          <Cell label="Cliente">
+            <strong>{os.ambiente.cliente.razaoSocial}</strong>
+            {os.ambiente.cliente.nomeFantasia && (
+              <><br /><span style={{ color: '#555' }}>{os.ambiente.cliente.nomeFantasia}</span></>
+            )}
+            <br />
+            <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.documento}</span>
+            <br />
+            <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.endereco}</span>
+          </Cell>
+
+          <Cell label="Ambiente / Local">
+            <strong>{os.ambiente.nome}</strong>
+            <br />
+            <span style={{ color: '#555' }}>{os.ambiente.localizacaoInterna}</span>
+            <br />
+            <span style={{ color: '#888', fontSize: '8pt' }}>Cap. Térmica: {os.ambiente.capacidadeTermica}</span>
+          </Cell>
+
+          <Cell label="Técnico Responsável">
+            <strong>{tecnicoLabel}</strong>
+            {os.tecnico?.nome && (
+              <><br /><span style={{ color: '#888', fontSize: '8pt' }}>{os.tecnico.email}</span></>
+            )}
+          </Cell>
+
+          <Cell label="Datas">
+            <Row k="Agendamento" v={fmt(os.dataAgendamento)} />
+            {os.dataInicio    && <Row k="Início"     v={fmt(os.dataInicio)} />}
+            {os.dataConclusao && <Row k="Conclusão"  v={fmt(os.dataConclusao)} />}
+          </Cell>
+        </div>
+
+        {/* OBSERVAÇÕES GERAIS */}
+        {os.observacoesGerais && (
+          <div style={{ padding: '10px 0', borderBottom: '1px solid #ddd' }}>
+            <SectionLabel>Observações Gerais</SectionLabel>
+            <p style={{ margin: 0, fontSize: '9pt' }}>{os.observacoesGerais}</p>
+          </div>
+        )}
+
+        {/* CARGA DE GÁS */}
+        {os.tipoGas && (
+          <div style={{ padding: '10px 0', borderBottom: '1px solid #ddd' }}>
+            <SectionLabel>Carga de Gás Refrigerante</SectionLabel>
+            <p style={{ margin: 0 }}>
+              <strong>{os.tipoGas}</strong>
+              {os.quantidadeGasGramas != null && (
+                <span style={{ color: '#555', marginLeft: '8px' }}>{Number(os.quantidadeGasGramas).toFixed(1)} g</span>
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* EQUIPAMENTOS */}
+        <div style={{ padding: '12px 0' }}>
+          <SectionLabel>Equipamentos e Serviços ({os.itens.length})</SectionLabel>
+
+          {os.itens.map((item, idx) => {
+            const checklistItems = parseSnapshot(item.checklistSnapshot)
+            return (
+              <div key={item.id} style={{ border: '1px solid #ccc', borderRadius: '4px', marginBottom: '10px', overflow: 'hidden' }}>
+
+                {/* Cabeçalho do equipamento */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f5f5f5', padding: '6px 10px', borderBottom: '1px solid #ccc' }}>
+                  <div>
+                    <span style={{ color: '#999', marginRight: '4px', fontSize: '8pt' }}>{idx + 1}.</span>
+                    <strong style={{ fontSize: '9.5pt' }}>{item.equipamento.nome}</strong>
+                    <span style={{ color: '#666', fontSize: '8pt', marginLeft: '8px' }}>
+                      {item.equipamento.marca}
+                      {item.equipamento.modelo ? ` ${item.equipamento.modelo}` : ''}
+                      {' · '}{item.equipamento.tipoEquipamento}
+                    </span>
+                    {item.equipamento.numeroSerie && (
+                      <span style={{ color: '#999', fontFamily: 'monospace', fontSize: '7.5pt', marginLeft: '8px' }}>
+                        S/N: {item.equipamento.numeroSerie}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ padding: '8px 10px' }}>
+                  {/* Checklist */}
+                  {checklistItems.length > 0 && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#888', margin: '0 0 6px 0' }}>
+                        Checklist de Serviços
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px' }}>
+                        {checklistItems.map((ci) => (
+                          <div key={ci.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
+                            <div style={{ width: '10px', height: '10px', border: '1px solid #999', borderRadius: '2px', marginTop: '1px', flexShrink: 0 }} />
+                            <span style={{ fontSize: '8.5pt', lineHeight: 1.4 }}>
+                              {ci.descricao}
+                              {ci.obrigatorio && <span style={{ color: '#999', fontSize: '7pt' }}> *</span>}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Observações técnicas */}
+                  <div>
+                    <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#888', margin: '0 0 4px 0' }}>
+                      Observações Técnicas
+                    </p>
+                    {item.observacoesTecnicas ? (
+                      <p style={{ fontSize: '9pt', margin: 0 }}>{item.observacoesTecnicas}</p>
+                    ) : (
+                      <div style={{ height: '28px', borderBottom: '1px dashed #bbb' }} />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* ASSINATURAS */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginTop: '16px', paddingTop: '16px', borderTop: '1.5px solid #111' }}>
+          <div>
+            {os.assinaturaBase64 ? (
+              <div style={{ height: '52px', marginBottom: '4px', display: 'flex', alignItems: 'flex-end' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={os.assinaturaBase64} alt="Assinatura do técnico" style={{ maxHeight: '48px', width: 'auto' }} />
               </div>
             ) : (
-              <div className="bg-white/20 rounded-xl px-3 py-2 shrink-0">
-                <span className="text-white font-black text-lg tracking-tight">{nomeEmpresa.slice(0,8).toUpperCase()}</span>
-              </div>
+              <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '4px' }} />
             )}
-            <div className="text-white">
-              <p className="font-black text-lg leading-tight">{nomeEmpresa}</p>
-              {config?.cnpj && <p className="text-xs opacity-75 mt-0.5">CNPJ: {config.cnpj}</p>}
-              {config?.telefone && <p className="text-xs opacity-75">{config.telefone}</p>}
-              {config?.endereco && <p className="text-xs opacity-75">{config.endereco}</p>}
-            </div>
+            <p style={{ fontSize: '8pt', textAlign: 'center', margin: '0 0 1px 0', color: '#444' }}>Assinatura do Técnico</p>
+            <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{tecnicoLabel}</p>
           </div>
 
-          {/* Lado direito: número + status */}
-          <div className="text-right text-white shrink-0">
-            <p className="text-xs uppercase tracking-widest opacity-70">Ordem de Serviço</p>
-            <p className="font-mono font-black text-2xl mt-0.5">{shortId}</p>
-            <span style={{ backgroundColor: STATUS_COLOR[os.status] ?? '#374151' }}
-              className="inline-block text-xs font-bold px-3 py-1 rounded-full mt-1 text-white">
-              {STATUS_LABEL[os.status] ?? os.status}
-            </span>
+          <div>
+            <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '4px' }} />
+            <p style={{ fontSize: '8pt', textAlign: 'center', margin: '0 0 1px 0', color: '#444' }}>Assinatura / Carimbo do Responsável</p>
+            <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{os.ambiente.cliente.razaoSocial}</p>
           </div>
         </div>
 
-        {/* Linha decorativa */}
-        <div style={{ height: '4px', background: `linear-gradient(to right, ${cor}, ${cor}99)` }} />
-
-        {/* ── CORPO ── */}
-        <div className="px-8 py-6">
-
-          {/* Grid de informações */}
-          <div className="grid grid-cols-2 gap-6 mb-5">
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: cor }}>Cliente</p>
-              <p className="font-semibold text-sm">{os.ambiente.cliente.razaoSocial}</p>
-              {os.ambiente.cliente.nomeFantasia && (
-                <p className="text-xs text-gray-500">{os.ambiente.cliente.nomeFantasia}</p>
-              )}
-              <p className="text-xs text-gray-400 mt-0.5">{os.ambiente.cliente.documento}</p>
-              <p className="text-xs text-gray-400">{os.ambiente.cliente.endereco}</p>
-            </div>
-
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: cor }}>Ambiente</p>
-              <p className="font-semibold text-sm">{os.ambiente.nome}</p>
-              <p className="text-xs text-gray-400">{os.ambiente.localizacaoInterna}</p>
-              <p className="text-xs text-gray-400">Cap. Térmica: {os.ambiente.capacidadeTermica}</p>
-            </div>
-
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: cor }}>Técnico</p>
-              <p className="text-sm font-medium">{tecnicoLabel}</p>
-              {os.tecnico?.nome && (
-                <p className="text-xs text-gray-400">{os.tecnico.email}</p>
-              )}
-            </div>
-
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: cor }}>Datas</p>
-              <p className="text-xs">Agendamento: <span className="font-medium">{fmt(os.dataAgendamento)}</span></p>
-              {os.dataInicio && <p className="text-xs">Início: <span className="font-medium">{fmt(os.dataInicio)}</span></p>}
-              {os.dataConclusao && <p className="text-xs">Conclusão: <span className="font-medium">{fmt(os.dataConclusao)}</span></p>}
-              <p className="text-[10px] text-gray-400 mt-0.5">{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
-            </div>
-          </div>
-
-          {os.observacoesGerais && (
-            <div className="mb-5 bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">Observações Gerais</p>
-              <p className="text-xs">{os.observacoesGerais}</p>
-            </div>
-          )}
-
-          {/* Equipamentos */}
-          <div className="mb-5">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-              Equipamentos e Serviços ({os.itens.length})
-            </p>
-            <div className="space-y-3">
-              {os.itens.map((item, idx) => {
-                const checklistItems = parseSnapshot(item.checklistSnapshot)
-                return (
-                  <div key={item.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-                      <div>
-                        <span className="text-xs text-gray-400 mr-1">{idx + 1}.</span>
-                        <span className="font-semibold text-sm">{item.equipamento.nome}</span>
-                        <span className="text-xs text-gray-400 ml-2">
-                          {item.equipamento.marca}
-                          {item.equipamento.modelo ? ` ${item.equipamento.modelo}` : ''}
-                          {' · '}{item.equipamento.tipoEquipamento}
-                        </span>
-                        {item.equipamento.numeroSerie && (
-                          <span className="text-[10px] text-gray-400 ml-2 font-mono">
-                            S/N: {item.equipamento.numeroSerie}
-                          </span>
-                        )}
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        item.statusItem === 'concluido' ? 'bg-green-100 text-green-800' :
-                        item.statusItem === 'nao_aplicavel' ? 'bg-gray-100 text-gray-500' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {ITEM_STATUS_LABEL[item.statusItem] ?? item.statusItem}
-                      </span>
-                    </div>
-
-                    <div className="px-4 py-3 space-y-2">
-                      {checklistItems.length > 0 && (
-                        <div>
-                          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-                            Checklist de Serviços
-                          </p>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                            {checklistItems.map((ci) => (
-                              <div key={ci.id} className="flex items-start gap-1.5">
-                                <div className="mt-0.5 w-3 h-3 border border-gray-400 rounded-sm shrink-0" />
-                                <span className="text-xs text-gray-700">
-                                  {ci.descricao}
-                                  {ci.obrigatorio && <span className="text-[9px] text-red-400 ml-1">*</span>}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1">
-                          Observações Técnicas
-                        </p>
-                        {item.observacoesTecnicas ? (
-                          <p className="text-xs text-gray-700">{item.observacoesTecnicas}</p>
-                        ) : (
-                          <div className="h-8 border-b border-dashed border-gray-300" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Carga de Gás */}
-          {os.tipoGas && (
-            <div className="mb-5 border border-blue-200 bg-blue-50 rounded-lg p-3">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400 mb-1">Carga de Gás Refrigerante</p>
-              <p className="text-sm font-semibold text-blue-800">
-                {os.tipoGas}
-                {os.quantidadeGasGramas != null && (
-                  <span className="ml-2 font-normal text-blue-600">{Number(os.quantidadeGasGramas).toFixed(1)} g</span>
-                )}
-              </p>
-            </div>
-          )}
-
-          {/* Assinaturas */}
-          <div className="grid grid-cols-2 gap-8 mt-8 pt-4 border-t border-gray-200">
-            <div>
-              <div className="border-b border-gray-400 h-14 mb-1" />
-              <p className="text-xs text-gray-500 text-center">Assinatura do Técnico</p>
-              <p className="text-[10px] text-gray-400 text-center">{tecnicoLabel}</p>
-            </div>
-            <div>
-              {os.assinaturaBase64 ? (
-                <div className="h-14 mb-1 flex items-end justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={os.assinaturaBase64} alt="Assinatura" className="max-h-12 w-auto" />
-                </div>
-              ) : (
-                <div className="border-b border-gray-400 h-14 mb-1" />
-              )}
-              <p className="text-xs text-gray-500 text-center">Assinatura / Carimbo do Responsável</p>
-              <p className="text-[10px] text-gray-400 text-center">{os.ambiente.cliente.razaoSocial}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── RODAPÉ COM SANGRIA ── */}
-        <div style={{ backgroundColor: cor + '15', borderTop: `2px solid ${cor}30` }}
-          className="px-8 py-3 flex items-center justify-between">
-          <p className="text-[8px] text-gray-400">
-            {shortId} · {nomeEmpresa}
+        {/* RODAPÉ */}
+        <div style={{ marginTop: '14px', paddingTop: '6px', borderTop: '1px solid #ddd', display: 'flex', justifyContent: 'space-between' }}>
+          <p style={{ fontSize: '7pt', color: '#aaa', margin: 0 }}>
+            {numero} · {nomeEmpresa}
             {config?.cnpj ? ` · CNPJ ${config.cnpj}` : ''}
             {config?.telefone ? ` · ${config.telefone}` : ''}
           </p>
-          <p className="text-[8px] text-gray-400">
-            Gerado em {new Date().toLocaleString('pt-BR')}
+          <p style={{ fontSize: '7pt', color: '#aaa', margin: 0 }}>
+            {new Date().toLocaleString('pt-BR')}
           </p>
         </div>
+
       </div>
     </>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#777', margin: '0 0 6px 0' }}>
+      {children}
+    </p>
+  )
+}
+
+function Cell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#777', margin: '0 0 3px 0' }}>
+        {label}
+      </p>
+      <div style={{ fontSize: '9.5pt', lineHeight: 1.6 }}>{children}</div>
+    </div>
+  )
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <p style={{ margin: '0 0 1px 0', fontSize: '9pt' }}>
+      <span style={{ color: '#666' }}>{k}: </span>
+      <strong>{v}</strong>
+    </p>
   )
 }
