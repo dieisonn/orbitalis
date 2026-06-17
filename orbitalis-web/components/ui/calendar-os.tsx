@@ -157,8 +157,8 @@ export function CalendarOs({ events }: { events: OsEvent[] }) {
         </div>
       </div>
 
-      {/* Painel lateral — O.S. do dia selecionado */}
-      <div className="w-full xl:w-80 shrink-0">
+      {/* Painel lateral */}
+      <div className="w-full xl:w-80 shrink-0 flex flex-col gap-3">
         {selected ? (
           <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-border bg-surface">
@@ -200,17 +200,20 @@ export function CalendarOs({ events }: { events: OsEvent[] }) {
         ) : (
           <div className="bg-white rounded-2xl border border-border shadow-sm p-6 text-center">
             <p className="text-sm text-gray-400">Clique em um dia para ver as O.S. agendadas.</p>
-            {/* Legenda */}
-            <div className="mt-5 space-y-2 text-left">
-              {Object.entries(STATUS_LABEL).map(([k, v]) => (
-                <div key={k} className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-sm shrink-0 ${STATUS_COLOR[k]}`} />
-                  <span className="text-xs text-gray-500">{v}</span>
-                </div>
-              ))}
-            </div>
           </div>
         )}
+
+        {/* Legenda — sempre visível */}
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-4">
+          <div className="space-y-2">
+            {Object.entries(STATUS_LABEL).map(([k, v]) => (
+              <div key={k} className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-sm shrink-0 ${STATUS_COLOR[k]}`} />
+                <span className="text-xs text-gray-500">{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   )
