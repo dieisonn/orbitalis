@@ -35,16 +35,17 @@ function fmtDate(d: string | null) {
 export default async function ClienteDetalhePage({ params }: Props) {
   const { id } = await params
 
-  let cliente: Cliente
-  let dash: Dashboard
+  let cliente: Cliente | undefined
+  let dash: Dashboard | undefined
   try {
     ;[cliente, dash] = await Promise.all([
       api.get<Cliente>(`/clientes/${id}`),
       api.get<Dashboard>(`/clientes/${id}/dashboard`),
     ])
   } catch {
-    notFound()
+    /* empty */
   }
+  if (!cliente || !dash) notFound()
 
   const totalOs = Object.values(dash.porStatus).reduce((s, n) => s + n, 0)
   const contratoAtivo = dash.contrato

@@ -89,7 +89,7 @@ export class RelatoriosService {
     ws.autoFilter = { from: 'A1', to: 'M1' };
 
     const buf = await wb.xlsx.writeBuffer();
-    return buf as Buffer;
+    return Buffer.from(buf);
   }
 
   // GET /relatorios/pmoc/:clienteId (§API §US05)
