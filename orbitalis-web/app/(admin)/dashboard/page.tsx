@@ -68,6 +68,10 @@ export default async function DashboardPage({ searchParams }: Props) {
     porTecnico: [],
     porTipoEquipamento: {},
     planosVencendo: { vermelho: [], amarelo: [], verde: [] },
+    custoTotalMes: 0,
+    taxaCorretivas: 0,
+    tempoMedioAtendimento: null,
+    totalConcluidasRecente: 0,
   }
 
   const [painel, historico] = await Promise.all([
