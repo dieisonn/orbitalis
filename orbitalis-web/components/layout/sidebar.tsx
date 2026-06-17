@@ -21,11 +21,13 @@ import {
   FileText,
   BarChart2,
   FileSpreadsheet,
+  CalendarDays,
 } from 'lucide-react'
 
 const NAV = [
   { href: '/dashboard',              label: 'Cockpit',           icon: LayoutDashboard },
   { href: '/alertas',                label: 'Alertas',           icon: Bell },
+  { href: '/ordens-servico/agenda',  label: 'Agenda',            icon: CalendarDays },
   { href: '/clientes',               label: 'Clientes',          icon: Users },
   { href: '/contratos',              label: 'Contratos',         icon: FileText },
   { href: '/ambientes',              label: 'Ambientes',         icon: Building2 },
@@ -108,7 +110,8 @@ export default function Sidebar({ config }: { config?: Config }) {
         {/* Nav */}
         <nav className="relative z-10 flex-1 py-4 overflow-y-auto">
           {NAV.map(({ href, label, icon: Icon }) => {
-            const active = path === href || (href !== '/dashboard' && path.startsWith(href))
+            const exactMatch = href === '/dashboard' || href === '/ordens-servico/agenda'
+            const active = path === href || (!exactMatch && path.startsWith(href))
             return (
               <Link
                 key={href}
