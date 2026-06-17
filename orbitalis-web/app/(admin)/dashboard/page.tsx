@@ -1,6 +1,9 @@
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
-import { CalendarClock, User, Wrench } from 'lucide-react'
+import {
+  CalendarClock, User, Wrench,
+  ClipboardList, Clock, AlertTriangle, CheckCircle, XCircle,
+} from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
 import { YearSelector } from '@/components/ui/year-selector'
 
@@ -29,11 +32,11 @@ type Historico = {
 }
 
 const STATUS = [
-  { key: 'aberta',       label: 'Abertas',      dot: 'bg-blue-500' },
-  { key: 'agendada',     label: 'Agendadas',    dot: 'bg-amber-400' },
-  { key: 'em_andamento', label: 'Em andamento', dot: 'bg-violet-500' },
-  { key: 'concluida',    label: 'Concluídas',   dot: 'bg-emerald-500' },
-  { key: 'cancelada',    label: 'Canceladas',   dot: 'bg-red-400' },
+  { key: 'aberta',       label: 'Abertas',      icon: ClipboardList, bg: 'bg-blue-600',   text: 'text-white' },
+  { key: 'agendada',     label: 'Agendadas',    icon: Clock,         bg: 'bg-orange-100', text: 'text-orange-700' },
+  { key: 'em_andamento', label: 'Em andamento', icon: AlertTriangle, bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  { key: 'concluida',    label: 'Concluídas',   icon: CheckCircle,   bg: 'bg-green-600',  text: 'text-white' },
+  { key: 'cancelada',    label: 'Canceladas',   icon: XCircle,       bg: 'bg-red-600',    text: 'text-white' },
 ]
 
 function fmtData(iso: string | null) {
@@ -92,18 +95,14 @@ export default async function DashboardPage({ searchParams }: Props) {
         <p className="text-sm text-gray-400 mt-0.5">Visão em tempo real das Ordens de Serviço</p>
       </div>
 
-      {/* Status — barra conectada */}
-      <div className="grid grid-cols-5 divide-x divide-border border border-border rounded-xl overflow-hidden bg-white">
-        {STATUS.map(({ key, label, dot }) => (
+      {/* Status — cards coloridos */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+        {STATUS.map(({ key, label, icon: Icon, bg, text }) => (
           <a key={key} href={`/ordens-servico?status=${key}`}
-            className="flex flex-col gap-1 p-5 hover:bg-surface transition-colors group">
-            <span className="text-3xl font-bold tabular-nums text-gray-900 group-hover:text-primary transition-colors">
-              {porStatus[key] ?? 0}
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${dot} shrink-0`} />
-              <span className="text-xs text-gray-500">{label}</span>
-            </div>
+            className={`rounded-xl p-5 flex flex-col gap-2 ${bg} hover:opacity-90 transition-opacity`}>
+            <Icon size={20} className={text} />
+            <p className={`text-3xl font-bold tabular-nums ${text}`}>{porStatus[key] ?? 0}</p>
+            <p className={`text-xs font-medium uppercase tracking-wide ${text} opacity-80`}>{label}</p>
           </a>
         ))}
       </div>
