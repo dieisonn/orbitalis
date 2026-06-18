@@ -190,7 +190,7 @@ export class CronService {
       include: {
         ambiente: {
           include: {
-            cliente: { include: { usuario: { select: { email: true } } } },
+            cliente: { select: { razaoSocial: true, telefone: true, usuario: { select: { email: true } } } },
           },
         },
         tecnico: { select: { nome: true } },
@@ -207,6 +207,7 @@ export class CronService {
       await this.notificacoes.notificarOsProxima({
         clienteEmail,
         clienteNome: os.ambiente.cliente.razaoSocial,
+        clienteTelefone: os.ambiente.cliente.telefone,
         osNumero,
         ambienteNome: os.ambiente.nome,
         tecnicoNome: os.tecnico?.nome ?? null,
@@ -230,7 +231,7 @@ export class CronService {
         vigenciaFim: { gte: agora, lte: em30Dias },
       },
       include: {
-        cliente: { include: { usuario: { select: { email: true } } } },
+        cliente: { select: { razaoSocial: true, telefone: true, usuario: { select: { email: true } } } },
       },
     });
 
@@ -247,6 +248,7 @@ export class CronService {
       await this.notificacoes.notificarContratoVencendo({
         clienteEmail,
         clienteNome: contrato.cliente.razaoSocial,
+        clienteTelefone: contrato.cliente.telefone,
         contratoDescricao: contrato.descricao,
         diasRestantes,
         dataFim: contrato.vigenciaFim.toISOString(),

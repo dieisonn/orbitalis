@@ -348,7 +348,7 @@ export class OrdensServicoService {
       },
       include: {
         itens: true,
-        ambiente: { include: { cliente: { include: { usuario: { select: { email: true } } } } } },
+        ambiente: { include: { cliente: { select: { razaoSocial: true, telefone: true, usuario: { select: { email: true } } } } } },
         tecnico: { select: { email: true, nome: true } },
       },
     });
@@ -359,6 +359,7 @@ export class OrdensServicoService {
       this.notificacoes.notificarOsConcluida({
         clienteEmail,
         clienteNome: updated.ambiente.cliente.razaoSocial,
+        clienteTelefone: updated.ambiente.cliente.telefone,
         osNumero,
         ambienteNome: updated.ambiente.nome,
         tecnicoNome: updated.tecnico?.nome ?? null,

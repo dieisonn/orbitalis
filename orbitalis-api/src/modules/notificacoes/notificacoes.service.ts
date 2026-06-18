@@ -5,6 +5,9 @@ import * as nodemailer from 'nodemailer';
 export class NotificacoesService {
   private readonly logger = new Logger(NotificacoesService.name);
   private transporter: nodemailer.Transporter | null = null;
+  private readonly evolutionUrl: string | null;
+  private readonly evolutionKey: string | null;
+  private readonly evolutionInstance: string | null;
 
   constructor() {
     const host = process.env.SMTP_HOST;
@@ -19,7 +22,48 @@ export class NotificacoesService {
         auth: { user, pass },
       });
     } else {
-      this.logger.warn('SMTP não configurado — notificações desativadas');
+      this.logger.warn('SMTP não configurado — notificações de e-mail desativadas');
+    }
+
+    this.evolutionUrl      = process.env.EVOLUTION_API_URL      ?? null;
+    this.evolutionKey      = process.env.EVOLUTION_API_KEY      ?? null;
+    this.evolutionInstance = process.env.EVOLUTION_INSTANCE     ?? null;
+
+    if (!this.evolutionUrl || !this.evolutionKey || !this.evolutionInstance) {
+      this.logger.warn('Evolution API não configurada — notificações WhatsApp desativadas');
+    }
+  }
+
+  private normalizePhone(phone: string): string | null {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('55') && digits.length >= 12) return digits;
+    if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+    return null;
+  }
+
+  private async sendWhatsApp(phone: string, text: string) {
+    if (!this.evolutionUrl || !this.evolutionKey || !this.evolutionInstance) return;
+    const number = this.normalizePhone(phone);
+    if (!number) return;
+    try {
+      const res = await fetch(
+        `${this.evolutionUrl}/message/sendText/${this.evolutionInstance}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': this.evolutionKey,
+          },
+          body: JSON.stringify({ number, text }),
+        },
+      );
+      if (!res.ok) {
+        this.logger.warn(`WhatsApp falhou (${res.status}) → ${number}`);
+      } else {
+        this.logger.log(`WhatsApp enviado → ${number}`);
+      }
+    } catch (err) {
+      this.logger.error(`Falha ao enviar WhatsApp para ${number}:`, err);
     }
   }
 
@@ -75,13 +119,22 @@ export class NotificacoesService {
   async notificarOsConcluida(params: {
     clienteEmail: string
     clienteNome: string
+    clienteTelefone?: string | null
     osNumero: string
     ambienteNome: string
     tecnicoNome: string | null
     dataConclusao: string
   }) {
-    const { clienteEmail, clienteNome, osNumero, ambienteNome, tecnicoNome, dataConclusao } = params;
+    const { clienteEmail, clienteNome, clienteTelefone, osNumero, ambienteNome, tecnicoNome, dataConclusao } = params;
     const data = new Date(dataConclusao).toLocaleDateString('pt-BR');
+
+    if (clienteTelefone) {
+      await this.sendWhatsApp(
+        clienteTelefone,
+        `✅ *Manutenção Concluída* — ${osNumero}\n\nOlá, ${clienteNome}!\n\nA manutenção no ambiente *${ambienteNome}* foi concluída em ${data}.\nTécnico: ${tecnicoNome ?? '—'}\n\nEm caso de dúvidas, entre em contato com nossa equipe.`,
+      );
+    }
+
     await this.send(
       clienteEmail,
       `[Orbitalis] Manutenção Concluída — ${osNumero}`,
@@ -109,13 +162,22 @@ export class NotificacoesService {
   async notificarOsProxima(params: {
     clienteEmail: string
     clienteNome: string
+    clienteTelefone?: string | null
     osNumero: string
     ambienteNome: string
     tecnicoNome: string | null
     dataAgendamento: string
   }) {
-    const { clienteEmail, clienteNome, osNumero, ambienteNome, tecnicoNome, dataAgendamento } = params;
+    const { clienteEmail, clienteNome, clienteTelefone, osNumero, ambienteNome, tecnicoNome, dataAgendamento } = params;
     const data = new Date(dataAgendamento).toLocaleDateString('pt-BR');
+
+    if (clienteTelefone) {
+      await this.sendWhatsApp(
+        clienteTelefone,
+        `🔔 *Lembrete de Manutenção* — ${osNumero}\n\nOlá, ${clienteNome}!\n\nHá uma manutenção agendada para *amanhã (${data})* no seu local.\n\nAmbiente: *${ambienteNome}*\nTécnico: ${tecnicoNome ?? 'A confirmar'}\n\nCertifique-se de que o acesso ao local estará disponível. Qualquer dúvida, fale conosco.`,
+      );
+    }
+
     await this.send(
       clienteEmail,
       `[Orbitalis] Manutenção Agendada para Amanhã — ${osNumero}`,
@@ -143,13 +205,22 @@ export class NotificacoesService {
   async notificarContratoVencendo(params: {
     clienteEmail: string
     clienteNome: string
+    clienteTelefone?: string | null
     contratoDescricao: string
     diasRestantes: number
     dataFim: string
   }) {
-    const { clienteEmail, clienteNome, contratoDescricao, diasRestantes, dataFim } = params;
+    const { clienteEmail, clienteNome, clienteTelefone, contratoDescricao, diasRestantes, dataFim } = params;
     const data = new Date(dataFim).toLocaleDateString('pt-BR');
     const urgente = diasRestantes <= 7;
+
+    if (clienteTelefone) {
+      await this.sendWhatsApp(
+        clienteTelefone,
+        `${urgente ? '⚠️ ' : '📋 '}*Contrato vencendo em ${diasRestantes} dia(s)*\n\nOlá, ${clienteNome}!\n\nSeu contrato de manutenção está próximo do vencimento.\n\nContrato: *${contratoDescricao}*\nVencimento: *${data}*\n\nEntre em contato para garantir a continuidade dos serviços.`,
+      );
+    }
+
     await this.send(
       clienteEmail,
       `[Orbitalis] ${urgente ? '⚠️ ' : ''}Contrato vencendo em ${diasRestantes} dia(s)`,
