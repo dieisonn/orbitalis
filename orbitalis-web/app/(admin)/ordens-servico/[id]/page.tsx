@@ -165,10 +165,16 @@ export default async function OsDetailPage({ params }: Props) {
             {(os.status === 'em_andamento' || os.status === 'agendada') && (
               <ConcluirOsBtn osId={os.id} osNum={osNum} />
             )}
+            {os.status !== 'concluida' && os.status !== 'cancelada' && (
+              <a
+                href={`/ordens-servico/${os.id}/editar`}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-600 border border-border rounded-lg hover:bg-surface transition-colors"
+              >
+                Editar
+              </a>
+            )}
             <a
               href={`/ordens-servico/${os.id}/pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-colors"
             >
               <FileText size={14} />

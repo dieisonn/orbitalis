@@ -173,4 +173,86 @@ export class CronService {
     const criados = await this.alertas.avaliarRegras();
     if (criados > 0) this.logger.log(`Alertas criados: ${criados}`);
   }
+
+  // Executa diariamente às 08:30 — notifica clientes sobre O.S. agendadas para amanhã
+  @Cron('0 30 8 * * *')
+  async notificarOsProximas() {
+    const amanha = new Date();
+    amanha.setDate(amanha.getDate() + 1);
+    const inicioDia = new Date(amanha.getFullYear(), amanha.getMonth(), amanha.getDate(), 0, 0, 0);
+    const fimDia    = new Date(amanha.getFullYear(), amanha.getMonth(), amanha.getDate(), 23, 59, 59, 999);
+
+    const osAmanha = await this.prisma.ordemServico.findMany({
+      where: {
+        status: { in: ['agendada', 'aberta'] },
+        dataAgendamento: { gte: inicioDia, lte: fimDia },
+      },
+      include: {
+        ambiente: {
+          include: {
+            cliente: { include: { usuario: { select: { email: true } } } },
+          },
+        },
+        tecnico: { select: { nome: true } },
+      },
+    });
+
+    let enviadas = 0;
+    for (const os of osAmanha) {
+      const clienteEmail = os.ambiente.cliente.usuario?.email;
+      if (!clienteEmail) continue;
+      const osNumero = os.numero != null
+        ? `OS-${String(os.numero).padStart(4, '0')}`
+        : `OS-${os.id.slice(0, 6).toUpperCase()}`;
+      await this.notificacoes.notificarOsProxima({
+        clienteEmail,
+        clienteNome: os.ambiente.cliente.razaoSocial,
+        osNumero,
+        ambienteNome: os.ambiente.nome,
+        tecnicoNome: os.tecnico?.nome ?? null,
+        dataAgendamento: os.dataAgendamento.toISOString(),
+      }).catch(() => null);
+      enviadas++;
+    }
+    if (enviadas > 0) this.logger.log(`Lembretes de O.S. enviados aos clientes: ${enviadas}`);
+  }
+
+  // Executa diariamente às 08:45 — notifica clientes sobre contratos vencendo
+  @Cron('0 45 8 * * *')
+  async notificarContratosVencendo() {
+    const agora = new Date();
+    const em30Dias = new Date(agora);
+    em30Dias.setDate(em30Dias.getDate() + 30);
+
+    const contratos = await this.prisma.contrato.findMany({
+      where: {
+        ativo: true,
+        vigenciaFim: { gte: agora, lte: em30Dias },
+      },
+      include: {
+        cliente: { include: { usuario: { select: { email: true } } } },
+      },
+    });
+
+    let enviadas = 0;
+    for (const contrato of contratos) {
+      const clienteEmail = contrato.cliente.usuario?.email;
+      if (!clienteEmail) continue;
+
+      const diasRestantes = Math.ceil(
+        (contrato.vigenciaFim.getTime() - agora.getTime()) / 86_400_000,
+      );
+      if (![30, 14, 7, 3, 1].includes(diasRestantes)) continue;
+
+      await this.notificacoes.notificarContratoVencendo({
+        clienteEmail,
+        clienteNome: contrato.cliente.razaoSocial,
+        contratoDescricao: contrato.descricao,
+        diasRestantes,
+        dataFim: contrato.vigenciaFim.toISOString(),
+      }).catch(() => null);
+      enviadas++;
+    }
+    if (enviadas > 0) this.logger.log(`Alertas de contrato vencendo enviados: ${enviadas}`);
+  }
 }

@@ -106,6 +106,74 @@ export class NotificacoesService {
     );
   }
 
+  async notificarOsProxima(params: {
+    clienteEmail: string
+    clienteNome: string
+    osNumero: string
+    ambienteNome: string
+    tecnicoNome: string | null
+    dataAgendamento: string
+  }) {
+    const { clienteEmail, clienteNome, osNumero, ambienteNome, tecnicoNome, dataAgendamento } = params;
+    const data = new Date(dataAgendamento).toLocaleDateString('pt-BR');
+    await this.send(
+      clienteEmail,
+      `[Orbitalis] Manutenção Agendada para Amanhã — ${osNumero}`,
+      `
+      <div style="font-family:sans-serif;max-width:500px;margin:auto">
+        <div style="background:#0505ad;padding:24px 32px;border-radius:12px 12px 0 0">
+          <h2 style="color:#fff;margin:0;font-size:20px">Lembrete de Manutenção</h2>
+          <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px">${osNumero}</p>
+        </div>
+        <div style="background:#f9fafb;padding:24px 32px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
+          <p style="font-size:14px;color:#374151">Olá, <strong>${clienteNome}</strong>!</p>
+          <p style="font-size:14px;color:#374151">Lembramos que há uma manutenção agendada para <strong>amanhã</strong> no seu local.</p>
+          <table style="width:100%;font-size:13px;color:#374151;border-collapse:collapse;margin:16px 0">
+            <tr><td style="padding:6px 0;color:#9ca3af;width:140px">Ambiente</td><td><strong>${ambienteNome}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#9ca3af">Técnico</td><td>${tecnicoNome ?? 'A confirmar'}</td></tr>
+            <tr><td style="padding:6px 0;color:#9ca3af">Data</td><td><strong>${data}</strong></td></tr>
+          </table>
+          <p style="font-size:12px;color:#9ca3af;margin-top:24px">Por favor, certifique-se de que o acesso ao local estará disponível. Em caso de dúvidas, entre em contato com nossa equipe.</p>
+        </div>
+      </div>
+      `,
+    );
+  }
+
+  async notificarContratoVencendo(params: {
+    clienteEmail: string
+    clienteNome: string
+    contratoDescricao: string
+    diasRestantes: number
+    dataFim: string
+  }) {
+    const { clienteEmail, clienteNome, contratoDescricao, diasRestantes, dataFim } = params;
+    const data = new Date(dataFim).toLocaleDateString('pt-BR');
+    const urgente = diasRestantes <= 7;
+    await this.send(
+      clienteEmail,
+      `[Orbitalis] ${urgente ? '⚠️ ' : ''}Contrato vencendo em ${diasRestantes} dia(s)`,
+      `
+      <div style="font-family:sans-serif;max-width:500px;margin:auto">
+        <div style="background:${urgente ? '#b91c1c' : '#d97706'};padding:24px 32px;border-radius:12px 12px 0 0">
+          <h2 style="color:#fff;margin:0;font-size:20px">${urgente ? '⚠️ ' : ''}Contrato Próximo do Vencimento</h2>
+          <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px">Vence em ${diasRestantes} dia(s)</p>
+        </div>
+        <div style="background:#f9fafb;padding:24px 32px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0">
+          <p style="font-size:14px;color:#374151">Olá, <strong>${clienteNome}</strong>!</p>
+          <p style="font-size:14px;color:#374151">O seu contrato de manutenção está próximo do vencimento. Entre em contato para garantir a continuidade dos serviços.</p>
+          <table style="width:100%;font-size:13px;color:#374151;border-collapse:collapse;margin:16px 0">
+            <tr><td style="padding:6px 0;color:#9ca3af;width:140px">Contrato</td><td><strong>${contratoDescricao}</strong></td></tr>
+            <tr><td style="padding:6px 0;color:#9ca3af">Vencimento</td><td style="color:${urgente ? '#b91c1c' : '#d97706'};font-weight:bold">${data}</td></tr>
+            <tr><td style="padding:6px 0;color:#9ca3af">Dias restantes</td><td style="color:${urgente ? '#b91c1c' : '#d97706'};font-weight:bold">${diasRestantes} dia(s)</td></tr>
+          </table>
+          <p style="font-size:12px;color:#9ca3af;margin-top:24px">Entre em contato com nossa equipe para renovar ou discutir as condições do contrato.</p>
+        </div>
+      </div>
+      `,
+    );
+  }
+
   async notificarOsAtrasada(params: {
     adminEmail: string
     osNumero: string

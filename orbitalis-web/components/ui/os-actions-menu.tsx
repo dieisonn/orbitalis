@@ -324,8 +324,6 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
                 {/* PDF — always visible */}
                 <a
                   href={`/ordens-servico/${osId}/pdf`}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   onClick={close}
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-surface transition-colors"
                 >

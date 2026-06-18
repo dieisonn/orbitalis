@@ -143,6 +143,16 @@ export class OrdensServicoController {
     return this.ordensServicoService.atualizarFinanceiro(id, body);
   }
 
+  // PATCH /api/v1/ordens-servico/:id — Admin, edição geral
+  @Patch(':id')
+  @Roles(UsuarioTipo.admin)
+  update(
+    @Param('id') id: string,
+    @Body() body: { dataAgendamento?: string; observacoesGerais?: string | null; tecnicoId?: string | null; tipo?: string },
+  ) {
+    return this.ordensServicoService.update(id, body);
+  }
+
   // PATCH /api/v1/ordens-servico/:id/sincronizar — Técnico (§6.3 §6.4)
   @Patch(':id/sincronizar')
   @Roles(UsuarioTipo.tecnico)

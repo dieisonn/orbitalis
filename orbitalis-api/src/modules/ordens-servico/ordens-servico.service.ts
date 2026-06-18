@@ -587,6 +587,24 @@ export class OrdensServicoService {
     return { message: 'O.S. excluída permanentemente' };
   }
 
+  // PATCH /ordens-servico/:id — Admin, edição geral de campos básicos
+  async update(id: string, dto: { dataAgendamento?: string; observacoesGerais?: string | null; tecnicoId?: string | null; tipo?: string }) {
+    const os = await this.prisma.ordemServico.findUnique({ where: { id } });
+    if (!os) throw new NotFoundException('O.S. não encontrada');
+    if (os.status === 'concluida' || os.status === 'cancelada') {
+      throw new BadRequestException('Não é possível editar uma O.S. encerrada');
+    }
+    return this.prisma.ordemServico.update({
+      where: { id },
+      data: {
+        ...(dto.dataAgendamento ? { dataAgendamento: new Date(dto.dataAgendamento) } : {}),
+        ...(dto.observacoesGerais !== undefined ? { observacoesGerais: dto.observacoesGerais || null } : {}),
+        ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
+        ...(dto.tipo ? { tipo: dto.tipo as any } : {}),
+      },
+    });
+  }
+
   // GET /ordens-servico/historico?ano=XXXX
   // Sem parâmetro: Jan-Dez do ano corrente.
   // Com ano=XXXX: Jan-Dez daquele ano.
