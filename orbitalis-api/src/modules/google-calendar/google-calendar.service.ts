@@ -136,14 +136,15 @@ export class GoogleCalendarService {
     return map[status] ?? '7';
   }
 
+  private dateInSaoPaulo(date: Date): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(date);
+  }
+
   async criarEvento(payload: CalendarEventPayload): Promise<string | null> {
     const ctx = await this.getClientAndCalendarId();
     if (!ctx) return null;
 
-    const start = new Date(payload.dataAgendamento);
-    start.setHours(8, 0, 0, 0);
-    const end = new Date(start);
-    end.setHours(10, 0, 0, 0);
+    const dateStr = this.dateInSaoPaulo(new Date(payload.dataAgendamento));
 
     try {
       const res = await ctx.cal.events.insert({
@@ -152,8 +153,8 @@ export class GoogleCalendarService {
           summary:     `${payload.ambienteNome} — ${payload.osNumero}`,
           description: this.buildDescription(payload),
           colorId:     this.colorId(payload.status),
-          start: { dateTime: start.toISOString(), timeZone: 'America/Sao_Paulo' },
-          end:   { dateTime: end.toISOString(),   timeZone: 'America/Sao_Paulo' },
+          start: { dateTime: `${dateStr}T08:00:00`, timeZone: 'America/Sao_Paulo' },
+          end:   { dateTime: `${dateStr}T10:00:00`, timeZone: 'America/Sao_Paulo' },
           reminders: {
             useDefault: false,
             overrides: [
@@ -175,10 +176,7 @@ export class GoogleCalendarService {
     const ctx = await this.getClientAndCalendarId();
     if (!ctx) return;
 
-    const start = new Date(payload.dataAgendamento);
-    start.setHours(8, 0, 0, 0);
-    const end = new Date(start);
-    end.setHours(10, 0, 0, 0);
+    const dateStr = this.dateInSaoPaulo(new Date(payload.dataAgendamento));
 
     try {
       await ctx.cal.events.patch({
@@ -188,8 +186,8 @@ export class GoogleCalendarService {
           summary:     `${payload.ambienteNome} — ${payload.osNumero}`,
           description: this.buildDescription(payload),
           colorId:     this.colorId(payload.status),
-          start: { dateTime: start.toISOString(), timeZone: 'America/Sao_Paulo' },
-          end:   { dateTime: end.toISOString(),   timeZone: 'America/Sao_Paulo' },
+          start: { dateTime: `${dateStr}T08:00:00`, timeZone: 'America/Sao_Paulo' },
+          end:   { dateTime: `${dateStr}T10:00:00`, timeZone: 'America/Sao_Paulo' },
         },
       });
     } catch (err) {
