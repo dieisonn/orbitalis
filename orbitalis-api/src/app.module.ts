@@ -14,6 +14,7 @@ import { ConfiguracaoEmpresaModule } from './modules/configuracao-empresa/config
 import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { ContratosModule } from './modules/contratos/contratos.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
+import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
 
 @Module({
   controllers: [HealthController],
@@ -32,6 +33,7 @@ import { AlertasModule } from './modules/alertas/alertas.module';
     NotificacoesModule,
     ContratosModule,
     AlertasModule,
+    GoogleCalendarModule,
   ],
 })
 export class AppModule {}

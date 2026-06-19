@@ -218,9 +218,10 @@ model OrdemServico {
   dataAgendamento   DateTime  @map("data_agendamento")
   dataInicio        DateTime? @map("data_inicio")
   dataConclusao     DateTime? @map("data_conclusao")
-  valorMaoObra      Decimal?  @map("valor_mao_obra") @db.Decimal(10, 2)
-  valorPecas        Decimal?  @map("valor_pecas") @db.Decimal(10, 2)
-  dataCriacao       DateTime  @default(now()) @map("data_criacao")
+  valorMaoObra          Decimal? @map("valor_mao_obra") @db.Decimal(10, 2)
+  valorPecas            Decimal? @map("valor_pecas") @db.Decimal(10, 2)
+  googleCalendarEventId String?  @map("google_calendar_event_id") @db.VarChar(255)
+  dataCriacao           DateTime @default(now()) @map("data_criacao")
 
   ambiente  Ambiente                        @relation(fields: [ambienteId], references: [id])
   plano     PlanoManutencao?                @relation(fields: [planoId], references: [id], onDelete: SetNull)

@@ -12,13 +12,30 @@ import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
+import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
 
 @Injectable()
 export class OrdensServicoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificacoes: NotificacoesService,
+    private readonly googleCalendar: GoogleCalendarService,
   ) {}
+
+  private buildCalendarPayload(os: any): CalendarEventPayload {
+    return {
+      osNumero: os.numero != null ? `OS-${String(os.numero).padStart(4, '0')}` : `OS-${os.id.slice(0, 6).toUpperCase()}`,
+      ambienteNome: os.ambiente?.nome ?? '',
+      clienteNome: os.ambiente?.cliente?.razaoSocial ?? '',
+      clienteTelefone: os.ambiente?.cliente?.telefone ?? null,
+      tecnicoNome: os.tecnico?.nome ?? null,
+      tipo: os.tipo ?? 'corretiva',
+      dataAgendamento: new Date(os.dataAgendamento),
+      equipamentos: (os.itens ?? []).map((i: any) => i.equipamento?.nome ?? '').filter(Boolean),
+      observacoesGerais: os.observacoesGerais ?? null,
+      status: os.status,
+    };
+  }
 
   // POST /ordens-servico (§6.1 + §6.2)
   // 1. Cria a O.S. pai para o ambiente
@@ -43,7 +60,7 @@ export class OrdensServicoService {
       ? JSON.parse(JSON.stringify(modeloChecklist.itens))
       : [];
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.create({
         data: {
           ambienteId: dto.ambienteId,
@@ -69,9 +86,29 @@ export class OrdensServicoService {
 
       return tx.ordemServico.findUnique({
         where: { id: os.id },
-        include: { itens: true },
+        include: {
+          itens: { include: { equipamento: { select: { nome: true } } } },
+          ambiente: { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
+          tecnico: { select: { nome: true } },
+        },
       });
     });
+
+    // Cria evento no Google Calendar em background (sem bloquear resposta)
+    if (result) {
+      this.googleCalendar.criarEvento(this.buildCalendarPayload(result))
+        .then((eventId) => {
+          if (eventId) {
+            return this.prisma.ordemServico.update({
+              where: { id: result.id },
+              data: { googleCalendarEventId: eventId },
+            });
+          }
+        })
+        .catch(() => null);
+    }
+
+    return result;
   }
 
   // GET /ordens-servico/painel — dados do cockpit (contadores + atrasadas + taxa + ranking)
@@ -367,6 +404,10 @@ export class OrdensServicoService {
       }).catch(() => null);
     }
 
+    if (os.googleCalendarEventId) {
+      this.googleCalendar.atualizarEvento(os.googleCalendarEventId, this.buildCalendarPayload({ ...updated, status: 'concluida' })).catch(() => null);
+    }
+
     return updated;
   }
 
@@ -549,6 +590,10 @@ export class OrdensServicoService {
       throw new BadRequestException('Não é possível cancelar uma O.S. já concluída');
     }
 
+    if (os.googleCalendarEventId) {
+      this.googleCalendar.excluirEvento(os.googleCalendarEventId).catch(() => null);
+    }
+
     return this.prisma.ordemServico.update({
       where: { id },
       data: { status: 'cancelada' },
@@ -579,6 +624,10 @@ export class OrdensServicoService {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
 
+    if (os.googleCalendarEventId) {
+      this.googleCalendar.excluirEvento(os.googleCalendarEventId).catch(() => null);
+    }
+
     // conflitos não têm cascade, precisam ser deletados antes
     await this.prisma.auditoriaConflitoSincronizacao.deleteMany({ where: { ordemServicoId: id } });
     // itens têm onDelete: Cascade, mas deleta explicitamente para segurança
@@ -595,7 +644,7 @@ export class OrdensServicoService {
     if (os.status === 'concluida' || os.status === 'cancelada') {
       throw new BadRequestException('Não é possível editar uma O.S. encerrada');
     }
-    return this.prisma.ordemServico.update({
+    const updated = await this.prisma.ordemServico.update({
       where: { id },
       data: {
         ...(dto.dataAgendamento ? { dataAgendamento: new Date(dto.dataAgendamento) } : {}),
@@ -603,7 +652,18 @@ export class OrdensServicoService {
         ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
         ...(dto.tipo ? { tipo: dto.tipo as any } : {}),
       },
+      include: {
+        itens: { include: { equipamento: { select: { nome: true } } } },
+        ambiente: { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
+        tecnico: { select: { nome: true } },
+      },
     });
+
+    if (os.googleCalendarEventId) {
+      this.googleCalendar.atualizarEvento(os.googleCalendarEventId, this.buildCalendarPayload(updated)).catch(() => null);
+    }
+
+    return updated;
   }
 
   // GET /ordens-servico/historico?ano=XXXX
