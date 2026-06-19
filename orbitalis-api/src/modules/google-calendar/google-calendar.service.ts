@@ -136,7 +136,10 @@ export class GoogleCalendarService {
   }
 
   private dateInSaoPaulo(date: Date): string {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(date);
+    // dataAgendamento é salvo como meia-noite UTC (ex: 2026-06-19T00:00:00Z)
+    // Converter para São Paulo (UTC-3) resulta em 21h do dia anterior — bug.
+    // Extrair o YYYY-MM-DD da string ISO evita essa armadilha.
+    return date.toISOString().split('T')[0];
   }
 
   async criarEvento(payload: CalendarEventPayload): Promise<string | null> {
