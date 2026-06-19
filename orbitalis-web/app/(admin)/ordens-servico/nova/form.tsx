@@ -2,10 +2,8 @@
 
 import { useTransition, useState } from 'react'
 import { criarOs } from './actions'
-import { Wrench, ShieldCheck } from 'lucide-react'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string }
-
 type Ambiente = {
   id: string
   nome: string
@@ -14,22 +12,24 @@ type Ambiente = {
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
   equipamentos: Equipamento[]
 }
-
 type Tecnico = { id: string; email: string; nome: string | null }
+type TipoServico = { id: string; sigla: string; nome: string; corHex: string; ativo: boolean }
 
 export function NovaOsForm({
   ambientes,
   tecnicos,
+  tiposServico,
 }: {
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
+  tiposServico: TipoServico[]
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError]           = useState<string | null>(null)
   const [clienteId, setClienteId]   = useState('')
   const [ambienteId, setAmbienteId] = useState('')
   const [equipamentoId, setEquipamentoId] = useState('')
-  const [tipo, setTipo]             = useState<'corretiva' | 'preventiva'>('corretiva')
+  const [tipoServicoId, setTipoServicoId] = useState('')
 
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -48,19 +48,31 @@ export function NovaOsForm({
     : []
 
   const ambienteSelecionado = ambientes.find((a) => a.id === ambienteId)
+  const tipoSelecionado     = tiposServico.find((t) => t.id === tipoServicoId)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!ambienteId) return
     const fd = new FormData(e.currentTarget)
-    const tecnicoId         = fd.get('tecnicoId')        as string
-    const dataAgendamento   = fd.get('dataAgendamento')  as string
+    const tecnicoId         = fd.get('tecnicoId')         as string
+    const dataAgendamento   = fd.get('dataAgendamento')   as string
+    const horaInicio        = fd.get('horaInicio')        as string
+    const horaFim           = fd.get('horaFim')           as string
     const observacoesGerais = fd.get('observacoesGerais') as string
 
     setError(null)
     startTransition(async () => {
       try {
-        await criarOs(ambienteId, tecnicoId, dataAgendamento, observacoesGerais, tipo, equipamentoId)
+        await criarOs({
+          ambienteId,
+          tecnicoId,
+          dataAgendamento,
+          observacoesGerais,
+          tipoServicoId,
+          equipamentoId,
+          horaInicio,
+          horaFim,
+        })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar O.S.'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)
@@ -71,37 +83,40 @@ export function NovaOsForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
 
-      {/* Tipo da O.S. */}
+      {/* Tipo de Serviço */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tipo de Manutenção <span className="text-destructive">*</span>
+          Tipo de Serviço <span className="text-destructive">*</span>
         </label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setTipo('corretiva')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
-              tipo === 'corretiva'
-                ? 'bg-destructive/10 border-destructive/40 text-destructive'
-                : 'border-border text-gray-500 hover:bg-surface'
-            }`}
-          >
-            <Wrench size={15} />
-            Corretiva
-          </button>
-          <button
-            type="button"
-            onClick={() => setTipo('preventiva')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
-              tipo === 'preventiva'
-                ? 'bg-action/10 border-action/40 text-action'
-                : 'border-border text-gray-500 hover:bg-surface'
-            }`}
-          >
-            <ShieldCheck size={15} />
-            Preventiva
-          </button>
+        <div className="grid grid-cols-3 gap-2">
+          {tiposServico.map((ts) => (
+            <button
+              key={ts.id}
+              type="button"
+              onClick={() => setTipoServicoId(tipoServicoId === ts.id ? '' : ts.id)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold transition-all text-left ${
+                tipoServicoId === ts.id
+                  ? 'border-transparent text-white shadow-sm'
+                  : 'border-border text-gray-600 hover:bg-surface'
+              }`}
+              style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex } : {}}
+            >
+              <span
+                className="shrink-0 text-xs font-bold w-7 text-center py-0.5 rounded text-white"
+                style={{ backgroundColor: tipoServicoId === ts.id ? 'rgba(255,255,255,0.25)' : ts.corHex }}
+              >
+                {ts.sigla}
+              </span>
+              <span className="truncate text-xs leading-tight">{ts.nome}</span>
+            </button>
+          ))}
         </div>
+        {tiposServico.length === 0 && (
+          <p className="text-xs text-gray-400 mt-1">
+            Nenhum tipo cadastrado.{' '}
+            <a href="/servicos" className="text-primary underline">Cadastrar em Serviços</a>
+          </p>
+        )}
       </div>
 
       {/* Cliente */}
@@ -147,12 +162,12 @@ export function NovaOsForm({
         </select>
       </div>
 
-      {/* Equipamento específico */}
+      {/* Equipamento */}
       {ambienteSelecionado && ambienteSelecionado.equipamentos.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Equipamento
-            <span className="ml-1 text-xs font-normal text-gray-400">(opcional — deixe em branco para todos)</span>
+            <span className="ml-1 text-xs font-normal text-gray-400">(opcional)</span>
           </label>
           <select
             value={equipamentoId}
@@ -169,17 +184,9 @@ export function NovaOsForm({
         </div>
       )}
 
-      {ambienteSelecionado && ambienteSelecionado.equipamentos.length === 0 && (
-        <p className="text-xs text-amber-600">
-          Nenhum equipamento cadastrado neste ambiente.
-        </p>
-      )}
-
       {/* Técnico */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Técnico Responsável
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Técnico Responsável</label>
         <select
           name="tecnicoId"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
@@ -205,15 +212,35 @@ export function NovaOsForm({
         />
       </div>
 
+      {/* Horários */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Início</label>
+          <input
+            name="horaInicio"
+            type="time"
+            defaultValue="08:00"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Término</label>
+          <input
+            name="horaFim"
+            type="time"
+            defaultValue="10:00"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+      </div>
+
       {/* Observações */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Observações
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
         <textarea
           name="observacoesGerais"
           rows={3}
-          placeholder="Descreva o serviço a ser executado ou observações relevantes…"
+          placeholder="Descreva o serviço ou observações relevantes…"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
         />
       </div>
@@ -232,9 +259,16 @@ export function NovaOsForm({
         <button
           type="submit"
           disabled={isPending || !ambienteId}
-          className="flex-1 py-2.5 bg-action text-white font-semibold rounded-lg text-sm hover:bg-action/90 disabled:opacity-60 transition-colors"
+          style={tipoSelecionado ? { backgroundColor: tipoSelecionado.corHex } : {}}
+          className={`flex-1 py-2.5 text-white font-semibold rounded-lg text-sm disabled:opacity-60 transition-colors ${
+            !tipoSelecionado ? 'bg-action hover:bg-action/90' : 'hover:opacity-90'
+          }`}
         >
-          {isPending ? 'Criando…' : 'Criar Ordem de Serviço'}
+          {isPending
+            ? 'Criando…'
+            : tipoSelecionado
+              ? `Criar ${tipoSelecionado.sigla} — O.S.`
+              : 'Criar Ordem de Serviço'}
         </button>
       </div>
     </form>

@@ -148,7 +148,15 @@ export class OrdensServicoController {
   @Roles(UsuarioTipo.admin)
   update(
     @Param('id') id: string,
-    @Body() body: { dataAgendamento?: string; observacoesGerais?: string | null; tecnicoId?: string | null; tipo?: string },
+    @Body() body: {
+      dataAgendamento?: string;
+      observacoesGerais?: string | null;
+      tecnicoId?: string | null;
+      tipo?: string;
+      tipoServicoId?: string | null;
+      horaInicio?: string | null;
+      horaFim?: string | null;
+    },
   ) {
     return this.ordensServicoService.update(id, body);
   }

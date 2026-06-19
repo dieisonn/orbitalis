@@ -13,6 +13,10 @@ export type CalendarEventPayload = {
   equipamentos: string[]
   observacoesGerais: string | null
   status: string
+  tipoServicoSigla?: string | null
+  tipoServicoColorId?: string | null
+  horaInicio?: string | null
+  horaFim?: string | null
 }
 
 @Injectable()
@@ -125,15 +129,10 @@ export class GoogleCalendarService {
     ].filter((l) => l !== null).join('\n');
   }
 
-  private colorId(status: string): string {
-    const map: Record<string, string> = {
-      aberta:       '7',  // peacock (azul)
-      agendada:     '6',  // tangerine (laranja)
-      em_andamento: '5',  // banana (amarelo)
-      concluida:    '2',  // sage (verde)
-      cancelada:    '8',  // graphite (cinza)
-    };
-    return map[status] ?? '7';
+  private colorId(payload: CalendarEventPayload): string {
+    if (payload.status === 'concluida') return '2';
+    if (payload.status === 'cancelada') return '8';
+    return payload.tipoServicoColorId ?? '7';
   }
 
   private dateInSaoPaulo(date: Date): string {
@@ -144,17 +143,19 @@ export class GoogleCalendarService {
     const ctx = await this.getClientAndCalendarId();
     if (!ctx) return null;
 
-    const dateStr = this.dateInSaoPaulo(new Date(payload.dataAgendamento));
+    const dateStr  = this.dateInSaoPaulo(new Date(payload.dataAgendamento));
+    const startStr = `${dateStr}T${payload.horaInicio ?? '08:00'}:00`;
+    const endStr   = `${dateStr}T${payload.horaFim   ?? '10:00'}:00`;
 
     try {
       const res = await ctx.cal.events.insert({
         calendarId: ctx.calendarId,
         requestBody: {
-          summary:     `${payload.ambienteNome} — ${payload.osNumero}`,
+          summary:     `${payload.tipoServicoSigla ?? 'OS'} — ${payload.ambienteNome} (${payload.osNumero})`,
           description: this.buildDescription(payload),
-          colorId:     this.colorId(payload.status),
-          start: { dateTime: `${dateStr}T08:00:00`, timeZone: 'America/Sao_Paulo' },
-          end:   { dateTime: `${dateStr}T10:00:00`, timeZone: 'America/Sao_Paulo' },
+          colorId:     this.colorId(payload),
+          start: { dateTime: startStr, timeZone: 'America/Sao_Paulo' },
+          end:   { dateTime: endStr,   timeZone: 'America/Sao_Paulo' },
           reminders: {
             useDefault: false,
             overrides: [
@@ -176,18 +177,20 @@ export class GoogleCalendarService {
     const ctx = await this.getClientAndCalendarId();
     if (!ctx) return;
 
-    const dateStr = this.dateInSaoPaulo(new Date(payload.dataAgendamento));
+    const dateStr  = this.dateInSaoPaulo(new Date(payload.dataAgendamento));
+    const startStr = `${dateStr}T${payload.horaInicio ?? '08:00'}:00`;
+    const endStr   = `${dateStr}T${payload.horaFim   ?? '10:00'}:00`;
 
     try {
       await ctx.cal.events.patch({
         calendarId: ctx.calendarId,
         eventId,
         requestBody: {
-          summary:     `${payload.ambienteNome} — ${payload.osNumero}`,
+          summary:     `${payload.tipoServicoSigla ?? 'OS'} — ${payload.ambienteNome} (${payload.osNumero})`,
           description: this.buildDescription(payload),
-          colorId:     this.colorId(payload.status),
-          start: { dateTime: `${dateStr}T08:00:00`, timeZone: 'America/Sao_Paulo' },
-          end:   { dateTime: `${dateStr}T10:00:00`, timeZone: 'America/Sao_Paulo' },
+          colorId:     this.colorId(payload),
+          start: { dateTime: startStr, timeZone: 'America/Sao_Paulo' },
+          end:   { dateTime: endStr,   timeZone: 'America/Sao_Paulo' },
         },
       });
     } catch (err) {

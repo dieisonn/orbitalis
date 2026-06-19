@@ -13,11 +13,14 @@ type OrdemServico = {
   origem: string
   dataAgendamento: string
   observacoesGerais: string | null
+  horaInicio: string | null
+  horaFim: string | null
   ambiente: {
     nome: string
     cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
   }
   tecnico: { id: string; email: string; nome: string | null } | null
+  tipoServico: { sigla: string; nome: string; corHex: string } | null
   itens: { id: string; statusItem: string }[]
   valorMaoObra: number | null
   valorPecas: number | null
@@ -167,8 +170,19 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
                 const clienteNome = cliente?.nomeFantasia ?? cliente?.razaoSocial
                 return (
                   <tr key={os.id} className="hover:bg-surface transition-colors align-middle">
-                    <td className="px-4 py-4 font-mono text-xs text-gray-500 whitespace-nowrap font-semibold">
-                      {os.numero != null ? `OS-${String(os.numero).padStart(4, '0')}` : `OS-${os.id.slice(0, 6).toUpperCase()}`}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {os.tipoServico ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-white text-xs font-bold"
+                          style={{ backgroundColor: os.tipoServico.corHex }}
+                        >
+                          {os.tipoServico.sigla}-{os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 4).toUpperCase()}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-xs text-gray-500 font-semibold">
+                          OS-{os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase()}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <div className="font-medium text-gray-900">{os.ambiente?.nome ?? '—'}</div>

@@ -22,18 +22,28 @@ export class OrdensServicoService {
     private readonly googleCalendar: GoogleCalendarService,
   ) {}
 
+  private osNumeroFormatado(os: any): string {
+    const sigla = os.tipoServico?.sigla ?? 'OS';
+    const num = os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase();
+    return `${sigla}-${num}`;
+  }
+
   private buildCalendarPayload(os: any): CalendarEventPayload {
     return {
-      osNumero: os.numero != null ? `OS-${String(os.numero).padStart(4, '0')}` : `OS-${os.id.slice(0, 6).toUpperCase()}`,
-      ambienteNome: os.ambiente?.nome ?? '',
-      clienteNome: os.ambiente?.cliente?.razaoSocial ?? '',
-      clienteTelefone: os.ambiente?.cliente?.telefone ?? null,
-      tecnicoNome: os.tecnico?.nome ?? null,
-      tipo: os.tipo ?? 'corretiva',
-      dataAgendamento: new Date(os.dataAgendamento),
-      equipamentos: (os.itens ?? []).map((i: any) => i.equipamento?.nome ?? '').filter(Boolean),
-      observacoesGerais: os.observacoesGerais ?? null,
-      status: os.status,
+      osNumero:           this.osNumeroFormatado(os),
+      ambienteNome:       os.ambiente?.nome ?? '',
+      clienteNome:        os.ambiente?.cliente?.razaoSocial ?? '',
+      clienteTelefone:    os.ambiente?.cliente?.telefone ?? null,
+      tecnicoNome:        os.tecnico?.nome ?? null,
+      tipo:               os.tipo ?? 'corretiva',
+      dataAgendamento:    new Date(os.dataAgendamento),
+      equipamentos:       (os.itens ?? []).map((i: any) => i.equipamento?.nome ?? '').filter(Boolean),
+      observacoesGerais:  os.observacoesGerais ?? null,
+      status:             os.status,
+      tipoServicoSigla:   os.tipoServico?.sigla ?? null,
+      tipoServicoColorId: os.tipoServico?.calendarColorId ?? null,
+      horaInicio:         os.horaInicio ?? null,
+      horaFim:            os.horaFim ?? null,
     };
   }
 
@@ -63,13 +73,16 @@ export class OrdensServicoService {
     const result = await this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.create({
         data: {
-          ambienteId: dto.ambienteId,
-          tecnicoId: dto.tecnicoId,
-          status: 'aberta',
-          tipo: dto.tipo ?? 'corretiva',
-          origem: dto.origem,
-          dataAgendamento: new Date(dto.dataAgendamento),
+          ambienteId:        dto.ambienteId,
+          tecnicoId:         dto.tecnicoId,
+          status:            'aberta',
+          tipo:              dto.tipo ?? 'corretiva',
+          origem:            dto.origem,
+          dataAgendamento:   new Date(dto.dataAgendamento),
           observacoesGerais: dto.observacoesGerais,
+          tipoServicoId:     dto.tipoServicoId ?? null,
+          horaInicio:        dto.horaInicio ?? null,
+          horaFim:           dto.horaFim ?? null,
         },
       });
 
@@ -87,9 +100,10 @@ export class OrdensServicoService {
       return tx.ordemServico.findUnique({
         where: { id: os.id },
         include: {
-          itens: { include: { equipamento: { select: { nome: true } } } },
-          ambiente: { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
-          tecnico: { select: { nome: true } },
+          itens:       { include: { equipamento: { select: { nome: true } } } },
+          ambiente:    { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
+          tecnico:     { select: { nome: true } },
+          tipoServico: { select: { sigla: true, calendarColorId: true } },
         },
       });
     });
@@ -505,8 +519,9 @@ export class OrdensServicoService {
               cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
             },
           },
-          tecnico: { select: { id: true, email: true, nome: true } },
-          itens: { select: { id: true, statusItem: true } },
+          tecnico:     { select: { id: true, email: true, nome: true } },
+          itens:       { select: { id: true, statusItem: true } },
+          tipoServico: { select: { sigla: true, nome: true, corHex: true } },
         },
         orderBy: this.resolveOrderBy(orderBy),
         skip: (page - 1) * perPage,
@@ -531,9 +546,10 @@ export class OrdensServicoService {
     return this.prisma.ordemServico.findUnique({
       where: { id },
       include: {
-        itens: { include: { equipamento: true } },
-        ambiente: { include: { cliente: true } },
-        tecnico: { select: { id: true, email: true } },
+        itens:       { include: { equipamento: true } },
+        ambiente:    { include: { cliente: true } },
+        tecnico:     { select: { id: true, email: true, nome: true } },
+        tipoServico: true,
       },
     });
   }
@@ -638,7 +654,15 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id — Admin, edição geral de campos básicos
-  async update(id: string, dto: { dataAgendamento?: string; observacoesGerais?: string | null; tecnicoId?: string | null; tipo?: string }) {
+  async update(id: string, dto: {
+    dataAgendamento?: string;
+    observacoesGerais?: string | null;
+    tecnicoId?: string | null;
+    tipo?: string;
+    tipoServicoId?: string | null;
+    horaInicio?: string | null;
+    horaFim?: string | null;
+  }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
     if (os.status === 'concluida' || os.status === 'cancelada') {
@@ -651,11 +675,15 @@ export class OrdensServicoService {
         ...(dto.observacoesGerais !== undefined ? { observacoesGerais: dto.observacoesGerais || null } : {}),
         ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
         ...(dto.tipo ? { tipo: dto.tipo as any } : {}),
+        ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId || null } : {}),
+        ...(dto.horaInicio !== undefined ? { horaInicio: dto.horaInicio || null } : {}),
+        ...(dto.horaFim !== undefined ? { horaFim: dto.horaFim || null } : {}),
       },
       include: {
-        itens: { include: { equipamento: { select: { nome: true } } } },
-        ambiente: { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
-        tecnico: { select: { nome: true } },
+        itens:       { include: { equipamento: { select: { nome: true } } } },
+        ambiente:    { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
+        tecnico:     { select: { nome: true } },
+        tipoServico: { select: { sigla: true, calendarColorId: true } },
       },
     });
 

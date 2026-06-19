@@ -22,6 +22,7 @@ import {
   BarChart2,
   FileSpreadsheet,
   CalendarDays,
+  Briefcase,
 } from 'lucide-react'
 
 const NAV = [
@@ -33,6 +34,7 @@ const NAV = [
   { href: '/ambientes',              label: 'Ambientes',         icon: Building2 },
   { href: '/equipamentos',           label: 'Equipamentos',      icon: Cpu },
   { href: '/ordens-servico',         label: 'Ordens de Serviço', icon: ClipboardList },
+  { href: '/servicos',               label: 'Serviços',          icon: Briefcase },
   { href: '/planos-manutencao',      label: 'Planos Prev.',      icon: CalendarClock },
   { href: '/checklists',             label: 'Checklists',        icon: ClipboardCheck },
   { href: '/tecnicos/produtividade', label: 'Produtividade',     icon: BarChart2 },

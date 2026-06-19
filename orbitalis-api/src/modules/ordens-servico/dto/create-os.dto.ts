@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
 } from 'class-validator';
 
 export class CreateOrdemServicoDto {
@@ -24,10 +25,24 @@ export class CreateOrdemServicoDto {
 
   @IsOptional()
   @IsUUID()
+  tipoServicoId?: string;
+
+  @IsOptional()
+  @IsUUID()
   equipamentoId?: string;
 
   @IsDateString()
   dataAgendamento: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'horaInicio deve ser HH:MM' })
+  horaInicio?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, { message: 'horaFim deve ser HH:MM' })
+  horaFim?: string;
 
   @IsOptional()
   @IsString()

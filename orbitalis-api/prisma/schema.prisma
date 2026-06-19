@@ -221,13 +221,17 @@ model OrdemServico {
   valorMaoObra          Decimal? @map("valor_mao_obra") @db.Decimal(10, 2)
   valorPecas            Decimal? @map("valor_pecas") @db.Decimal(10, 2)
   googleCalendarEventId String?  @map("google_calendar_event_id") @db.VarChar(255)
+  tipoServicoId         String?  @map("tipo_servico_id") @db.Uuid
+  horaInicio            String?  @map("hora_inicio") @db.VarChar(5)
+  horaFim               String?  @map("hora_fim") @db.VarChar(5)
   dataCriacao           DateTime @default(now()) @map("data_criacao")
 
-  ambiente  Ambiente                        @relation(fields: [ambienteId], references: [id])
-  plano     PlanoManutencao?                @relation(fields: [planoId], references: [id], onDelete: SetNull)
-  tecnico   Usuario?                        @relation("TecnicoOrdens", fields: [tecnicoId], references: [id])
-  itens     OrdemServicoItem[]
-  conflitos AuditoriaConflitoSincronizacao[]
+  ambiente     Ambiente                        @relation(fields: [ambienteId], references: [id])
+  plano        PlanoManutencao?                @relation(fields: [planoId], references: [id], onDelete: SetNull)
+  tecnico      Usuario?                        @relation("TecnicoOrdens", fields: [tecnicoId], references: [id])
+  tipoServico  TipoServico?                    @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
+  itens        OrdemServicoItem[]
+  conflitos    AuditoriaConflitoSincronizacao[]
 
   @@index([status])
   @@map("ordens_servico")
@@ -248,6 +252,24 @@ model OrdemServicoItem {
   equipamento  Equipamento  @relation(fields: [equipamentoId], references: [id])
 
   @@map("ordem_servico_itens")
+}
+
+// ─────────────────────────────────────────
+// tipos_servico  (nomenclatura e cores por tipo de serviço)
+// ─────────────────────────────────────────
+model TipoServico {
+  id              String   @id @default(uuid()) @db.Uuid
+  sigla           String   @unique @db.VarChar(5)
+  nome            String   @db.VarChar(100)
+  corHex          String   @map("cor_hex") @db.VarChar(7)
+  calendarColorId String   @default("7") @map("calendar_color_id") @db.VarChar(5)
+  valorPadrao     Decimal? @map("valor_padrao") @db.Decimal(10, 2)
+  ativo           Boolean  @default(true)
+  sistema         Boolean  @default(false)
+
+  ordensServico OrdemServico[]
+
+  @@map("tipos_servico")
 }
 
 // ─────────────────────────────────────────
