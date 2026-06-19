@@ -264,6 +264,14 @@ model ConfiguracaoEmpresa {
   endereco     String?  @db.VarChar(255)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
+  // Google Calendar OAuth2
+  googleConectado          Boolean   @default(false) @map("google_conectado")
+  googleEmail              String?   @map("google_email") @db.VarChar(255)
+  googleCalendarId         String?   @map("google_calendar_id") @db.VarChar(255)
+  googleAccessToken        String?   @map("google_access_token") @db.Text
+  googleRefreshToken       String?   @map("google_refresh_token") @db.Text
+  googleTokenExpiry        DateTime? @map("google_token_expiry")
+
   @@map("configuracao_empresa")
 }
 

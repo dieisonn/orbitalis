@@ -1,4 +1,5 @@
 'use server'
+import { revalidatePath } from 'next/cache'
 import { api } from '@/lib/api'
 
 export async function salvarConfiguracao(
@@ -24,4 +25,9 @@ export async function salvarConfiguracao(
   } catch (err) {
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar configuração' }
   }
+}
+
+export async function desconectarGoogle() {
+  await api.delete('/configuracao/google')
+  revalidatePath('/configuracoes')
 }
