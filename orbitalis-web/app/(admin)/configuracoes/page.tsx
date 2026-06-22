@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import { ConfiguracaoForm } from './form'
 import { GoogleCalendarCard } from './google-calendar-card'
+import { ResponsavelTecnicoCard } from './responsavel-tecnico-card'
 
 type Config = {
   nomeEmpresa: string
@@ -12,7 +13,11 @@ type Config = {
   endereco: string | null
   googleConectado?: boolean
   googleEmail?: string | null
+  responsavelTecnicoId?: string | null
+  responsavelTecnico?: { id: string; nome: string | null; email: string; crea: string | null } | null
 }
+
+type Tecnico = { id: string; email: string; nome: string | null; crea: string | null }
 
 export default async function ConfiguracoesPage({
   searchParams,
@@ -26,8 +31,13 @@ export default async function ConfiguracoesPage({
     nomeEmpresa: 'Orbitalis', nomeFantasia: null, logoUrl: null,
     corPrimaria: '#0505ad', cnpj: null, telefone: null, endereco: null,
   }
+  let tecnicos: Tecnico[] = []
   try {
-    config = await api.get<Config>('/configuracao')
+    [config] = await Promise.all([
+      api.get<Config>('/configuracao'),
+    ])
+    const tecnicosRes = await api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] }))
+    tecnicos = tecnicosRes.data
   } catch { /* usa padrão */ }
 
   return (
@@ -57,6 +67,12 @@ export default async function ConfiguracoesPage({
       <GoogleCalendarCard
         conectado={config.googleConectado ?? false}
         email={config.googleEmail ?? null}
+      />
+
+      <ResponsavelTecnicoCard
+        tecnicos={tecnicos}
+        responsavelTecnicoId={config.responsavelTecnicoId ?? null}
+        responsavelTecnico={config.responsavelTecnico ?? null}
       />
     </div>
   )

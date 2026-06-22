@@ -8,6 +8,7 @@ export async function editarPlano(
   id: string,
   data: {
     tecnicoId: string
+    tipoServicoId?: string
     frequenciaDias: string
     proximaGeracao: string
     dataFim?: string
@@ -17,6 +18,7 @@ export async function editarPlano(
 ) {
   await api.patch(`/planos-manutencao/${id}`, {
     tecnicoId: data.tecnicoId || null,
+    tipoServicoId: data.tipoServicoId || null,
     frequenciaDias: Number(data.frequenciaDias),
     proximaGeracao: data.proximaGeracao,
     dataFim: data.dataFim || null,

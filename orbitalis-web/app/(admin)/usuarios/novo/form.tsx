@@ -16,11 +16,12 @@ export function NovoTecnicoForm() {
     const nome = fd.get('nome') as string
     const telefone = fd.get('telefone') as string
     const especialidade = fd.get('especialidade') as string
+    const crea = fd.get('crea') as string
 
     if (senha !== confirmacao) { setError('As senhas não coincidem'); return }
     setError(null)
     startTransition(async () => {
-      const result = await criarTecnico(email, senha, nome, telefone, especialidade)
+      const result = await criarTecnico(email, senha, nome, telefone, especialidade, crea)
       if (result && !result.ok) setError(result.error ?? 'Erro ao criar técnico')
     })
   }
@@ -51,15 +52,27 @@ export function NovoTecnicoForm() {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Especialidade
-        </label>
-        <input
-          name="especialidade"
-          placeholder="Ex: Ar-condicionado split, VRF, Chiller…"
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Especialidade
+          </label>
+          <input
+            name="especialidade"
+            placeholder="Ex: Ar-condicionado split, VRF, Chiller…"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            CREA / CONFEA
+          </label>
+          <input
+            name="crea"
+            placeholder="Ex: 123456/D-SP"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
       </div>
 
       <div className="border-t border-border pt-4">

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CronService } from '../cron/cron.service';
+import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
 import { CreatePlanoManutencaoDto } from './dto/create-plano.dto';
 
 type EquipConfigInput = { equipamentoId: string; modeloChecklistId?: string | null };
@@ -10,7 +11,8 @@ const INCLUDE_FULL = {
   cliente: {
     select: { id: true, razaoSocial: true, nomeFantasia: true, documento: true, endereco: true, telefone: true },
   },
-  tecnico: { select: { id: true, email: true, nome: true } },
+  tecnico: { select: { id: true, email: true, nome: true, crea: true } },
+  tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true, calendarColorId: true } },
   equipamentosConfig: {
     include: {
       equipamento: {
@@ -31,6 +33,7 @@ export class PlanosManutencaoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cronService: CronService,
+    private readonly googleCalendar: GoogleCalendarService,
   ) {}
 
   async create(dto: CreatePlanoManutencaoDto) {
@@ -39,6 +42,7 @@ export class PlanosManutencaoService {
         data: {
           clienteId: dto.clienteId,
           tecnicoId: dto.tecnicoId,
+          tipoServicoId: dto.tipoServicoId || null,
           frequenciaDias: dto.frequenciaDias,
           proximaGeracao: new Date(dto.proximaGeracao),
           dataFim: dto.dataFim ? new Date(dto.dataFim) : null,
@@ -67,6 +71,7 @@ export class PlanosManutencaoService {
         include: {
           cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
           tecnico: { select: { email: true, nome: true } },
+          tipoServico: { select: { sigla: true, corHex: true } },
           _count: { select: { equipamentosConfig: true } },
         },
         orderBy: [{ cliente: { razaoSocial: 'asc' } }, { proximaGeracao: 'asc' }],
@@ -115,6 +120,7 @@ export class PlanosManutencaoService {
     id: string,
     data: {
       tecnicoId?: string | null;
+      tipoServicoId?: string | null;
       frequenciaDias?: number;
       proximaGeracao?: string;
       dataFim?: string | null;
@@ -178,9 +184,20 @@ export class PlanosManutencaoService {
     const plano = await this.prisma.planoManutencao.findUnique({
       where: { id },
       include: {
+        tipoServico: { select: { id: true, sigla: true, calendarColorId: true } },
+        tecnico: { select: { id: true, nome: true } },
         equipamentosConfig: {
           include: {
-            equipamento: { select: { id: true, ambienteId: true } },
+            equipamento: {
+              select: {
+                id: true,
+                ambienteId: true,
+                nome: true,
+                ambiente: {
+                  select: { id: true, nome: true, cliente: { select: { razaoSocial: true, telefone: true } } },
+                },
+              },
+            },
             modeloChecklist: true,
           },
         },
@@ -190,7 +207,11 @@ export class PlanosManutencaoService {
 
     const configs = plano.equipamentosConfig.map((c) => ({
       equipamentoId: c.equipamentoId,
+      equipamentoNome: c.equipamento.nome,
       ambienteId: c.equipamento.ambienteId,
+      ambienteNome: c.equipamento.ambiente.nome,
+      clienteNome: c.equipamento.ambiente.cliente.razaoSocial,
+      clienteTelefone: c.equipamento.ambiente.cliente.telefone,
       snapshot: c.modeloChecklist
         ? (JSON.parse(JSON.stringify(c.modeloChecklist.itens)) as Prisma.InputJsonValue)
         : ([] as Prisma.InputJsonValue),
@@ -219,28 +240,66 @@ export class PlanosManutencaoService {
 
     for (const dataGeracao of datasParaGerar) {
       for (const config of configs) {
-        await this.prisma.$transaction(async (tx) => {
-          const os = await tx.ordemServico.create({
+        const os = await this.prisma.$transaction(async (tx) => {
+          const created = await tx.ordemServico.create({
             data: {
               ambienteId: config.ambienteId,
               planoId: plano.id,
               tecnicoId: plano.tecnicoId,
+              tipoServicoId: plano.tipoServicoId,
               status: 'agendada',
               tipo: 'preventiva',
               origem: 'preventiva_automatica',
               dataAgendamento: dataGeracao,
             },
+            select: { id: true, numero: true },
           });
 
           await tx.ordemServicoItem.create({
             data: {
-              ordemServicoId: os.id,
+              ordemServicoId: created.id,
               equipamentoId: config.equipamentoId,
               statusItem: 'pendente',
               checklistSnapshot: config.snapshot,
             },
           });
+
+          return created;
         });
+
+        // Cria evento no Google Calendar
+        const osNumero = plano.tipoServico
+          ? `${plano.tipoServico.sigla}-${String(os.numero).padStart(4, '0')}`
+          : `OS-${String(os.numero).padStart(4, '0')}`;
+
+        const payload: CalendarEventPayload = {
+          osNumero,
+          ambienteNome: config.ambienteNome,
+          clienteNome: config.clienteNome,
+          clienteTelefone: config.clienteTelefone ?? null,
+          tecnicoNome: plano.tecnico?.nome ?? null,
+          tipo: 'preventiva',
+          dataAgendamento: dataGeracao,
+          equipamentos: [config.equipamentoNome],
+          observacoesGerais: null,
+          status: 'agendada',
+          tipoServicoSigla: plano.tipoServico?.sigla ?? null,
+          tipoServicoColorId: plano.tipoServico?.calendarColorId ?? null,
+          horaInicio: null,
+          horaFim: null,
+        };
+
+        this.googleCalendar.criarEvento(payload)
+          .then((eventId) => {
+            if (eventId) {
+              return this.prisma.ordemServico.update({
+                where: { id: os.id },
+                data: { googleCalendarEventId: eventId },
+              });
+            }
+          })
+          .catch(() => null);
+
         totalGeradas++;
       }
     }

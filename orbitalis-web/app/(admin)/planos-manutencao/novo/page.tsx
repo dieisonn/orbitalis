@@ -19,19 +19,22 @@ type Ambiente = {
   equipamentos: Equipamento[]
 }
 
-type Tecnico   = { id: string; email: string; nome: string | null }
-type Checklist = { id: string; nome: string }
+type Tecnico     = { id: string; email: string; nome: string | null }
+type Checklist   = { id: string; nome: string }
+type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
 export default async function NovoPlanoPage() {
-  const [ambientesRes, tecnicosRes, checklistsRes] = await Promise.all([
+  const [ambientesRes, tecnicosRes, checklistsRes, tiposRes] = await Promise.all([
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
     api.get<{ data: Checklist[] }>('/modelos-checklist?perPage=1000').catch(() => ({ data: [] as Checklist[] })),
+    api.get<TipoServico[]>('/tipos-servico').catch(() => [] as TipoServico[]),
   ])
 
-  const ambientes  = ambientesRes.data
-  const tecnicos   = tecnicosRes.data
-  const checklists = checklistsRes.data
+  const ambientes    = ambientesRes.data
+  const tecnicos     = tecnicosRes.data
+  const checklists   = checklistsRes.data
+  const tiposServico = Array.isArray(tiposRes) ? tiposRes : []
 
   const temCliente = ambientes.some((a) => a.cliente)
 
@@ -55,7 +58,7 @@ export default async function NovoPlanoPage() {
           </p>
         </div>
       ) : (
-        <NovoPlanoForm ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} />
+        <NovoPlanoForm ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} tiposServico={tiposServico} />
       )}
     </div>
   )

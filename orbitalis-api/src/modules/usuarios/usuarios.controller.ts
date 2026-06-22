@@ -7,7 +7,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UsuarioTipo } from '@prisma/client';
 
 const SELECT_TECNICO = {
-  id: true, email: true, nome: true, telefone: true, especialidade: true, dataCriacao: true,
+  id: true, email: true, nome: true, telefone: true, especialidade: true, crea: true, dataCriacao: true,
 } as const;
 
 @Controller('usuarios')
@@ -90,7 +90,7 @@ export class UsuariosController {
 
   @Post()
   @Roles(UsuarioTipo.admin)
-  async criarTecnico(@Body() body: { email: string; senha: string; nome?: string; telefone?: string; especialidade?: string }) {
+  async criarTecnico(@Body() body: { email: string; senha: string; nome?: string; telefone?: string; especialidade?: string; crea?: string }) {
     if (!body.email || !body.senha) throw new BadRequestException('Email e senha são obrigatórios');
     const existe = await this.prisma.usuario.findUnique({ where: { email: body.email } });
     if (existe) throw new BadRequestException('Email já cadastrado');
@@ -103,6 +103,7 @@ export class UsuariosController {
         nome: body.nome || null,
         telefone: body.telefone || null,
         especialidade: body.especialidade || null,
+        crea: body.crea || null,
       },
       select: SELECT_TECNICO,
     });
@@ -112,7 +113,7 @@ export class UsuariosController {
   @Roles(UsuarioTipo.admin)
   async atualizarTecnico(
     @Param('id') id: string,
-    @Body() body: { email?: string; senha?: string; nome?: string; telefone?: string; especialidade?: string },
+    @Body() body: { email?: string; senha?: string; nome?: string; telefone?: string; especialidade?: string; crea?: string },
   ) {
     const data: Record<string, string | null> = {};
     if (body.email) data.email = body.email;
@@ -120,6 +121,7 @@ export class UsuariosController {
     if (body.nome !== undefined) data.nome = body.nome || null;
     if (body.telefone !== undefined) data.telefone = body.telefone || null;
     if (body.especialidade !== undefined) data.especialidade = body.especialidade || null;
+    if (body.crea !== undefined) data.crea = body.crea || null;
     if (Object.keys(data).length === 0) return { message: 'Nada a atualizar' };
     return this.prisma.usuario.update({ where: { id }, data, select: SELECT_TECNICO });
   }

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AlertasService } from '../alertas/alertas.service';
+import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
 
 @Injectable()
 export class CronService {
@@ -13,6 +14,7 @@ export class CronService {
     private readonly prisma: PrismaService,
     private readonly notificacoes: NotificacoesService,
     private readonly alertas: AlertasService,
+    private readonly googleCalendar: GoogleCalendarService,
   ) {}
 
   // Executa diariamente às 00:00:01 (§US05)
@@ -29,9 +31,20 @@ export class CronService {
         OR: [{ dataFim: null }, { dataFim: { gte: agora } }],
       },
       include: {
+        tipoServico: { select: { id: true, sigla: true, calendarColorId: true } },
+        tecnico: { select: { id: true, nome: true } },
         equipamentosConfig: {
           include: {
-            equipamento: { select: { id: true, ambienteId: true } },
+            equipamento: {
+              select: {
+                id: true,
+                ambienteId: true,
+                nome: true,
+                ambiente: {
+                  select: { id: true, nome: true, cliente: { select: { razaoSocial: true, telefone: true } } },
+                },
+              },
+            },
             modeloChecklist: true,
           },
         },
@@ -46,7 +59,11 @@ export class CronService {
       try {
         const configs = plano.equipamentosConfig.map((c) => ({
           equipamentoId: c.equipamentoId,
+          equipamentoNome: c.equipamento.nome,
           ambienteId: c.equipamento.ambienteId,
+          ambienteNome: c.equipamento.ambiente.nome,
+          clienteNome: c.equipamento.ambiente.cliente.razaoSocial,
+          clienteTelefone: c.equipamento.ambiente.cliente.telefone,
           snapshot: c.modeloChecklist
             ? (JSON.parse(JSON.stringify(c.modeloChecklist.itens)) as Prisma.InputJsonValue)
             : ([] as Prisma.InputJsonValue),
@@ -79,28 +96,66 @@ export class CronService {
 
         for (const dataGeracao of datasParaGerar) {
           for (const config of configs) {
-            await this.prisma.$transaction(async (tx) => {
-              const os = await tx.ordemServico.create({
+            const os = await this.prisma.$transaction(async (tx) => {
+              const created = await tx.ordemServico.create({
                 data: {
                   ambienteId: config.ambienteId,
                   planoId: plano.id,
                   tecnicoId: plano.tecnicoId,
+                  tipoServicoId: plano.tipoServicoId,
                   status: 'agendada',
                   tipo: 'preventiva',
                   origem: 'preventiva_automatica',
                   dataAgendamento: dataGeracao,
                 },
+                select: { id: true, numero: true },
               });
 
               await tx.ordemServicoItem.create({
                 data: {
-                  ordemServicoId: os.id,
+                  ordemServicoId: created.id,
                   equipamentoId: config.equipamentoId,
                   statusItem: 'pendente',
                   checklistSnapshot: config.snapshot,
                 },
               });
+
+              return created;
             });
+
+            // Cria evento no Google Calendar em background
+            const osNumero = plano.tipoServico
+              ? `${plano.tipoServico.sigla}-${String(os.numero).padStart(4, '0')}`
+              : `OS-${String(os.numero).padStart(4, '0')}`;
+
+            const payload: CalendarEventPayload = {
+              osNumero,
+              ambienteNome: config.ambienteNome,
+              clienteNome: config.clienteNome,
+              clienteTelefone: config.clienteTelefone ?? null,
+              tecnicoNome: plano.tecnico?.nome ?? null,
+              tipo: 'preventiva',
+              dataAgendamento: dataGeracao,
+              equipamentos: [config.equipamentoNome],
+              observacoesGerais: null,
+              status: 'agendada',
+              tipoServicoSigla: plano.tipoServico?.sigla ?? null,
+              tipoServicoColorId: plano.tipoServico?.calendarColorId ?? null,
+              horaInicio: null,
+              horaFim: null,
+            };
+
+            this.googleCalendar.criarEvento(payload)
+              .then((eventId) => {
+                if (eventId) {
+                  return this.prisma.ordemServico.update({
+                    where: { id: os.id },
+                    data: { googleCalendarEventId: eventId },
+                  });
+                }
+              })
+              .catch(() => null);
+
             geradas++;
           }
         }

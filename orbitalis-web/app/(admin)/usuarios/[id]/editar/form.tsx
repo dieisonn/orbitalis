@@ -8,9 +8,10 @@ type Props = {
   nome: string | null
   telefone: string | null
   especialidade: string | null
+  crea: string | null
 }
 
-export function EditarTecnicoForm({ id, email, nome, telefone, especialidade }: Props) {
+export function EditarTecnicoForm({ id, email, nome, telefone, especialidade, crea }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -23,11 +24,12 @@ export function EditarTecnicoForm({ id, email, nome, telefone, especialidade }: 
     const novoNome = fd.get('nome') as string
     const novoTelefone = fd.get('telefone') as string
     const novaEspecialidade = fd.get('especialidade') as string
+    const novoCrea = fd.get('crea') as string
 
     if (senha && senha !== confirmacao) { setError('As senhas não coincidem'); return }
     setError(null)
     startTransition(async () => {
-      const result = await editarTecnico(id, novoEmail, senha, novoNome, novoTelefone, novaEspecialidade)
+      const result = await editarTecnico(id, novoEmail, senha, novoNome, novoTelefone, novaEspecialidade, novoCrea)
       if (result && !result.ok) setError(result.error ?? 'Erro ao salvar')
     })
   }
@@ -47,10 +49,17 @@ export function EditarTecnicoForm({ id, email, nome, telefone, especialidade }: 
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Especialidade</label>
-        <input name="especialidade" defaultValue={especialidade ?? ''} placeholder="Ex: Ar-condicionado split, VRF, Chiller…"
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Especialidade</label>
+          <input name="especialidade" defaultValue={especialidade ?? ''} placeholder="Ex: Ar-condicionado split, VRF, Chiller…"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">CREA / CONFEA</label>
+          <input name="crea" defaultValue={crea ?? ''} placeholder="Ex: 123456/D-SP"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
       </div>
 
       <div className="border-t border-border pt-4">

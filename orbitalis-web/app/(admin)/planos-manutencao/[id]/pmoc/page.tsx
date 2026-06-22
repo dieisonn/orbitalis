@@ -12,6 +12,7 @@ type Config = {
   cnpj: string | null
   telefone: string | null
   endereco: string | null
+  responsavelTecnico?: { id: string; nome: string | null; email: string; crea: string | null } | null
 } | null
 
 export default async function PmocPage({ params }: Props) {

@@ -68,11 +68,13 @@ model Usuario {
   nome          String?     @db.VarChar(150)
   telefone      String?     @db.VarChar(20)
   especialidade String?     @db.VarChar(100)
+  crea          String?     @db.VarChar(20)
   dataCriacao   DateTime    @default(now()) @map("data_criacao")
 
-  cliente           Cliente?
-  ordensComoTecnico OrdemServico[]    @relation("TecnicoOrdens")
-  planosComoTecnico PlanoManutencao[] @relation("TecnicoPlanos")
+  cliente                        Cliente?
+  ordensComoTecnico              OrdemServico[]    @relation("TecnicoOrdens")
+  planosComoTecnico              PlanoManutencao[] @relation("TecnicoPlanos")
+  configuracaoEmpresaResponsavel ConfiguracaoEmpresa?
 
   @@map("usuarios")
 }
@@ -172,8 +174,11 @@ model PlanoManutencao {
   ultimaGeracao  DateTime? @map("ultima_geracao")
   dataFim        DateTime? @map("data_fim")
 
+  tipoServicoId  String?   @map("tipo_servico_id") @db.Uuid
+
   cliente            Cliente                  @relation(fields: [clienteId], references: [id])
   tecnico            Usuario?                 @relation("TecnicoPlanos", fields: [tecnicoId], references: [id])
+  tipoServico        TipoServico?             @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
   equipamentosConfig PlanoEquipamentoConfig[]
   ordensServico      OrdemServico[]
 
@@ -268,6 +273,7 @@ model TipoServico {
   sistema         Boolean  @default(false)
 
   ordensServico OrdemServico[]
+  planos        PlanoManutencao[]
 
   @@map("tipos_servico")
 }
@@ -293,6 +299,10 @@ model ConfiguracaoEmpresa {
   googleAccessToken        String?   @map("google_access_token") @db.Text
   googleRefreshToken       String?   @map("google_refresh_token") @db.Text
   googleTokenExpiry        DateTime? @map("google_token_expiry")
+
+  // Responsável técnico para relatórios PMOC
+  responsavelTecnicoId     String?   @map("responsavel_tecnico_id") @db.Uuid
+  responsavelTecnico       Usuario?  @relation(fields: [responsavelTecnicoId], references: [id], onDelete: SetNull)
 
   @@map("configuracao_empresa")
 }

@@ -8,6 +8,7 @@ type EquipConfig = { equipamentoId: string; modeloChecklistId: string | null }
 export async function criarPlano(data: {
   clienteId: string
   tecnicoId: string
+  tipoServicoId?: string
   frequenciaDias: number
   proximaGeracao: string
   dataFim?: string
@@ -16,6 +17,7 @@ export async function criarPlano(data: {
   await api.post('/planos-manutencao', {
     clienteId: data.clienteId,
     tecnicoId: data.tecnicoId || undefined,
+    tipoServicoId: data.tipoServicoId || undefined,
     frequenciaDias: data.frequenciaDias,
     proximaGeracao: data.proximaGeracao,
     dataFim: data.dataFim || undefined,

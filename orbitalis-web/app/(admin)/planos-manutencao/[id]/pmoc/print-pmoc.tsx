@@ -51,7 +51,7 @@ export type Plano = {
     endereco: string
     telefone: string | null
   }
-  tecnico: { email: string; nome: string | null } | null
+  tecnico: { email: string; nome: string | null; crea?: string | null } | null
   equipamentosConfig: EquipConfig[]
   ordensServico: OsResumo[]
 }
@@ -64,6 +64,7 @@ type Config = {
   cnpj: string | null
   telefone: string | null
   endereco: string | null
+  responsavelTecnico?: { id: string; nome: string | null; email: string; crea: string | null } | null
 } | null
 
 function parseItens(raw: unknown): ChecklistItem[] {
@@ -132,7 +133,10 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
     ? plano.ordensServico[0].dataAgendamento
     : plano.proximaGeracao
 
+  const responsavel = config?.responsavelTecnico ?? plano.tecnico
   const tecnicoLabel = plano.tecnico ? (plano.tecnico.nome ?? plano.tecnico.email) : 'Não definido'
+  const responsavelLabel = responsavel ? (responsavel.nome ?? responsavel.email) : tecnicoLabel
+  const responsavelCrea = responsavel?.crea ?? plano.tecnico?.crea ?? null
   const clienteLabel = plano.cliente.nomeFantasia ?? plano.cliente.razaoSocial
 
   // Agrupa equipamentos por ambiente para inventário
@@ -254,12 +258,16 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
             <div style={S.box(cor)}>
               <div style={S.sectionHeader(cor)}><p style={S.label(cor)}>Responsável Técnico</p></div>
               <div style={S.sectionBody}>
-                <p style={{ fontWeight: 600, fontSize: '9pt', marginBottom: '3px' }}>{tecnicoLabel}</p>
-                <p style={{ fontSize: '7.5pt', color: '#6b7280', marginBottom: '6px' }}>{plano.tecnico?.email ?? ''}</p>
+                <p style={{ fontWeight: 600, fontSize: '9pt', marginBottom: '3px' }}>{responsavelLabel}</p>
+                <p style={{ fontSize: '7.5pt', color: '#6b7280', marginBottom: '6px' }}>{responsavel?.email ?? plano.tecnico?.email ?? ''}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   <div>
-                    <p style={{ fontSize: '6.5pt', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Registro no Conselho</p>
-                    <div style={{ borderBottom: '1px solid #d1d5db', height: '18px', marginTop: '2px' }} />
+                    <p style={{ fontSize: '6.5pt', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>CREA / Registro</p>
+                    {responsavelCrea ? (
+                      <p style={{ fontSize: '8pt', fontWeight: 700, color: '#374151', marginTop: '3px', fontFamily: 'monospace' }}>{responsavelCrea}</p>
+                    ) : (
+                      <div style={{ borderBottom: '1px solid #d1d5db', height: '18px', marginTop: '2px' }} />
+                    )}
                   </div>
                   <div>
                     <p style={{ fontSize: '6.5pt', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>ART / TRT</p>

@@ -2,7 +2,7 @@ import { api } from '@/lib/api'
 import { EditarTecnicoForm } from './form'
 import { notFound } from 'next/navigation'
 
-type Tecnico = { id: string; email: string; nome: string | null; telefone: string | null; especialidade: string | null }
+type Tecnico = { id: string; email: string; nome: string | null; telefone: string | null; especialidade: string | null; crea: string | null }
 type Props = { params: Promise<{ id: string }> }
 
 export default async function EditarTecnicoPage({ params }: Props) {
@@ -27,6 +27,7 @@ export default async function EditarTecnicoPage({ params }: Props) {
           nome={tecnico.nome}
           telefone={tecnico.telefone}
           especialidade={tecnico.especialidade}
+          crea={tecnico.crea}
         />
       </div>
     </div>

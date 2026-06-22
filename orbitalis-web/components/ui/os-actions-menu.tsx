@@ -267,6 +267,7 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
   const [open, setOpen]   = useState(false)
   const [panel, setPanel] = useState<Panel>('menu')
   const [pos, setPos]     = useState({ top: 0, left: 0 })
+  const [openUp, setOpenUp] = useState(false)
   const btnRef            = useRef<HTMLButtonElement>(null)
 
   const isTerminal = status === 'concluida' || status === 'cancelada'
@@ -277,8 +278,9 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
   function handleOpen() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
-      // w-52 = 208px; posiciona à esquerda do botão para não sair da tela
-      setPos({ top: r.bottom + 4, left: r.right - 208 })
+      const up = window.innerHeight - r.bottom < 320
+      setOpenUp(up)
+      setPos({ top: up ? r.top : r.bottom + 4, left: r.right - 208 })
     }
     setOpen((v) => !v)
     setPanel('menu')
@@ -306,7 +308,9 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
           {/* fixed: não é afetado por overflow-hidden dos ancestrais */}
           <div
             className="fixed z-50 bg-white border border-border rounded-xl shadow-xl w-52 overflow-hidden"
-            style={{ top: pos.top, left: pos.left }}
+            style={openUp
+              ? { bottom: window.innerHeight - pos.top + 4, left: pos.left }
+              : { top: pos.top, left: pos.left }}
           >
 
             {panel === 'menu' && (

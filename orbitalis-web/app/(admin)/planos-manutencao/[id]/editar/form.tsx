@@ -37,12 +37,14 @@ type EquipConfigAtual = {
 }
 
 type Tecnico   = { id: string; email: string; nome: string | null }
-type Checklist = { id: string; nome: string }
+type Checklist   = { id: string; nome: string }
+type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
 type Props = {
   id: string
   clienteLabel: string
   tecnicoId: string | null
+  tipoServicoId: string | null
   frequenciaDias: number
   proximaGeracao: string
   dataFim: string | null
@@ -51,12 +53,14 @@ type Props = {
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
   checklists: Checklist[]
+  tiposServico: TipoServico[]
 }
 
 export function EditarPlanoForm({
   id,
   clienteLabel,
   tecnicoId,
+  tipoServicoId: tipoServicoIdInicial,
   frequenciaDias,
   proximaGeracao,
   dataFim,
@@ -65,10 +69,12 @@ export function EditarPlanoForm({
   ambientes,
   tecnicos,
   checklists,
+  tiposServico,
 }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [isAtivo, setIsAtivo] = useState(ativo)
+  const [tipoServicoId, setTipoServicoId] = useState(tipoServicoIdInicial ?? '')
 
   // Inicializa com a config atual: { equipamentoId: checklistId | '' }
   const configInicial = useMemo(() => {
@@ -120,6 +126,7 @@ export function EditarPlanoForm({
       try {
         await editarPlano(id, {
           tecnicoId:         fd.get('tecnicoId') as string,
+          tipoServicoId,
           frequenciaDias:    fd.get('frequenciaDias') as string,
           proximaGeracao:    fd.get('proximaGeracao') as string,
           dataFim:           fd.get('dataFim') as string,
@@ -138,6 +145,33 @@ export function EditarPlanoForm({
       {/* ── Configurações ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-border p-6 space-y-5">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Configurações — {clienteLabel}</h2>
+
+        {tiposServico.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Serviço</label>
+            <div className="flex flex-wrap gap-2">
+              {tiposServico.map((ts) => (
+                <button
+                  key={ts.id}
+                  type="button"
+                  onClick={() => setTipoServicoId(tipoServicoId === ts.id ? '' : ts.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                    tipoServicoId === ts.id ? 'border-transparent text-white' : 'border-border text-gray-600 hover:bg-surface'
+                  }`}
+                  style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex } : {}}
+                >
+                  <span
+                    className="w-6 text-center py-0.5 rounded text-white text-xs font-bold"
+                    style={{ backgroundColor: tipoServicoId === ts.id ? 'rgba(255,255,255,0.25)' : ts.corHex }}
+                  >
+                    {ts.sigla}
+                  </span>
+                  {ts.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {/* Técnico */}

@@ -27,6 +27,10 @@ export class CreatePlanoManutencaoDto {
   @IsUUID()
   tecnicoId?: string;
 
+  @IsOptional()
+  @IsUUID()
+  tipoServicoId?: string;
+
   @IsInt()
   @Min(1)
   frequenciaDias: number;

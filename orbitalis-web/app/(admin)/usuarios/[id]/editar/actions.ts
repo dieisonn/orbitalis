@@ -4,13 +4,14 @@ import { api } from '@/lib/api'
 
 export async function editarTecnico(
   id: string, email: string, senha: string,
-  nome: string, telefone: string, especialidade: string,
+  nome: string, telefone: string, especialidade: string, crea: string,
 ) {
   const body: Record<string, string | undefined> = {
     email,
     nome: nome || undefined,
     telefone: telefone || undefined,
     especialidade: especialidade || undefined,
+    crea: crea || undefined,
   }
   if (senha) body.senha = senha
   try {

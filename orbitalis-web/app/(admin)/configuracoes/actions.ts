@@ -31,3 +31,13 @@ export async function desconectarGoogle() {
   await api.delete('/configuracao/google')
   revalidatePath('/configuracoes')
 }
+
+export async function salvarResponsavelTecnico(responsavelTecnicoId: string | null) {
+  try {
+    await api.patch('/configuracao', { responsavelTecnicoId: responsavelTecnicoId || null })
+    revalidatePath('/configuracoes')
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar' }
+  }
+}
