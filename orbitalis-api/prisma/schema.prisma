@@ -301,7 +301,7 @@ model ConfiguracaoEmpresa {
   googleTokenExpiry        DateTime? @map("google_token_expiry")
 
   // Responsável técnico para relatórios PMOC
-  responsavelTecnicoId     String?   @map("responsavel_tecnico_id") @db.Uuid
+  responsavelTecnicoId     String?   @unique @map("responsavel_tecnico_id") @db.Uuid
   responsavelTecnico       Usuario?  @relation(fields: [responsavelTecnicoId], references: [id], onDelete: SetNull)
 
   @@map("configuracao_empresa")
