@@ -9,7 +9,7 @@ RUN npm install
 
 COPY orbitalis-api/ .
 
-RUN npm run build && npx prisma generate
+RUN npx prisma generate && npm run build
 
 # ── Runtime ──────────────────────────────────
 FROM node:20-alpine AS runner
