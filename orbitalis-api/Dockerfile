@@ -9,7 +9,7 @@ RUN npm install
 
 COPY . .
 
-RUN npm run build && npx prisma generate
+RUN npx prisma generate && npm run build
 
 # â”€â”€ Runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 FROM node:20.18-alpine AS runner
