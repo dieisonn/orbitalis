@@ -308,7 +308,6 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
           </div>
         )}
       </div>
-    </div>
 
       {/* ── Diagnósticos LGMV ── */}
       <div className="mt-8">
