@@ -34,6 +34,7 @@ export class DiagnosticosLgmvService {
         osId: dto.osId ?? null,
         arquivoIduNome: dto.arquivoIduNome ?? null,
         arquivoOduNome: dto.arquivoOduNome ?? null,
+        dataInspecao: dto.dataInspecao ? new Date(dto.dataInspecao) : null,
         dadosIdu: iduData ? (iduData as any) : undefined,
         dadosOdu: oduData ? (oduData as any) : undefined,
         relatorio: relatorio as any,
@@ -52,11 +53,23 @@ export class DiagnosticosLgmvService {
       select: {
         id: true,
         criadoEm: true,
+        dataInspecao: true,
         arquivoIduNome: true,
         arquivoOduNome: true,
         relatorio: true,
         os: { select: { id: true, numero: true } },
       },
+    })
+  }
+
+  async update(id: string, data: { dataInspecao?: string | null }) {
+    await this.findOne(id)
+    return this.prisma.diagnosticoLgmv.update({
+      where: { id },
+      data: {
+        dataInspecao: data.dataInspecao ? new Date(data.dataInspecao) : null,
+      },
+      select: { id: true, dataInspecao: true },
     })
   }
 

@@ -18,6 +18,10 @@ export class CreateDiagnosticoDto {
 
   @IsOptional()
   @IsString()
+  dataInspecao?: string
+
+  @IsOptional()
+  @IsString()
   iduCsv?: string
 
   @IsOptional()

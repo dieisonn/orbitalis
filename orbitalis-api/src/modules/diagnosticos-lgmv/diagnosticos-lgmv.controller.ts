@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
 import { UsuarioTipo } from '@prisma/client'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
@@ -33,6 +33,12 @@ export class DiagnosticosLgmvController {
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   findOne(@Param('id') id: string) {
     return this.service.findOne(id)
+  }
+
+  @Patch(':id')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  update(@Param('id') id: string, @Body() body: { dataInspecao?: string | null }) {
+    return this.service.update(id, body)
   }
 
   @Delete(':id')

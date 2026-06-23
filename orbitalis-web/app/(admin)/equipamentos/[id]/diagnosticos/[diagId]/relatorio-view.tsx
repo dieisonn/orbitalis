@@ -1,10 +1,12 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from 'recharts'
-import { CheckCircle, AlertTriangle, XCircle, Activity, Gauge, Zap, Printer } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, Activity, Gauge, Zap, Printer, Calendar, Pencil, Check, X } from 'lucide-react'
+import { atualizarDataInspecao } from '@/app/(admin)/equipamentos/[id]/diagnosticos/actions'
 
 interface Kpi { media: number; min: number; max: number }
 interface Anomalia { nivel: 'normal' | 'atencao' | 'critico'; parametro: string; valor: string; mensagem: string }
@@ -35,9 +37,12 @@ interface Relatorio {
 }
 
 interface Props {
+  diagId: string
   relatorio: Relatorio
+  equipamentoId: string
   equipamentoNome: string
   criadoEm: string
+  dataInspecao: string | null
   arquivoIduNome: string | null
   arquivoOduNome: string | null
 }
@@ -71,9 +76,31 @@ function downsample<T>(arr: T[], max: number): T[] {
   return arr.filter((_, i) => i % step === 0)
 }
 
-export function RelatorioView({ relatorio: r, equipamentoNome, criadoEm, arquivoIduNome, arquivoOduNome }: Props) {
+function fmtDate(iso: string | null) {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+}
+
+export function RelatorioView({ diagId, relatorio: r, equipamentoId, equipamentoNome, criadoEm, dataInspecao: initialDate, arquivoIduNome, arquivoOduNome }: Props) {
   const statusCfg = STATUS_CONFIG[r.status]
   const StatusIcon = statusCfg.Icon
+
+  const [dataInspecao, setDataInspecao] = useState(
+    initialDate ? initialDate.split('T')[0] : ''
+  )
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(dataInspecao)
+  const [isPending, startTransition] = useTransition()
+
+  function startEdit() { setDraft(dataInspecao); setEditing(true) }
+  function cancelEdit() { setEditing(false) }
+  function saveEdit() {
+    startTransition(async () => {
+      await atualizarDataInspecao(diagId, draft || null)
+      setDataInspecao(draft)
+      setEditing(false)
+    })
+  }
 
   const iduSamples = downsample(r.seriesIdu, 120)
   const oduSamples = downsample(r.seriesOdu, 120)
@@ -93,16 +120,48 @@ export function RelatorioView({ relatorio: r, equipamentoNome, criadoEm, arquivo
                 <StatusIcon size={12} />
                 {statusCfg.label}
               </span>
-              <button
-                onClick={() => window.print()}
+              <a
+                href={`/equipamentos/${equipamentoId}/diagnosticos/${diagId}/pdf`}
+                target="_blank"
                 className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-border rounded-lg hover:bg-surface transition-colors print:hidden"
               >
-                <Printer size={13} /> Imprimir
-              </button>
+                <Printer size={13} /> Imprimir / PDF
+              </a>
             </div>
             <p className="text-sm text-gray-500">{equipamentoNome}</p>
+
+            {/* Data de inspeção editável */}
+            <div className="flex items-center gap-2 mt-1.5">
+              <Calendar size={12} className="text-gray-400 shrink-0" />
+              {editing ? (
+                <>
+                  <input
+                    type="date"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    className="border border-border rounded px-2 py-0.5 text-xs text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  />
+                  <button onClick={saveEdit} disabled={isPending} className="text-emerald-600 hover:text-emerald-700 disabled:opacity-50">
+                    <Check size={14} />
+                  </button>
+                  <button onClick={cancelEdit} className="text-gray-400 hover:text-gray-600">
+                    <X size={14} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-gray-600">
+                    {dataInspecao ? fmtDate(dataInspecao) : <span className="text-gray-400">Data de inspeção não informada</span>}
+                  </span>
+                  <button onClick={startEdit} className="text-gray-300 hover:text-primary transition-colors">
+                    <Pencil size={11} />
+                  </button>
+                </>
+              )}
+            </div>
+
             <p className="text-xs text-gray-400 mt-0.5">
-              {new Date(criadoEm).toLocaleString('pt-BR')} · Modo: {r.modo} · Duração: {r.duracao} · {r.totalLeituras} leituras
+              Gerado em {new Date(criadoEm).toLocaleString('pt-BR')} · Modo: {r.modo} · Duração: {r.duracao} · {r.totalLeituras} leituras
             </p>
             {(arquivoIduNome || arquivoOduNome) && (
               <p className="text-xs text-gray-300 mt-0.5">

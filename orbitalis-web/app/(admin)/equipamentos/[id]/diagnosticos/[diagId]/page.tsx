@@ -29,9 +29,12 @@ export default async function DiagnosticoPage({ params }: Props) {
       </div>
 
       <RelatorioView
+        diagId={diagId}
         relatorio={diag.relatorio}
+        equipamentoId={id}
         equipamentoNome={eq?.nome ?? '—'}
         criadoEm={diag.criadoEm}
+        dataInspecao={diag.dataInspecao ?? null}
         arquivoIduNome={diag.arquivoIduNome}
         arquivoOduNome={diag.arquivoOduNome}
       />

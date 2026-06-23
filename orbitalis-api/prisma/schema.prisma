@@ -377,15 +377,16 @@ model AuditoriaConflitoSincronizacao {
 // diagnosticos_lgmv  (laudos LGMV por equipamento)
 // ─────────────────────────────────────────
 model DiagnosticoLgmv {
-  id             String   @id @default(uuid()) @db.Uuid
-  equipamentoId  String   @map("equipamento_id") @db.Uuid
-  osId           String?  @map("os_id") @db.Uuid
-  arquivoIduNome String?  @map("arquivo_idu_nome") @db.VarChar(255)
-  arquivoOduNome String?  @map("arquivo_odu_nome") @db.VarChar(255)
-  dadosIdu       Json?    @map("dados_idu")
-  dadosOdu       Json?    @map("dados_odu")
+  id             String    @id @default(uuid()) @db.Uuid
+  equipamentoId  String    @map("equipamento_id") @db.Uuid
+  osId           String?   @map("os_id") @db.Uuid
+  arquivoIduNome String?   @map("arquivo_idu_nome") @db.VarChar(255)
+  arquivoOduNome String?   @map("arquivo_odu_nome") @db.VarChar(255)
+  dataInspecao   DateTime? @map("data_inspecao")
+  dadosIdu       Json?     @map("dados_idu")
+  dadosOdu       Json?     @map("dados_odu")
   relatorio      Json
-  criadoEm       DateTime @default(now()) @map("criado_em")
+  criadoEm       DateTime  @default(now()) @map("criado_em")
 
   equipamento Equipamento   @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
   os          OrdemServico? @relation(fields: [osId], references: [id], onDelete: SetNull)
