@@ -221,12 +221,9 @@ export class PlanosManutencaoService {
     let cursor = new Date(plano.proximaGeracao);
 
     if (plano.dataFim) {
-      while (true) {
-        const next = new Date(cursor);
-        next.setDate(next.getDate() + plano.frequenciaDias);
-        if (next > plano.dataFim) break;
+      while (cursor <= plano.dataFim) {
         datasParaGerar.push(new Date(cursor));
-        cursor = next;
+        cursor = new Date(cursor.getTime() + plano.frequenciaDias * 86_400_000);
       }
     } else {
       datasParaGerar.push(new Date(cursor));
@@ -239,8 +236,9 @@ export class PlanosManutencaoService {
     let totalGeradas = 0;
 
     for (const dataGeracao of datasParaGerar) {
+      // Cria uma O.S. por equipamento (sem vincular evento do Calendar individualmente)
       for (const config of configs) {
-        const os = await this.prisma.$transaction(async (tx) => {
+        await this.prisma.$transaction(async (tx) => {
           const created = await tx.ordemServico.create({
             data: {
               ambienteId: config.ambienteId,
@@ -252,7 +250,7 @@ export class PlanosManutencaoService {
               origem: 'preventiva_automatica',
               dataAgendamento: dataGeracao,
             },
-            select: { id: true, numero: true },
+            select: { id: true },
           });
 
           await tx.ordemServicoItem.create({
@@ -263,24 +261,24 @@ export class PlanosManutencaoService {
               checklistSnapshot: config.snapshot,
             },
           });
-
-          return created;
         });
 
-        // Cria evento no Google Calendar
-        const osNumero = plano.tipoServico
-          ? `${plano.tipoServico.sigla}-${String(os.numero).padStart(4, '0')}`
-          : `OS-${String(os.numero).padStart(4, '0')}`;
+        totalGeradas++;
+      }
 
+      // UM evento por visita — todos os equipamentos do cliente agrupados
+      if (configs.length > 0) {
+        const d = dataGeracao;
+        const dateLabel = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
         const payload: CalendarEventPayload = {
-          osNumero,
-          ambienteNome: config.ambienteNome,
-          clienteNome: config.clienteNome,
-          clienteTelefone: config.clienteTelefone ?? null,
+          osNumero: dateLabel,
+          ambienteNome: configs[0].clienteNome,
+          clienteNome: configs[0].clienteNome,
+          clienteTelefone: configs[0].clienteTelefone ?? null,
           tecnicoNome: plano.tecnico?.nome ?? null,
           tipo: 'preventiva',
           dataAgendamento: dataGeracao,
-          equipamentos: [config.equipamentoNome],
+          equipamentos: configs.map((c) => c.equipamentoNome),
           observacoesGerais: null,
           status: 'agendada',
           tipoServicoSigla: plano.tipoServico?.sigla ?? null,
@@ -288,19 +286,7 @@ export class PlanosManutencaoService {
           horaInicio: null,
           horaFim: null,
         };
-
-        this.googleCalendar.criarEvento(payload)
-          .then((eventId) => {
-            if (eventId) {
-              return this.prisma.ordemServico.update({
-                where: { id: os.id },
-                data: { googleCalendarEventId: eventId },
-              });
-            }
-          })
-          .catch(() => null);
-
-        totalGeradas++;
+        this.googleCalendar.criarEvento(payload).catch(() => null);
       }
     }
 

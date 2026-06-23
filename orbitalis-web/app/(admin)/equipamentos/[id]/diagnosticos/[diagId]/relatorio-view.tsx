@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from 'recharts'
-import { CheckCircle, AlertTriangle, XCircle, Activity, Gauge, Zap } from 'lucide-react'
+import { CheckCircle, AlertTriangle, XCircle, Activity, Gauge, Zap, Printer } from 'lucide-react'
 
 interface Kpi { media: number; min: number; max: number }
 interface Anomalia { nivel: 'normal' | 'atencao' | 'critico'; parametro: string; valor: string; mensagem: string }
@@ -87,12 +87,18 @@ export function RelatorioView({ relatorio: r, equipamentoNome, criadoEm, arquivo
             <Activity size={22} className="text-primary" />
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="text-xl font-bold text-gray-900">Diagnóstico LGMV</h1>
               <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${statusCfg.cls}`}>
                 <StatusIcon size={12} />
                 {statusCfg.label}
               </span>
+              <button
+                onClick={() => window.print()}
+                className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-border rounded-lg hover:bg-surface transition-colors print:hidden"
+              >
+                <Printer size={13} /> Imprimir
+              </button>
             </div>
             <p className="text-sm text-gray-500">{equipamentoNome}</p>
             <p className="text-xs text-gray-400 mt-0.5">
