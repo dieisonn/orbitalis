@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
-import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle } from 'lucide-react'
+import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle, Activity, CheckCircle, XCircle } from 'lucide-react'
+import { LgmvUpload } from '@/components/ui/lgmv-upload'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -43,6 +44,15 @@ type Item = {
 
 type Historico = { equipamento: Equipamento; itens: Item[]; isReincidente: boolean; corretivasRecentes: number }
 
+type DiagnosticoResumido = {
+  id: string
+  criadoEm: string
+  arquivoIduNome: string | null
+  arquivoOduNome: string | null
+  relatorio: { status: 'normal' | 'atencao' | 'critico'; modo: string; duracao: string }
+  os: { id: string; numero: number } | null
+}
+
 const STATUS: Record<string, { label: string; cls: string }> = {
   aberta:       { label: 'Aberta',       cls: 'bg-blue-100   text-blue-700'   },
   agendada:     { label: 'Agendada',     cls: 'bg-yellow-100 text-yellow-700' },
@@ -71,8 +81,12 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
   const { id } = await params
 
   let hist: Historico
+  let diagnosticos: DiagnosticoResumido[] = []
   try {
-    hist = await api.get<Historico>(`/equipamentos/${id}/historico`)
+    [hist] = await Promise.all([
+      api.get<Historico>(`/equipamentos/${id}/historico`),
+    ])
+    diagnosticos = await api.get<DiagnosticoResumido[]>(`/diagnosticos-lgmv/equipamento/${id}`).catch(() => [])
   } catch {
     notFound()
   }
@@ -285,6 +299,76 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
                         <span className="text-xs font-bold text-primary">
                           {os.status === 'concluida' ? fmtBRL(item.acumulado) : <span className="text-gray-300">—</span>}
                         </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+
+      {/* ── Diagnósticos LGMV ── */}
+      <div className="mt-8">
+        <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
+          <Activity size={16} className="text-primary" />
+          Diagnósticos LGMV
+          <span className="text-xs font-normal text-gray-400">({diagnosticos.length} registro{diagnosticos.length !== 1 ? 's' : ''})</span>
+        </h2>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <LgmvUpload equipamentoId={id} equipamentoNome={eq.nome} />
+        </div>
+
+        {diagnosticos.length > 0 && (
+          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface">
+                  {['Data', 'Status', 'Modo', 'Duração', 'Arquivos', 'O.S.', ''].map((h) => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {diagnosticos.map((d) => {
+                  const st = d.relatorio.status
+                  const StatusIcon = st === 'critico' ? XCircle : st === 'atencao' ? AlertTriangle : CheckCircle
+                  const stCls = st === 'critico' ? 'text-red-500' : st === 'atencao' ? 'text-yellow-500' : 'text-emerald-500'
+                  const stLabel = st === 'critico' ? 'Crítico' : st === 'atencao' ? 'Atenção' : 'Normal'
+                  return (
+                    <tr key={d.id} className="hover:bg-surface transition-colors">
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                        {new Date(d.criadoEm).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`flex items-center gap-1 text-xs font-semibold ${stCls}`}>
+                          <StatusIcon size={12} />{stLabel}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{d.relatorio.modo}</td>
+                      <td className="px-4 py-3 text-xs text-gray-600">{d.relatorio.duracao}</td>
+                      <td className="px-4 py-3 text-xs text-gray-400">
+                        {[d.arquivoIduNome, d.arquivoOduNome].filter(Boolean).join(' + ') || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {d.os ? (
+                          <a href={`/ordens-servico/${d.os.id}`} className="text-primary hover:underline font-mono">
+                            OS-{String(d.os.numero).padStart(4, '0')}
+                          </a>
+                        ) : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <a
+                          href={`/equipamentos/${id}/diagnosticos/${d.id}`}
+                          className="text-xs font-semibold text-primary hover:underline"
+                        >
+                          Ver relatório
+                        </a>
                       </td>
                     </tr>
                   )

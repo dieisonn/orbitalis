@@ -16,6 +16,7 @@ import { ContratosModule } from './modules/contratos/contratos.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
 import { TiposServicoModule } from './modules/tipos-servico/tipos-servico.module';
+import { DiagnosticosLgmvModule } from './modules/diagnosticos-lgmv/diagnosticos-lgmv.module';
 
 @Module({
   controllers: [HealthController],
@@ -36,6 +37,7 @@ import { TiposServicoModule } from './modules/tipos-servico/tipos-servico.module
     AlertasModule,
     GoogleCalendarModule,
     TiposServicoModule,
+    DiagnosticosLgmvModule,
   ],
 })
 export class AppModule {}

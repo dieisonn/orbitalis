@@ -4,9 +4,10 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
 import {
   MapPin, User, Calendar, Clock, CheckSquare, Wrench,
-  FileText, DollarSign, ClipboardCheck, AlertCircle, Wind,
+  FileText, DollarSign, ClipboardCheck, AlertCircle, Wind, Activity,
 } from 'lucide-react'
 import { ConcluirOsBtn } from '@/components/ui/concluir-os-btn'
+import { LgmvUpload } from '@/components/ui/lgmv-upload'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -288,6 +289,27 @@ export default async function OsDetailPage({ params }: Props) {
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Diagnósticos LGMV por equipamento */}
+        {os.itens.length > 0 && (
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2 mb-3">
+              <Activity size={14} className="text-primary" />
+              Diagnósticos LGMV
+              <span className="text-xs font-normal text-gray-400">— Faça upload dos arquivos IDU/ODU por equipamento</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {os.itens.map((item) => (
+                <LgmvUpload
+                  key={item.id}
+                  equipamentoId={item.equipamento.id}
+                  equipamentoNome={item.equipamento.nome}
+                  osId={os.id}
+                />
+              ))}
+            </div>
           </div>
         )}
 
