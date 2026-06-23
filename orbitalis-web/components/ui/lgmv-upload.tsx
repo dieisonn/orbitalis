@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { Upload, FileText, X, Activity, AlertTriangle, CheckCircle } from 'lucide-react'
+import { criarDiagnosticoLgmv } from '@/app/(admin)/equipamentos/[id]/diagnosticos/actions'
 
 interface Props {
   equipamentoId: string
@@ -40,7 +41,7 @@ export function LgmvUpload({ equipamentoId, equipamentoNome, osId, onSuccess }: 
 
     startTransition(async () => {
       try {
-        const body: Record<string, string> = { equipamentoId }
+        const body: Parameters<typeof criarDiagnosticoLgmv>[0] = { equipamentoId }
         if (osId) body.osId = osId
         if (iduFile) {
           body.iduCsv = await readFileAsText(iduFile)
@@ -51,28 +52,17 @@ export function LgmvUpload({ equipamentoId, equipamentoNome, osId, onSuccess }: 
           body.arquivoOduNome = oduFile.name
         }
 
-        const token = document.cookie.match(/access_token=([^;]+)/)?.[1]
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ''}/api/v1/diagnosticos-lgmv`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(body),
-        })
-
+        const res = await criarDiagnosticoLgmv(body)
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          setResult({ ok: false, error: err.message ?? 'Erro ao processar diagnóstico.' })
+          setResult({ ok: false, error: res.error ?? 'Erro ao processar diagnóstico.' })
           return
         }
-        const data = await res.json()
-        setResult({ ok: true, diagId: data.id })
-        onSuccess?.(data.id)
+        setResult({ ok: true, diagId: res.id })
+        onSuccess?.(res.id)
         setIduFile(null)
         setOduFile(null)
       } catch {
-        setResult({ ok: false, error: 'Erro de conexão. Tente novamente.' })
+        setResult({ ok: false, error: 'Erro inesperado. Tente novamente.' })
       }
     })
   }
