@@ -165,7 +165,7 @@ export function RelatorioView({ relatorio: r, equipamentoNome, criadoEm, arquivo
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: number) => `${v} psi`} />
+              <Tooltip formatter={(v: number | string) => `${v} psi`} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Line type="monotone" dataKey="highPress" name="Alta" stroke="#ef4444" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="lowPress"  name="Sucção" stroke="#3b82f6" strokeWidth={1.5} dot={false} connectNulls />
@@ -185,7 +185,7 @@ export function RelatorioView({ relatorio: r, equipamentoNome, criadoEm, arquivo
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: number) => `${v}°C`} />
+              <Tooltip formatter={(v: number | string) => `${v}°C`} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Line type="monotone" dataKey="scsh"    name="SH/SC"         stroke="#8b5cf6" strokeWidth={1.5} dot={false} connectNulls />
               <Line type="monotone" dataKey="pipeIn"  name="Tubo Entrada"  stroke="#0ea5e9" strokeWidth={1}   dot={false} connectNulls />
