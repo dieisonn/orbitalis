@@ -12,7 +12,7 @@ type OsResumo = {
   dataAgendamento: string
   dataConclusao: string | null
   ambienteId: string
-  items: { equipamentoId: string }[]
+  itens: { equipamentoId: string }[]
 }
 
 type EquipConfig = {
@@ -224,7 +224,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
           const relevant = os.filter((o) => {
             const d = new Date(o.dataAgendamento)
             const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
-            return k === monthKey && o.items.some((it) => it.equipamentoId === equipId)
+            return k === monthKey && o.itens.some((it) => it.equipamentoId === equipId)
           })
           if (relevant.length === 0) {
             // verifica se é o mês da próxima geração
