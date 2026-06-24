@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { UsuarioTipo } from '@prisma/client'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
@@ -27,6 +27,13 @@ export class DiagnosticosLgmvController {
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   findByOs(@Param('osId') id: string) {
     return this.service.findByOs(id)
+  }
+
+  @Get('historico-mensal')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  historicoMensal(@Query('ano') ano?: string) {
+    const anoNum = ano ? Math.max(2020, Math.min(2030, Number(ano))) : new Date().getFullYear()
+    return this.service.historicoMensal(anoNum)
   }
 
   @Get(':id')

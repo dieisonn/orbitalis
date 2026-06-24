@@ -100,6 +100,39 @@ export class DiagnosticosLgmvService {
     return diag
   }
 
+  async historicoMensal(ano: number) {
+    const inicio = new Date(Date.UTC(ano, 0, 1))
+    const fim = new Date(Date.UTC(ano + 1, 0, 1))
+
+    const diags = await this.prisma.diagnosticoLgmv.findMany({
+      where: {
+        OR: [
+          { dataInspecao: { gte: inicio, lt: fim } },
+          { dataInspecao: null, criadoEm: { gte: inicio, lt: fim } },
+        ],
+      },
+      select: { criadoEm: true, dataInspecao: true, relatorio: true },
+    })
+
+    const meses = Array.from({ length: 12 }, (_, i) => ({
+      mes: i + 1,
+      normal: 0,
+      atencao: 0,
+      critico: 0,
+    }))
+
+    for (const d of diags) {
+      const date = d.dataInspecao ?? d.criadoEm
+      const month = date.getUTCMonth()
+      const status = (d.relatorio as any)?.status ?? 'normal'
+      if (month >= 0 && month < 12) {
+        meses[month][status as 'normal' | 'atencao' | 'critico']++
+      }
+    }
+
+    return meses
+  }
+
   async remove(id: string) {
     await this.findOne(id)
     await this.prisma.diagnosticoLgmv.delete({ where: { id } })
