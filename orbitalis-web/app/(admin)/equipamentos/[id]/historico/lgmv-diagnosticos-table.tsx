@@ -3,7 +3,9 @@
 import { useState, useMemo } from 'react'
 import { Pencil, Check, X, AlertTriangle, CheckCircle, XCircle, TrendingUp } from 'lucide-react'
 import { atualizarDataInspecao } from '../diagnosticos/actions'
-import { LgmvMensalChart } from '@/components/ui/lgmv-mensal-chart'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts'
 
 type Kpi = { media: number; min: number; max: number }
 
@@ -33,6 +35,14 @@ type Props = {
   diagnosticos: DiagnosticoResumido[]
 }
 
+const KPIS: { key: keyof DiagnosticoResumido['relatorio']['kpis']; label: string; unit: string; color: string }[] = [
+  { key: 'superaquecimento', label: 'Superaquecimento',    unit: '°C',  color: '#f59e0b' },
+  { key: 'pressaoBaixa',     label: 'Pressão de Sucção',   unit: 'psi', color: '#3b82f6' },
+  { key: 'pressaoAlta',      label: 'Pressão de Descarga', unit: 'psi', color: '#8b5cf6' },
+  { key: 'consumo',          label: 'Consumo Elétrico',    unit: 'kW',  color: '#10b981' },
+  { key: 'freqCompressor',   label: 'Freq. Compressor',    unit: 'Hz',  color: '#ef4444' },
+]
+
 function toDateInput(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
 }
@@ -43,36 +53,27 @@ function fmtDataExibida(d: DiagnosticoResumido): string {
     : new Date(d.criadoEm).toLocaleDateString('pt-BR')
 }
 
-function buildChartData(diags: DiagnosticoResumido[], ano: number) {
-  const meses = Array.from({ length: 12 }, (_, i) => ({
-    mes: i + 1, normal: 0, atencao: 0, critico: 0,
-  }))
-  for (const d of diags) {
-    const date = d.dataInspecao ? new Date(d.dataInspecao) : new Date(d.criadoEm)
-    if (date.getUTCFullYear() === ano) {
-      const month = date.getUTCMonth()
-      meses[month][d.relatorio.status]++
-    }
-  }
-  return meses
-}
-
 export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: Props) {
   const [diags, setDiags] = useState(initial)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const anoGrafico = useMemo(() => {
-    if (diags.length === 0) return new Date().getFullYear()
-    const anos = diags.map(d => {
-      const iso = d.dataInspecao ?? d.criadoEm
-      return new Date(iso).getUTCFullYear()
-    })
-    return Math.max(...anos)
+  const lineData = useMemo(() => {
+    return [...diags]
+      .sort((a, b) => {
+        const da = new Date(a.dataInspecao ?? a.criadoEm).getTime()
+        const db = new Date(b.dataInspecao ?? b.criadoEm).getTime()
+        return da - db
+      })
+      .map((d) => {
+        const point: Record<string, number | string | null> = { data: fmtDataExibida(d) }
+        for (const kpi of KPIS) {
+          point[kpi.key] = d.relatorio.kpis[kpi.key]?.media ?? null
+        }
+        return point
+      })
   }, [diags])
-
-  const chartData = useMemo(() => buildChartData(diags, anoGrafico), [diags, anoGrafico])
 
   async function handleSave(id: string) {
     setSaving(true)
@@ -194,13 +195,62 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
         </table>
       </div>
 
-      {/* Gráfico mês a mês */}
-      <div className="bg-white rounded-2xl border border-border p-5 shadow-sm mb-5">
-        <p className="text-sm font-bold text-gray-800 mb-4">
-          Inspeções mês a mês — {anoGrafico}
-        </p>
-        <LgmvMensalChart data={chartData} ano={anoGrafico} />
-      </div>
+      {/* Gráficos de linha por KPI */}
+      {diags.length > 0 && (
+        <div className="bg-white rounded-2xl border border-border p-5 shadow-sm mb-5">
+          <p className="text-sm font-bold text-gray-800 mb-5 flex items-center gap-2">
+            <TrendingUp size={14} className="text-primary" />
+            Evolução dos parâmetros
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {KPIS.map(({ key, label, unit, color }) => {
+              const hasData = lineData.some(p => p[key] !== null)
+              return (
+                <div key={key}>
+                  <p className="text-xs font-semibold text-gray-500 mb-2">
+                    {label}
+                    <span className="font-normal text-gray-400 ml-1">({unit})</span>
+                  </p>
+                  {hasData ? (
+                    <ResponsiveContainer width="100%" height={110}>
+                      <LineChart data={lineData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis
+                          dataKey="data"
+                          tick={{ fontSize: 10, fill: '#9ca3af' }}
+                          interval={0}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: '#9ca3af' }}
+                          allowDecimals
+                          width={40}
+                        />
+                        <Tooltip
+                          formatter={(v) => [`${v} ${unit}`, label]}
+                          contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e5e7eb' }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey={key}
+                          stroke={color}
+                          strokeWidth={2}
+                          dot={{ r: 4, fill: color, strokeWidth: 0 }}
+                          activeDot={{ r: 5 }}
+                          connectNulls
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-[110px] flex items-center justify-center text-xs text-gray-300">
+                      Sem dados
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Comparativo de KPIs entre inspeções */}
       {diags.length > 1 && (
