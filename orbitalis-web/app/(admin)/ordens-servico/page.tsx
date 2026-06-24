@@ -1,10 +1,7 @@
-import { Suspense } from 'react'
 import { api } from '@/lib/api'
-import { StatusBadge } from '@/components/ui/status-badge'
 import { OsFilterBar } from '@/components/ui/os-filter-bar'
-import { OsPagination } from '@/components/ui/os-pagination'
-import { OsActionsMenu } from '@/components/ui/os-actions-menu'
-import { ClipboardList, CalendarDays } from 'lucide-react'
+import { OsTable } from './os-table'
+import { CalendarDays } from 'lucide-react'
 
 type OrdemServico = {
   id: string
@@ -34,12 +31,6 @@ type ApiResponse = {
   total: number
   page: number
   perPage: number
-}
-
-const ORIGEM_LABEL: Record<string, string> = {
-  manual_admin:          'Manual',
-  preventiva_automatica: 'Preventiva',
-  portal_cliente:        'Portal Cliente',
 }
 
 type Props = {
@@ -153,85 +144,13 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-border overflow-hidden mt-4">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface">
-                {['Nº', 'Cliente / Ambiente', 'Status', 'Origem', 'Técnico', 'Data', 'Itens', 'Ação'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {ordens.map((os) => {
-                const cliente = os.ambiente?.cliente
-                const clienteNome = cliente?.nomeFantasia ?? cliente?.razaoSocial
-                return (
-                  <tr key={os.id} className="hover:bg-surface transition-colors align-middle">
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {os.tipoServico ? (
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-white text-xs font-bold"
-                          style={{ backgroundColor: os.tipoServico.corHex }}
-                        >
-                          {os.tipoServico.sigla}-{os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 4).toUpperCase()}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-xs text-gray-500 font-semibold">
-                          OS-{os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase()}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="font-medium text-gray-900">{os.ambiente?.nome ?? '—'}</div>
-                      {clienteNome && (
-                        <div className="text-xs text-gray-400 mt-0.5">{clienteNome}</div>
-                      )}
-                      {os.observacoesGerais && (
-                        <div className="text-xs text-gray-400 mt-1 max-w-[220px] truncate italic" title={os.observacoesGerais}>
-                          {os.observacoesGerais}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-4">
-                      <StatusBadge status={os.status} />
-                    </td>
-                    <td className="px-4 py-4 text-gray-500">
-                      {ORIGEM_LABEL[os.origem] ?? os.origem}
-                    </td>
-                    <td className="px-4 py-4 text-gray-500 text-xs">
-                      {os.tecnico ? (
-                        <span>{os.tecnico.nome ?? os.tecnico.email}</span>
-                      ) : (
-                        <span className="italic text-gray-400">Não atribuído</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-gray-500 text-xs whitespace-nowrap">
-                      {new Date(os.dataAgendamento).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="px-4 py-4 text-center font-semibold text-gray-600">
-                      {os.itens?.length ?? 0}
-                    </td>
-                    <td className="px-4 py-3">
-                      <OsActionsMenu
-                        osId={os.id}
-                        status={os.status}
-                        tecnicos={tecnicos}
-                        valorMaoObra={os.valorMaoObra ?? null}
-                        valorPecas={os.valorPecas ?? null}
-                      />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          <Suspense>
-            <OsPagination page={currentPage} total={total} perPage={perPage} />
-          </Suspense>
-        </div>
+        <OsTable
+          ordens={ordens}
+          tecnicos={tecnicos}
+          currentPage={currentPage}
+          total={total}
+          perPage={perPage}
+        />
       )}
     </div>
   )

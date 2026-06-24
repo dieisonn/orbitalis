@@ -623,6 +623,15 @@ export class OrdensServicoService {
     return this.prisma.ordemServico.update({ where: { id }, data: { status } });
   }
 
+  // PATCH /ordens-servico/bulk-status — Altera status de múltiplas O.S. de uma vez
+  async bulkAlterarStatus(ids: string[], status: OsStatus) {
+    const { count } = await this.prisma.ordemServico.updateMany({
+      where: { id: { in: ids } },
+      data: { status },
+    });
+    return { atualizadas: count };
+  }
+
   // PATCH /ordens-servico/:id/financeiro — Admin registra valores da O.S.
   async atualizarFinanceiro(id: string, data: { valorMaoObra?: number; valorPecas?: number }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });

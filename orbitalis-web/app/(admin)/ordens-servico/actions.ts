@@ -39,3 +39,12 @@ export async function concluirOs(
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao concluir' }
   }
 }
+
+export async function alterarStatusLote(ids: string[], status: string) {
+  try {
+    const res = await api.patch<{ atualizadas: number }>('/ordens-servico/bulk-status', { ids, status })
+    return { ok: true as const, atualizadas: res.atualizadas }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao alterar status em lote' }
+  }
+}

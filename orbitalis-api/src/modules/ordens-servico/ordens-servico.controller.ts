@@ -126,6 +126,13 @@ export class OrdensServicoController {
     return this.ordensServicoService.concluir(id, body);
   }
 
+  // PATCH /api/v1/ordens-servico/bulk-status — Altera status em lote
+  @Patch('bulk-status')
+  @Roles(UsuarioTipo.admin)
+  bulkAlterarStatus(@Body() body: { ids: string[]; status: OsStatus }) {
+    return this.ordensServicoService.bulkAlterarStatus(body.ids, body.status);
+  }
+
   // PATCH /api/v1/ordens-servico/:id/status — Admin ou Técnico altera status
   @Patch(':id/status')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
