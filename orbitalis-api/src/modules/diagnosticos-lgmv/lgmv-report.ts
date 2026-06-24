@@ -191,7 +191,18 @@ export function gerarRelatorio(idu: LgmvIduData | null, odu: LgmvOduData | null)
     // Compressor frequency
     const frVals = stable.map((r) => r.invFreq).filter((v): v is number => v !== null)
     const frStat = stats(frVals)
-    if (frStat) kpis.freqCompressor = frStat
+    if (frStat) {
+      kpis.freqCompressor = frStat
+      if (frStat.media < 15) {
+        anomalias.push({ nivel: 'critico', parametro: 'Freq. compressor', valor: `${frStat.media} Hz`, mensagem: 'Frequência do compressor muito baixa — operando abaixo do limite mínimo. Verificar dimensionamento e válvulas EEV.' })
+      } else if (frStat.media < 25) {
+        anomalias.push({ nivel: 'atencao', parametro: 'Freq. compressor', valor: `${frStat.media} Hz`, mensagem: 'Frequência do compressor abaixo de 25 Hz — equipamento possivelmente superdimensionado para a carga atual.' })
+      } else if (frStat.media > 110) {
+        anomalias.push({ nivel: 'critico', parametro: 'Freq. compressor', valor: `${frStat.media} Hz`, mensagem: 'Frequência do compressor muito alta — verificar carga de refrigerante e condições do ambiente.' })
+      } else {
+        anomalias.push({ nivel: 'normal', parametro: 'Freq. compressor', valor: `${frStat.media} Hz`, mensagem: 'Frequência do compressor dentro da faixa operacional.' })
+      }
+    }
   }
 
   // ── Overall status ────────────────────────────────────
