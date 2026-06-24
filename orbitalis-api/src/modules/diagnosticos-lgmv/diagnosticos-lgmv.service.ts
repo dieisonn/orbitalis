@@ -133,6 +133,37 @@ export class DiagnosticosLgmvService {
     return meses
   }
 
+  async findByCliente(clienteId: string) {
+    const equipamentos = await this.prisma.equipamento.findMany({
+      where: { ambiente: { clienteId } },
+      orderBy: [{ ambiente: { nome: 'asc' } }, { nome: 'asc' }],
+      select: {
+        id: true,
+        nome: true,
+        marca: true,
+        modelo: true,
+        ambiente: { select: { id: true, nome: true } },
+        diagnosticosLgmv: {
+          orderBy: { criadoEm: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            dataInspecao: true,
+            criadoEm: true,
+            relatorio: true,
+          },
+        },
+      },
+    })
+
+    return equipamentos
+      .filter((eq) => eq.diagnosticosLgmv.length > 0)
+      .map((eq) => ({
+        equipamento: { id: eq.id, nome: eq.nome, marca: eq.marca, modelo: eq.modelo, ambiente: eq.ambiente },
+        diagnostico: eq.diagnosticosLgmv[0],
+      }))
+  }
+
   async recomputeAll() {
     const all = await this.prisma.diagnosticoLgmv.findMany({
       select: { id: true, dadosIdu: true, dadosOdu: true },

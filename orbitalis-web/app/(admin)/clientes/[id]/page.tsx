@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { StatusBadge } from '@/components/ui/status-badge'
 import {
   Building2, Cpu, ChevronRight, DollarSign, ClipboardList,
-  CalendarClock, FileText, AlertTriangle, CheckCircle,
+  CalendarClock, FileText, AlertTriangle, CheckCircle, Activity,
 } from 'lucide-react'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string; marca: string; modelo: string | null; numeroSerie: string | null }
@@ -22,6 +22,19 @@ type Dashboard = {
   totalEquipamentos: number
 }
 
+type LgmvKpis = {
+  superaquecimento?: { media: number }
+  pressaoBaixa?: { media: number }
+  pressaoAlta?: { media: number }
+  freqCompressor?: { media: number }
+  consumo?: { media: number }
+}
+type LgmvAnomalia = { nivel: 'normal' | 'atencao' | 'critico'; parametro: string }
+type LgmvEquip = {
+  equipamento: { id: string; nome: string; marca: string; modelo: string | null; ambiente: { id: string; nome: string } }
+  diagnostico: { id: string; dataInspecao: string | null; criadoEm: string; relatorio: { status: 'normal' | 'atencao' | 'critico'; kpis: LgmvKpis; anomalias?: LgmvAnomalia[] } }
+}
+
 type Props = { params: Promise<{ id: string }> }
 
 function fmtBRL(v: number) {
@@ -37,15 +50,38 @@ export default async function ClienteDetalhePage({ params }: Props) {
 
   let cliente: Cliente | undefined
   let dash: Dashboard | undefined
+  let lgmvEquips: LgmvEquip[] = []
   try {
     ;[cliente, dash] = await Promise.all([
       api.get<Cliente>(`/clientes/${id}`),
       api.get<Dashboard>(`/clientes/${id}/dashboard`),
     ])
+    lgmvEquips = await api.get<LgmvEquip[]>(`/diagnosticos-lgmv/cliente/${id}`).catch(() => [])
   } catch {
     /* empty */
   }
   if (!cliente || !dash) notFound()
+
+  function kpiLevel(rel: LgmvEquip['diagnostico']['relatorio'], param: string, key: keyof LgmvKpis, compute: (v: number) => 'normal' | 'atencao' | 'critico'): 'normal' | 'atencao' | 'critico' | null {
+    const found = rel.anomalias?.find((a) => a.parametro.toLowerCase() === param.toLowerCase())
+    if (found) return found.nivel
+    const v = rel.kpis[key]?.media
+    return v !== undefined ? compute(v) : null
+  }
+
+  const NIVEL_CELL: Record<string, string> = {
+    normal: 'text-emerald-700 font-semibold',
+    atencao: 'text-amber-600 font-semibold bg-amber-50',
+    critico: 'text-red-600 font-bold bg-red-50',
+  }
+
+  const KPIS_CMP = [
+    { label: 'SH (°C)',  key: 'superaquecimento' as keyof LgmvKpis, param: 'Superaquecimento',    compute: (v: number) => (v < 3 ? 'critico' : v < 5 || v > 12 ? 'atencao' : 'normal') as 'normal'|'atencao'|'critico' },
+    { label: 'LP (psi)', key: 'pressaoBaixa'      as keyof LgmvKpis, param: 'Pressão de sucção',   compute: (v: number) => (v < 65 ? 'critico' : v < 80 || v > 145 ? 'atencao' : 'normal') as 'normal'|'atencao'|'critico' },
+    { label: 'HP (psi)', key: 'pressaoAlta'       as keyof LgmvKpis, param: 'Pressão de descarga', compute: (v: number) => (v > 400 ? 'critico' : v > 340 || v < 150 ? 'atencao' : 'normal') as 'normal'|'atencao'|'critico' },
+    { label: 'Hz',       key: 'freqCompressor'    as keyof LgmvKpis, param: 'Freq. compressor',    compute: (v: number) => (v < 15 ? 'critico' : v < 25 || v > 110 ? 'atencao' : 'normal') as 'normal'|'atencao'|'critico' },
+    { label: 'kW',       key: 'consumo'           as keyof LgmvKpis, param: '',                    compute: (_: number) => 'normal' as 'normal'|'atencao'|'critico' },
+  ]
 
   const totalOs = Object.values(dash.porStatus).reduce((s, n) => s + n, 0)
   const contratoAtivo = dash.contrato
@@ -200,6 +236,75 @@ export default async function ClienteDetalhePage({ params }: Props) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── Comparativo LGMV entre equipamentos ── */}
+      {lgmvEquips.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-border mb-4 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 bg-surface border-b border-border">
+            <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <Activity size={14} className="text-primary" /> Comparativo LGMV — última inspeção por equipamento
+            </p>
+            <span className="text-[10px] text-gray-400">{lgmvEquips.length} equipamento(s) com diagnóstico</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border bg-surface/50">
+                  <th className="text-left px-5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide min-w-[160px]">Equipamento</th>
+                  <th className="text-left px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase">Ambiente</th>
+                  <th className="text-left px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase">Inspeção</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
+                  {KPIS_CMP.map((k) => (
+                    <th key={k.key} className="text-center px-3 py-2.5 text-[10px] font-semibold text-gray-400 uppercase">{k.label}</th>
+                  ))}
+                  <th className="px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {lgmvEquips.map(({ equipamento: eq, diagnostico: diag }) => {
+                  const st = diag.relatorio.status
+                  const stCls = st === 'critico' ? 'text-red-600' : st === 'atencao' ? 'text-amber-600' : 'text-emerald-600'
+                  const stLabel = st === 'critico' ? 'Crítico' : st === 'atencao' ? 'Atenção' : 'Normal'
+                  const StIcon = st === 'critico' ? AlertTriangle : st === 'atencao' ? AlertTriangle : CheckCircle
+                  const dataLabel = diag.dataInspecao
+                    ? new Date(diag.dataInspecao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                    : new Date(diag.criadoEm).toLocaleDateString('pt-BR')
+                  return (
+                    <tr key={eq.id} className="hover:bg-surface/50 transition-colors">
+                      <td className="px-5 py-3 font-medium text-gray-800">
+                        {eq.nome}
+                        <span className="block text-[10px] text-gray-400 font-normal">{eq.marca}{eq.modelo ? ` ${eq.modelo}` : ''}</span>
+                      </td>
+                      <td className="px-3 py-3 text-gray-500">{eq.ambiente.nome}</td>
+                      <td className="px-3 py-3 text-gray-500 whitespace-nowrap">{dataLabel}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`inline-flex items-center gap-1 font-semibold ${stCls}`}>
+                          <StIcon size={11} />{stLabel}
+                        </span>
+                      </td>
+                      {KPIS_CMP.map((kpi) => {
+                        const media = diag.relatorio.kpis[kpi.key]?.media
+                        const nivel = media !== undefined ? kpiLevel(diag.relatorio, kpi.param, kpi.key, kpi.compute) : null
+                        const cls = nivel ? NIVEL_CELL[nivel] : 'text-gray-300'
+                        return (
+                          <td key={kpi.key} className={`px-3 py-3 text-center rounded-sm ${cls}`}>
+                            {media !== undefined ? media : '—'}
+                          </td>
+                        )
+                      })}
+                      <td className="px-3 py-3 text-right">
+                        <a href={`/equipamentos/${eq.id}/historico`} className="text-primary font-semibold hover:underline whitespace-nowrap">
+                          Histórico →
+                        </a>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

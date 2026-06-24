@@ -35,6 +35,12 @@ export class DiagnosticosLgmvController {
     return this.service.findByOs(id)
   }
 
+  @Get('cliente/:clienteId')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  findByCliente(@Param('clienteId') clienteId: string) {
+    return this.service.findByCliente(clienteId)
+  }
+
   @Get('historico-mensal')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   historicoMensal(@Query('ano') ano?: string) {
