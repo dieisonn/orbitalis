@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
-import { History, Wrench, Calendar, Tag, ClipboardList, AlertTriangle, Activity } from 'lucide-react'
+import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle, Activity } from 'lucide-react'
 import { LgmvUpload } from '@/components/ui/lgmv-upload'
 import { LgmvDiagnosticosTable } from './lgmv-diagnosticos-table'
 import type { DiagnosticoResumido } from './lgmv-diagnosticos-table'
