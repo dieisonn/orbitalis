@@ -9,6 +9,13 @@ import {
 
 type Kpi = { media: number; min: number; max: number }
 
+type Anomalia = {
+  nivel: 'normal' | 'atencao' | 'critico'
+  parametro: string
+  valor: string
+  mensagem: string
+}
+
 export type DiagnosticoResumido = {
   id: string
   criadoEm: string
@@ -19,6 +26,7 @@ export type DiagnosticoResumido = {
     status: 'normal' | 'atencao' | 'critico'
     modo: string
     duracao: string
+    anomalias?: Anomalia[]
     kpis: {
       superaquecimento?: Kpi
       pressaoBaixa?: Kpi
@@ -35,13 +43,33 @@ type Props = {
   diagnosticos: DiagnosticoResumido[]
 }
 
-const KPIS: { key: keyof DiagnosticoResumido['relatorio']['kpis']; label: string; unit: string; color: string }[] = [
-  { key: 'superaquecimento', label: 'Superaquecimento',    unit: '°C',  color: '#f59e0b' },
-  { key: 'pressaoBaixa',     label: 'Pressão de Sucção',   unit: 'psi', color: '#3b82f6' },
-  { key: 'pressaoAlta',      label: 'Pressão de Descarga', unit: 'psi', color: '#8b5cf6' },
+const KPIS: {
+  key: keyof DiagnosticoResumido['relatorio']['kpis']
+  label: string
+  unit: string
+  color: string
+  anomaliaParam?: string
+}[] = [
+  { key: 'superaquecimento', label: 'Superaquecimento',    unit: '°C',  color: '#f59e0b', anomaliaParam: 'Superaquecimento' },
+  { key: 'pressaoBaixa',     label: 'Pressão de Sucção',   unit: 'psi', color: '#3b82f6', anomaliaParam: 'Pressão de sucção' },
+  { key: 'pressaoAlta',      label: 'Pressão de Descarga', unit: 'psi', color: '#8b5cf6', anomaliaParam: 'Pressão de descarga' },
   { key: 'consumo',          label: 'Consumo Elétrico',    unit: 'kW',  color: '#10b981' },
   { key: 'freqCompressor',   label: 'Freq. Compressor',    unit: 'Hz',  color: '#ef4444' },
 ]
+
+const NIVEL_CLS: Record<string, string> = {
+  critico: 'text-red-600',
+  atencao: 'text-amber-600',
+  normal:  'text-gray-700',
+}
+
+function getAnomaliaLvl(d: DiagnosticoResumido, anomaliaParam: string | undefined): Anomalia['nivel'] | null {
+  if (!anomaliaParam || !d.relatorio.anomalias?.length) return null
+  const found = d.relatorio.anomalias.find(
+    (a) => a.parametro.toLowerCase() === anomaliaParam.toLowerCase(),
+  )
+  return found?.nivel ?? null
+}
 
 function toDateInput(iso: string): string {
   return new Date(iso).toISOString().slice(0, 10)
@@ -51,6 +79,15 @@ function fmtDataExibida(d: DiagnosticoResumido): string {
   return d.dataInspecao
     ? new Date(d.dataInspecao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
     : new Date(d.criadoEm).toLocaleDateString('pt-BR')
+}
+
+function fmtDataCurta(d: DiagnosticoResumido): string {
+  const date = d.dataInspecao
+    ? new Date(d.dataInspecao)
+    : new Date(d.criadoEm)
+  const day = date.getUTCDate().toString().padStart(2, '0')
+  const month = (date.getUTCMonth() + 1).toString().padStart(2, '0')
+  return `${day}/${month}`
 }
 
 export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: Props) {
@@ -67,7 +104,10 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
         return da - db
       })
       .map((d) => {
-        const point: Record<string, number | string | null> = { data: fmtDataExibida(d) }
+        const point: Record<string, number | string | null> = {
+          data: fmtDataCurta(d),
+          dataFull: fmtDataExibida(d),
+        }
         for (const kpi of KPIS) {
           point[kpi.key] = d.relatorio.kpis[kpi.key]?.media ?? null
         }
@@ -213,7 +253,7 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
                   </p>
                   {hasData ? (
                     <ResponsiveContainer width="100%" height={110}>
-                      <LineChart data={lineData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                      <LineChart data={lineData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis
                           dataKey="data"
@@ -223,9 +263,10 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
                         <YAxis
                           tick={{ fontSize: 10, fill: '#9ca3af' }}
                           allowDecimals
-                          width={40}
+                          width={38}
                         />
                         <Tooltip
+                          labelFormatter={(_, payload) => payload?.[0]?.payload?.dataFull ?? ''}
                           formatter={(v) => [`${v} ${unit}`, label]}
                           contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e5e7eb' }}
                         />
@@ -283,23 +324,25 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {[
-                { label: 'Superaquecimento',    key: 'superaquecimento',  unit: '°C'  },
-                { label: 'Pressão de Sucção',   key: 'pressaoBaixa',      unit: 'psi' },
-                { label: 'Pressão de Descarga', key: 'pressaoAlta',       unit: 'psi' },
-                { label: 'Consumo Elétrico',    key: 'consumo',           unit: 'kW'  },
-                { label: 'Freq. Compressor',    key: 'freqCompressor',    unit: 'Hz'  },
-              ].map(({ label, key, unit }) => (
+              {KPIS.map(({ key, label, unit, anomaliaParam }) => (
                 <tr key={key} className="hover:bg-surface">
                   <td className="px-4 py-2.5 font-semibold text-gray-600">{label}</td>
                   {[...diags].reverse().map((d) => {
-                    const kpi = (d.relatorio.kpis as any)[key] as Kpi | undefined
+                    const kpi = d.relatorio.kpis[key] as Kpi | undefined
+                    const nivel = getAnomaliaLvl(d, anomaliaParam)
+                    const cls = nivel ? NIVEL_CLS[nivel] : 'text-gray-700'
+                    const badge = nivel === 'critico'
+                      ? <span className="ml-1 text-[9px] bg-red-100 text-red-600 px-1 py-0.5 rounded font-bold uppercase">crítico</span>
+                      : nivel === 'atencao'
+                      ? <span className="ml-1 text-[9px] bg-amber-100 text-amber-600 px-1 py-0.5 rounded font-bold uppercase">atenção</span>
+                      : null
                     return (
-                      <td key={d.id} className="px-4 py-2.5 text-center text-gray-700">
+                      <td key={d.id} className="px-4 py-2.5 text-center">
                         {kpi ? (
                           <span>
-                            <span className="font-bold">{kpi.media}</span>
+                            <span className={`font-bold ${cls}`}>{kpi.media}</span>
                             <span className="text-gray-400 ml-0.5">{unit}</span>
+                            {badge}
                             <br />
                             <span className="text-[10px] text-gray-400">{kpi.min}–{kpi.max}</span>
                           </span>
