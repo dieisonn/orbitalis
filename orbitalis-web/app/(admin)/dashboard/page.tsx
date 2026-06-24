@@ -6,8 +6,6 @@ import {
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
 import { YearSelector } from '@/components/ui/year-selector'
-import { LgmvMensalChart } from '@/components/ui/lgmv-mensal-chart'
-import { Activity } from 'lucide-react'
 
 type TaxaConclusao = { concluidas: number; total: number; percentual: number }
 type Tecnico = {
@@ -33,7 +31,6 @@ type Historico = {
   em_andamento: number; concluida: number; cancelada: number
 }
 
-type LgmvMensal = { mes: number; normal: number; atencao: number; critico: number }
 
 const STATUS = [
   { key: 'aberta',       label: 'Abertas',      icon: ClipboardList, bg: 'bg-blue-600',   text: 'text-white' },
@@ -69,10 +66,9 @@ export default async function DashboardPage({ searchParams }: Props) {
     tempoMedioAtendimento: null, totalConcluidasRecente: 0,
   }
 
-  const [painel, historico, lgmvMensal] = await Promise.all([
+  const [painel, historico] = await Promise.all([
     api.get<Painel>('/ordens-servico/painel').catch(() => defaultPainel),
     api.get<Historico[]>(`/ordens-servico/historico?ano=${ano}`).catch(() => [] as Historico[]),
-    api.get<LgmvMensal[]>(`/diagnosticos-lgmv/historico-mensal?ano=${ano}`).catch(() => [] as LgmvMensal[]),
   ])
 
   const { porStatus, atrasadas, taxaConclusao, porTecnico, porTipoEquipamento, planosVencendo,
@@ -236,20 +232,6 @@ export default async function DashboardPage({ searchParams }: Props) {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Inspeções LGMV por mês */}
-      <div className="bg-white rounded-xl border border-border p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Activity size={14} className="text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700">Inspeções LGMV por mês</h2>
-          </div>
-          <Suspense>
-            <YearSelector ano={ano} />
-          </Suspense>
-        </div>
-        <LgmvMensalChart data={lgmvMensal} ano={ano} />
       </div>
 
       {/* Planos vencendo + tipos de equipamento */}

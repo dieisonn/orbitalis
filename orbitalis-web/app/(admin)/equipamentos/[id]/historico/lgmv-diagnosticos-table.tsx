@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Pencil, Check, X, AlertTriangle, CheckCircle, XCircle, TrendingUp } from 'lucide-react'
 import { atualizarDataInspecao } from '../diagnosticos/actions'
+import { LgmvMensalChart } from '@/components/ui/lgmv-mensal-chart'
 
 type Kpi = { media: number; min: number; max: number }
 
@@ -42,11 +43,36 @@ function fmtDataExibida(d: DiagnosticoResumido): string {
     : new Date(d.criadoEm).toLocaleDateString('pt-BR')
 }
 
+function buildChartData(diags: DiagnosticoResumido[], ano: number) {
+  const meses = Array.from({ length: 12 }, (_, i) => ({
+    mes: i + 1, normal: 0, atencao: 0, critico: 0,
+  }))
+  for (const d of diags) {
+    const date = d.dataInspecao ? new Date(d.dataInspecao) : new Date(d.criadoEm)
+    if (date.getUTCFullYear() === ano) {
+      const month = date.getUTCMonth()
+      meses[month][d.relatorio.status]++
+    }
+  }
+  return meses
+}
+
 export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: Props) {
   const [diags, setDiags] = useState(initial)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const anoGrafico = useMemo(() => {
+    if (diags.length === 0) return new Date().getFullYear()
+    const anos = diags.map(d => {
+      const iso = d.dataInspecao ?? d.criadoEm
+      return new Date(iso).getUTCFullYear()
+    })
+    return Math.max(...anos)
+  }, [diags])
+
+  const chartData = useMemo(() => buildChartData(diags, anoGrafico), [diags, anoGrafico])
 
   async function handleSave(id: string) {
     setSaving(true)
@@ -71,6 +97,7 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
 
   return (
     <>
+      {/* Tabela de inspeções */}
       <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm mb-5">
         <table className="w-full text-sm">
           <thead>
@@ -119,11 +146,11 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 group">
+                      <div className="flex items-center gap-1.5">
                         <span>{fmtDataExibida(d)}</span>
                         <button
                           onClick={() => handleEdit(d)}
-                          className="text-gray-300 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-gray-400 hover:text-primary transition-colors"
                           title="Editar data de inspeção"
                         >
                           <Pencil size={11} />
@@ -167,6 +194,15 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
         </table>
       </div>
 
+      {/* Gráfico mês a mês */}
+      <div className="bg-white rounded-2xl border border-border p-5 shadow-sm mb-5">
+        <p className="text-sm font-bold text-gray-800 mb-4">
+          Inspeções mês a mês — {anoGrafico}
+        </p>
+        <LgmvMensalChart data={chartData} ano={anoGrafico} />
+      </div>
+
+      {/* Comparativo de KPIs entre inspeções */}
       {diags.length > 1 && (
         <div className="bg-white rounded-2xl border border-border overflow-x-auto shadow-sm">
           <div className="px-5 py-3.5 border-b border-border bg-surface">
