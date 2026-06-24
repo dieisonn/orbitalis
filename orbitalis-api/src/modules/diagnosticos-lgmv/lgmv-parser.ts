@@ -90,14 +90,21 @@ export function parseLgmvCsv(raw: string): LgmvIduData | LgmvOduData | null {
 
     const readings: LgmvIduReading[] = dataLines.map((line) => {
       const c = line.split(',')
+      const rawPipeOut = num(c[poI])
+      const rawScsh   = num(c[shI])
+      // LG LGMV uses -100, -65.xx and similar as "no sensor" placeholders.
+      // Filter out physically impossible pipe temps (< -40°C or > 80°C) and
+      // SC/SH outside the plausible HVAC range (-15 to +70°C).
+      const pipeOut = rawPipeOut !== null && rawPipeOut > -40 && rawPipeOut < 80 ? rawPipeOut : null
+      const scsh    = rawScsh    !== null && rawScsh    > -15 && rawScsh    < 70 ? rawScsh    : null
       return {
         time: c[ti] ?? '',
         operMode: c[oi] ?? '',
         error: c[ei] ?? '',
         air: num(c[airI]),
         pipeIn: num(c[piI]),
-        pipeOut: num(c[poI]),
-        scsh: num(c[shI]),
+        pipeOut,
+        scsh,
         eev: num(c[evI]),
         humidity: num(c[huI]),
       }

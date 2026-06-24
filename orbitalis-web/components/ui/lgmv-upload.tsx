@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { Upload, FileText, X, Activity, AlertTriangle, CheckCircle, Calendar } from 'lucide-react'
 import { criarDiagnosticoLgmv } from '@/app/(admin)/equipamentos/[id]/diagnosticos/actions'
 
@@ -25,6 +26,7 @@ function todayISO() {
 }
 
 export function LgmvUpload({ equipamentoId, equipamentoNome, osId, onSuccess }: Props) {
+  const router = useRouter()
   const [iduFile, setIduFile] = useState<File | null>(null)
   const [oduFile, setOduFile] = useState<File | null>(null)
   const [dataInspecao, setDataInspecao] = useState(todayISO)
@@ -70,6 +72,7 @@ export function LgmvUpload({ equipamentoId, equipamentoNome, osId, onSuccess }: 
         setIduFile(null)
         setOduFile(null)
         setDataInspecao(todayISO())
+        router.refresh()
       } catch {
         setResult({ ok: false, error: 'Erro inesperado. Tente novamente.' })
       }
