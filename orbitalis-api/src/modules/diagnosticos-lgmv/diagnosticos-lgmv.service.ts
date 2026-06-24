@@ -133,6 +133,40 @@ export class DiagnosticosLgmvService {
     return meses
   }
 
+  async recomputeAll() {
+    const all = await this.prisma.diagnosticoLgmv.findMany({
+      select: { id: true, dadosIdu: true, dadosOdu: true },
+    })
+
+    let updated = 0
+    let skipped = 0
+    const erros: string[] = []
+
+    for (const diag of all) {
+      const idu = diag.dadosIdu && (diag.dadosIdu as any).type === 'IDU'
+        ? (diag.dadosIdu as any)
+        : null
+      const odu = diag.dadosOdu && (diag.dadosOdu as any).type === 'ODU'
+        ? (diag.dadosOdu as any)
+        : null
+
+      if (!idu && !odu) { skipped++; continue }
+
+      try {
+        const relatorio = gerarRelatorio(idu, odu)
+        await this.prisma.diagnosticoLgmv.update({
+          where: { id: diag.id },
+          data: { relatorio: relatorio as any },
+        })
+        updated++
+      } catch (err) {
+        erros.push(`${diag.id}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+
+    return { total: all.length, updated, skipped, erros }
+  }
+
   async remove(id: string) {
     await this.findOne(id)
     await this.prisma.diagnosticoLgmv.delete({ where: { id } })

@@ -11,6 +11,12 @@ import { CreateDiagnosticoDto } from './dto/create-diagnostico.dto'
 export class DiagnosticosLgmvController {
   constructor(private readonly service: DiagnosticosLgmvService) {}
 
+  @Post('recompute-all')
+  @Roles(UsuarioTipo.admin)
+  recomputeAll() {
+    return this.service.recomputeAll()
+  }
+
   @Post()
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   create(@Body() dto: CreateDiagnosticoDto) {

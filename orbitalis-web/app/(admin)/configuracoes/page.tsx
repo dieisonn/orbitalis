@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { ConfiguracaoForm } from './form'
 import { GoogleCalendarCard } from './google-calendar-card'
 import { ResponsavelTecnicoCard } from './responsavel-tecnico-card'
+import { LgmvRecomputeCard } from './lgmv-recompute-card'
 
 type Config = {
   nomeEmpresa: string
@@ -74,6 +75,8 @@ export default async function ConfiguracoesPage({
         responsavelTecnicoId={config.responsavelTecnicoId ?? null}
         responsavelTecnico={config.responsavelTecnico ?? null}
       />
+
+      <LgmvRecomputeCard />
     </div>
   )
 }
