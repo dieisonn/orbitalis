@@ -4,7 +4,8 @@ import { useState, useMemo } from 'react'
 import { Pencil, Check, X, AlertTriangle, CheckCircle, XCircle, TrendingUp } from 'lucide-react'
 import { atualizarDataInspecao } from '../diagnosticos/actions'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceArea,
+  ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, ReferenceArea,
 } from 'recharts'
 
 type Kpi = { media: number; min: number; max: number }
@@ -140,6 +141,7 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
+  const [selectedKpiKey, setSelectedKpiKey] = useState<string>('pressaoAlta')
 
   const mostRecent = useMemo(() => {
     if (diags.length === 0) return null
@@ -163,11 +165,19 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
           dataFull: fmtDataExibida(d),
         }
         for (const kpi of KPIS) {
-          point[kpi.key] = d.relatorio.kpis[kpi.key]?.media ?? null
+          const kd = d.relatorio.kpis[kpi.key]
+          point[kpi.key] = kd?.media ?? null
+          point[kpi.key + 'Min'] = kd?.min ?? null
+          point[kpi.key + 'Max'] = kd?.max ?? null
         }
         return point
       })
   }, [diags])
+
+  const selectedKpi = useMemo(
+    () => KPIS.find((k) => k.key === selectedKpiKey) ?? KPIS[0],
+    [selectedKpiKey],
+  )
 
   async function handleSave(id: string) {
     setSaving(true)
@@ -317,65 +327,141 @@ export function LgmvDiagnosticosTable({ equipamentoId, diagnosticos: initial }: 
         </table>
       </div>
 
-      {/* ── Gráficos de linha por KPI com faixa de referência ── */}
-      {diags.length > 0 && (
-        <div className="bg-white rounded-2xl border border-border p-5 shadow-sm mb-5">
-          <p className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
-            <TrendingUp size={14} className="text-primary" />
-            Evolução dos parâmetros
-          </p>
-          <p className="text-xs text-gray-400 mb-5">Área verde = faixa de operação normal</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {KPIS.map((kpi) => {
-              const hasData = lineData.some((p) => p[kpi.key] !== null)
-              return (
-                <div key={kpi.key}>
-                  <p className="text-xs font-semibold text-gray-500 mb-2">
-                    {kpi.label}
-                    <span className="font-normal text-gray-400 ml-1">({kpi.unit})</span>
-                  </p>
-                  {hasData ? (
-                    <ResponsiveContainer width="100%" height={110}>
-                      <LineChart data={lineData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                        {kpi.normalMin !== undefined && kpi.normalMax !== undefined && (
-                          <ReferenceArea
-                            y1={kpi.normalMin}
-                            y2={kpi.normalMax}
-                            fill="#10b981"
-                            fillOpacity={0.1}
-                            strokeOpacity={0}
-                          />
-                        )}
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="data" tick={{ fontSize: 10, fill: '#9ca3af' }} interval={0} />
-                        <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} allowDecimals width={38} />
-                        <Tooltip
-                          labelFormatter={(_, payload) => payload?.[0]?.payload?.dataFull ?? ''}
-                          formatter={(v) => [`${v} ${kpi.unit}`, kpi.label]}
-                          contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid #e5e7eb' }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey={kpi.key}
-                          stroke={kpi.color}
-                          strokeWidth={2}
-                          dot={{ r: 4, fill: kpi.color, strokeWidth: 0 }}
-                          activeDot={{ r: 5 }}
-                          connectNulls
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-[110px] flex items-center justify-center text-xs text-gray-300">
-                      Sem dados
-                    </div>
+      {/* ── Tendência histórica com seletor de KPI ── */}
+      {lineData.length >= 2 && (() => {
+        const kpi = selectedKpi
+        const hasData = lineData.some((p) => p[kpi.key] !== null)
+        const xInterval = lineData.length <= 6 ? 0 : Math.floor(lineData.length / 5)
+
+        const firstVal = lineData[0]?.[kpi.key] as number | null
+        const lastVal = lineData[lineData.length - 1]?.[kpi.key] as number | null
+        const delta = firstVal !== null && lastVal !== null ? +(lastVal - firstVal).toFixed(1) : null
+        const nivelOrder = { normal: 0, atencao: 1, critico: 2 } as const
+        const firstNivel = firstVal !== null && kpi.computeNivel ? kpi.computeNivel(firstVal) : null
+        const lastNivel = lastVal !== null && kpi.computeNivel ? kpi.computeNivel(lastVal) : null
+        const nivelDelta = firstNivel && lastNivel ? nivelOrder[lastNivel] - nivelOrder[firstNivel] : null
+        const trendColor = nivelDelta === null || nivelDelta === 0 ? 'text-gray-400' : nivelDelta > 0 ? 'text-red-500' : 'text-emerald-600'
+        const trendArrow = delta === null ? '' : delta > 0 ? '↑' : delta < 0 ? '↓' : '→'
+
+        return (
+          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm mb-5">
+            <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
+              <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                <TrendingUp size={14} className="text-primary" />
+                Tendência histórica
+                {delta !== null && (
+                  <span className={`text-xs font-semibold ${trendColor}`}>
+                    {trendArrow} {delta > 0 ? '+' : ''}{delta} {kpi.unit}
+                  </span>
+                )}
+              </p>
+              <p className="text-[10px] text-gray-400 self-center">
+                Área verde = faixa normal · Sombreado = variação min/máx · Pontos = status da inspeção
+              </p>
+            </div>
+
+            {/* Abas de KPI */}
+            <div className="flex gap-1.5 mb-4 flex-wrap">
+              {KPIS.map((k) => {
+                const selected = k.key === selectedKpiKey
+                return (
+                  <button
+                    key={k.key}
+                    onClick={() => setSelectedKpiKey(k.key)}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-colors ${
+                      selected ? 'text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                    style={selected ? { backgroundColor: k.color } : undefined}
+                  >
+                    {k.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {hasData ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <ComposedChart data={lineData} margin={{ top: 8, right: 20, left: 0, bottom: 0 }}>
+                  {kpi.normalMin !== undefined && kpi.normalMax !== undefined && (
+                    <ReferenceArea
+                      y1={kpi.normalMin}
+                      y2={kpi.normalMax}
+                      fill="#10b981"
+                      fillOpacity={0.1}
+                      strokeOpacity={0}
+                    />
                   )}
-                </div>
-              )
-            })}
+                  {/* Faixa min/max: área colorida de 0→max depois apagada de 0→min com branco */}
+                  <Area
+                    type="monotone"
+                    dataKey={kpi.key + 'Max'}
+                    fill={kpi.color}
+                    fillOpacity={0.12}
+                    stroke="none"
+                    connectNulls
+                    legendType="none"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey={kpi.key + 'Min'}
+                    fill="#ffffff"
+                    fillOpacity={1}
+                    stroke="none"
+                    connectNulls
+                    legendType="none"
+                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="data" tick={{ fontSize: 10, fill: '#9ca3af' }} interval={xInterval} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} allowDecimals width={40} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (!active || !payload) return null
+                      const entry = payload.find((p) => p.dataKey === kpi.key)
+                      if (!entry) return null
+                      const pt = entry.payload
+                      const val = pt[kpi.key] as number
+                      const nivel = kpi.computeNivel ? kpi.computeNivel(val) : 'normal'
+                      const dotColor = nivel === 'critico' ? '#ef4444' : nivel === 'atencao' ? '#f59e0b' : '#10b981'
+                      const nivelLabel = nivel === 'critico' ? 'Crítico' : nivel === 'atencao' ? 'Atenção' : 'Normal'
+                      return (
+                        <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm text-xs">
+                          <p className="font-semibold text-gray-700 mb-1">{pt.dataFull}</p>
+                          <p style={{ color: kpi.color }}>
+                            {kpi.label}: <strong>{val} {kpi.unit}</strong>
+                          </p>
+                          <p className="text-gray-400">
+                            Min/máx: {pt[kpi.key + 'Min']} – {pt[kpi.key + 'Max']} {kpi.unit}
+                          </p>
+                          <p style={{ color: dotColor }} className="font-semibold">{nivelLabel}</p>
+                        </div>
+                      )
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey={kpi.key}
+                    stroke={kpi.color}
+                    strokeWidth={2.5}
+                    dot={(props: any) => {
+                      const val = props.payload?.[kpi.key]
+                      if (val === null || val === undefined) return <g key={props.key} />
+                      const nivel = kpi.computeNivel ? kpi.computeNivel(val) : 'normal'
+                      const fill = nivel === 'critico' ? '#ef4444' : nivel === 'atencao' ? '#f59e0b' : '#10b981'
+                      return <circle key={props.key} cx={props.cx} cy={props.cy} r={5} fill={fill} stroke="white" strokeWidth={1.5} />
+                    }}
+                    activeDot={{ r: 6 }}
+                    connectNulls
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[240px] flex items-center justify-center text-xs text-gray-300">
+                Sem dados para este parâmetro
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* ── Comparativo de KPIs entre inspeções ── */}
       {diags.length > 1 && (
