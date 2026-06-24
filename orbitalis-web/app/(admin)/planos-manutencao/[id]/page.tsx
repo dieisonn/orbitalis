@@ -12,6 +12,7 @@ type OsResumo = {
   dataAgendamento: string
   dataConclusao: string | null
   ambienteId: string
+  items: { equipamentoId: string }[]
 }
 
 type EquipConfig = {
@@ -204,6 +205,113 @@ export default async function DetalhePlanoPage({ params }: Props) {
           ))
         )}
       </div>
+
+      {/* ── Semáforo de cumprimento mensal ── */}
+      {os.length > 0 && (() => {
+        const now = new Date()
+
+        // 12 meses anteriores + mês atual + próximo
+        const months: { key: string; label: string }[] = []
+        for (let i = -11; i <= 1; i++) {
+          const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
+          months.push({ key, label })
+        }
+
+        // Para cada equipamento e mês, calcula status
+        function cellStatus(equipId: string, monthKey: string) {
+          const relevant = os.filter((o) => {
+            const d = new Date(o.dataAgendamento)
+            const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+            return k === monthKey && o.items.some((it) => it.equipamentoId === equipId)
+          })
+          if (relevant.length === 0) {
+            // verifica se é o mês da próxima geração
+            const proxKey = (() => {
+              const d = new Date(plano.proximaGeracao)
+              return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+            })()
+            return proxKey === monthKey ? 'proxima' : 'vazia'
+          }
+          if (relevant.some((o) => o.status === 'concluida')) return 'concluida'
+          const active = relevant.filter((o) => o.status !== 'cancelada')
+          if (active.length === 0) return 'cancelada'
+          const allFuture = active.every((o) => new Date(o.dataAgendamento) > now)
+          return allFuture ? 'agendada' : 'atrasada'
+        }
+
+        const CELL: Record<string, { bg: string; text: string; symbol: string; title: string }> = {
+          concluida: { bg: 'bg-emerald-100', text: 'text-emerald-700', symbol: '✓', title: 'Concluído' },
+          atrasada:  { bg: 'bg-red-100',     text: 'text-red-600',     symbol: '✗', title: 'Atrasado'  },
+          agendada:  { bg: 'bg-blue-50',     text: 'text-blue-500',    symbol: '⟳', title: 'Agendado'  },
+          proxima:   { bg: 'bg-amber-50',    text: 'text-amber-500',   symbol: '→', title: 'Próxima geração' },
+          cancelada: { bg: 'bg-gray-50',     text: 'text-gray-300',    symbol: '—', title: 'Cancelado' },
+          vazia:     { bg: '',               text: 'text-gray-200',    symbol: '—', title: 'Sem OS'    },
+        }
+
+        // filtra meses que têm alguma OS (para não mostrar 13 colunas vazias)
+        const activeMths = months.filter((m) =>
+          plano.equipamentosConfig.some((c) => cellStatus(c.equipamentoId, m.key) !== 'vazia')
+        )
+
+        if (activeMths.length === 0) return null
+
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden mb-6">
+            <div className="px-6 py-3 border-b border-border bg-surface flex items-center justify-between">
+              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <CalendarClock size={14} className="text-primary" />
+                Cumprimento — últimos 12 meses
+              </h2>
+              <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-100 inline-block" />Concluído</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-100 inline-block" />Atrasado</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-50 inline-block" />Agendado</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-amber-50 inline-block" />Próxima</span>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="text-xs w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-4 py-2 font-semibold text-gray-500 min-w-[140px]">Equipamento</th>
+                    {activeMths.map((m) => (
+                      <th key={m.key} className="px-2 py-2 font-semibold text-gray-400 text-center whitespace-nowrap capitalize min-w-[52px]">
+                        {m.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {plano.equipamentosConfig.map((c) => (
+                    <tr key={c.equipamentoId} className="hover:bg-surface/50">
+                      <td className="px-4 py-2.5 font-medium text-gray-700 truncate max-w-[180px]">
+                        {c.equipamento.nome}
+                        <span className="text-gray-400 font-normal ml-1 text-[10px]">{c.equipamento.ambiente.nome}</span>
+                      </td>
+                      {activeMths.map((m) => {
+                        const st = cellStatus(c.equipamentoId, m.key)
+                        const cfg = CELL[st]
+                        return (
+                          <td key={m.key} className="px-2 py-2.5 text-center">
+                            <span
+                              className={`inline-flex items-center justify-center w-7 h-7 rounded-lg font-bold text-sm ${cfg.bg} ${cfg.text}`}
+                              title={cfg.title}
+                            >
+                              {cfg.symbol}
+                            </span>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* O.S. Geradas */}
       <div>

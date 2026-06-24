@@ -101,6 +101,7 @@ export class PlanosManutencaoService {
         dataAgendamento: true,
         dataConclusao: true,
         ambienteId: true,
+        items: { select: { equipamentoId: true } },
       },
     });
 
