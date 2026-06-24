@@ -47,17 +47,20 @@ export function LgmvMensalChart({ data, ano }: { data: Ponto[]; ano: number }) {
         <CartesianGrid strokeDasharray="3 3" stroke="#dde3f5" />
         <XAxis
           dataKey="label"
-          tick={({ x, y, payload }) => (
-            <text
-              x={x} y={y + 12}
-              textAnchor="middle"
-              fontSize={payload?.value && formatted.find(d => d.label === payload.value)?.isAtual ? 12 : 11}
-              fontWeight={payload?.value && formatted.find(d => d.label === payload.value)?.isAtual ? 700 : 400}
-              fill={payload?.value && formatted.find(d => d.label === payload.value)?.isAtual ? '#0505ad' : '#6b7280'}
-            >
-              {payload?.value}
-            </text>
-          )}
+          tick={({ x, y, payload }: { x?: number | string; y?: number | string; payload?: { value: string } }) => {
+            const isAtual = !!payload?.value && !!formatted.find(d => d.label === payload!.value)?.isAtual
+            return (
+              <text
+                x={Number(x ?? 0)} y={Number(y ?? 0) + 12}
+                textAnchor="middle"
+                fontSize={isAtual ? 12 : 11}
+                fontWeight={isAtual ? 700 : 400}
+                fill={isAtual ? '#0505ad' : '#6b7280'}
+              >
+                {payload?.value}
+              </text>
+            )
+          }}
           interval={0}
         />
         <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
