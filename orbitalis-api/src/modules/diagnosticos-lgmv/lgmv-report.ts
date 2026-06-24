@@ -128,34 +128,38 @@ export function gerarRelatorio(idu: LgmvIduData | null, odu: LgmvOduData | null)
     const stable = skipStartup(odu.readings, 5)
 
     // High pressure
+    // R410A normal operating HP: 200–340 psi. HP safety cutout: ~580 psi.
+    // Crítico at >400 psi (~70% of cutout). Atenção at >340 psi (dirty condenser).
     const hiVals = stable.map((r) => r.highPressTrace).filter((v): v is number => v !== null && v > 150)
     const hiStat = stats(hiVals)
     if (hiStat) {
       kpis.pressaoAlta = hiStat
-      if (hiStat.media > 320) {
-        anomalias.push({ nivel: 'critico', parametro: 'Pressão de descarga', valor: `${hiStat.media} psi`, mensagem: 'Pressão de descarga muito alta — provável condensador sujo, obstruído ou ventilador com falha.' })
-      } else if (hiStat.media > 285) {
-        anomalias.push({ nivel: 'atencao', parametro: 'Pressão de descarga', valor: `${hiStat.media} psi`, mensagem: 'Pressão de descarga elevada — recomenda-se limpeza do condensador.' })
-      } else if (hiStat.media < 180) {
+      if (hiStat.media > 400) {
+        anomalias.push({ nivel: 'critico', parametro: 'Pressão de descarga', valor: `${hiStat.media} psi`, mensagem: 'Pressão de descarga muito alta — condensador severamente sujo, não-condensáveis ou sobrecarga de gás. Risco de desligamento por proteção.' })
+      } else if (hiStat.media > 340) {
+        anomalias.push({ nivel: 'atencao', parametro: 'Pressão de descarga', valor: `${hiStat.media} psi`, mensagem: 'Pressão de descarga elevada — recomenda-se limpeza do condensador. Faixa normal para R410A: 200–340 psi.' })
+      } else if (hiStat.media < 150) {
         anomalias.push({ nivel: 'atencao', parametro: 'Pressão de descarga', valor: `${hiStat.media} psi`, mensagem: 'Pressão de descarga baixa — verificar carga de gás.' })
       } else {
-        anomalias.push({ nivel: 'normal', parametro: 'Pressão de descarga', valor: `${hiStat.media} psi`, mensagem: 'Pressão de descarga normal.' })
+        anomalias.push({ nivel: 'normal', parametro: 'Pressão de descarga', valor: `${hiStat.media} psi`, mensagem: 'Pressão de descarga dentro da faixa esperada para as condições de operação.' })
       }
     }
 
     // Low pressure
+    // R410A normal LP in cooling: 80–145 psi. Crítico at <65 psi (significant undercharge).
+    // Atenção high at >145 psi (overcharge or very low load).
     const loVals = stable.map((r) => r.lowPressTrace).filter((v): v is number => v !== null && v > 30 && v < 200)
     const loStat = stats(loVals)
     if (loStat) {
       kpis.pressaoBaixa = loStat
-      if (loStat.media < 70) {
-        anomalias.push({ nivel: 'critico', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção muito baixa — sistema possivelmente com baixa carga de gás ou restrição.' })
-      } else if (loStat.media < 90) {
-        anomalias.push({ nivel: 'atencao', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção abaixo do ideal para R410A (90-120 psi).' })
-      } else if (loStat.media > 130) {
-        anomalias.push({ nivel: 'atencao', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção elevada — possível problema no evaporador ou excesso de carga.' })
+      if (loStat.media < 65) {
+        anomalias.push({ nivel: 'critico', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção muito baixa — sistema com baixa carga de gás ou restrição severa no circuito.' })
+      } else if (loStat.media < 80) {
+        anomalias.push({ nivel: 'atencao', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção abaixo do ideal — verificar carga de gás e estado do evaporador. Faixa normal: 80–145 psi.' })
+      } else if (loStat.media > 145) {
+        anomalias.push({ nivel: 'atencao', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção elevada — possível excesso de carga de gás ou carga térmica muito baixa no ambiente.' })
       } else {
-        anomalias.push({ nivel: 'normal', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção normal para R410A.' })
+        anomalias.push({ nivel: 'normal', parametro: 'Pressão de sucção', valor: `${loStat.media} psi`, mensagem: 'Pressão de sucção dentro da faixa normal para R410A (80–145 psi).' })
       }
     }
 
@@ -228,6 +232,8 @@ export function gerarRelatorio(idu: LgmvIduData | null, odu: LgmvOduData | null)
     } else {
       laudoParts.push(`O superaquecimento médio foi de ${shStat.media}°C (mín: ${shStat.min}°C, máx: ${shStat.max}°C) — faixa ideal é de 5 a 8°C.`)
     }
+  } else if (idu) {
+    laudoParts.push(`Leituras de SC/SH indisponíveis neste relatório — sensor da unidade interna sem dado válido no período registrado (EEV possivelmente em 0 durante a captura).`)
   }
 
   if (kpis.pressaoBaixa && kpis.pressaoAlta) {

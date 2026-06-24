@@ -64,14 +64,14 @@ const KPIS: KpiConfig[] = [
   {
     key: 'pressaoBaixa', label: 'Pressão de Sucção', unit: 'psi', color: '#3b82f6',
     anomaliaParam: 'Pressão de sucção',
-    computeNivel: (v) => v < 70 ? 'critico' : (v < 90 || v > 130) ? 'atencao' : 'normal',
-    normalMin: 90, normalMax: 130,
+    computeNivel: (v) => v < 65 ? 'critico' : (v < 80 || v > 145) ? 'atencao' : 'normal',
+    normalMin: 80, normalMax: 145,
   },
   {
     key: 'pressaoAlta', label: 'Pressão de Descarga', unit: 'psi', color: '#8b5cf6',
     anomaliaParam: 'Pressão de descarga',
-    computeNivel: (v) => v > 320 ? 'critico' : (v > 285 || v < 180) ? 'atencao' : 'normal',
-    normalMin: 180, normalMax: 285,
+    computeNivel: (v) => v > 400 ? 'critico' : (v > 340 || v < 150) ? 'atencao' : 'normal',
+    normalMin: 150, normalMax: 340,
   },
   {
     key: 'consumo', label: 'Consumo Elétrico', unit: 'kW', color: '#10b981',
