@@ -148,13 +148,16 @@ export class EquipamentosService {
     });
   }
 
-  async getMetricasConfiabilidade(periodo = 365) {
+  async getMetricasConfiabilidade(periodo = 365, clienteId?: string) {
     const desde = new Date();
     desde.setDate(desde.getDate() - periodo);
 
+    const equipWhere: any = { deletedAt: null };
+    if (clienteId) equipWhere.ambiente = { cliente: { id: clienteId } };
+
     const [equipamentos, itens] = await Promise.all([
       this.prisma.equipamento.findMany({
-        where: { deletedAt: null },
+        where: equipWhere,
         include: { ambiente: { include: { cliente: true } } },
         orderBy: { nome: 'asc' },
       }),

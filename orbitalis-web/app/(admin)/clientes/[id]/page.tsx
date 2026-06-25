@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import {
   Building2, Cpu, ChevronRight, DollarSign, ClipboardList,
   CalendarClock, FileText, AlertTriangle, CheckCircle, Activity,
+  Clock, RefreshCw, ShieldCheck,
 } from 'lucide-react'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string; marca: string; modelo: string | null; numeroSerie: string | null }
@@ -21,6 +22,15 @@ type Dashboard = {
   totalAmbientes: number
   totalEquipamentos: number
 }
+
+type MetricaEquip = {
+  id: string
+  totalCorretivas: number
+  mttrHoras: number | null
+  mtbfDias: number | null
+}
+
+type Config = { mttrLimiteHoras: number | null; mtbfLimiteDias: number | null }
 
 type LgmvKpis = {
   superaquecimento?: { media: number }
@@ -51,12 +61,18 @@ export default async function ClienteDetalhePage({ params }: Props) {
   let cliente: Cliente | undefined
   let dash: Dashboard | undefined
   let lgmvEquips: LgmvEquip[] = []
+  let metricas: MetricaEquip[] = []
+  let config: Config = { mttrLimiteHoras: null, mtbfLimiteDias: null }
   try {
     ;[cliente, dash] = await Promise.all([
       api.get<Cliente>(`/clientes/${id}`),
       api.get<Dashboard>(`/clientes/${id}/dashboard`),
     ])
     lgmvEquips = await api.get<LgmvEquip[]>(`/diagnosticos-lgmv/cliente/${id}`).catch(() => [])
+    ;[metricas, config] = await Promise.all([
+      api.get<MetricaEquip[]>(`/equipamentos/metricas-confiabilidade?clienteId=${id}`).catch(() => []),
+      api.get<Config>('/configuracao').catch(() => ({ mttrLimiteHoras: null, mtbfLimiteDias: null })),
+    ])
   } catch {
     /* empty */
   }
@@ -82,6 +98,46 @@ export default async function ClienteDetalhePage({ params }: Props) {
     { label: 'Hz',       key: 'freqCompressor'    as keyof LgmvKpis, param: 'Freq. compressor',    compute: (v: number) => (v < 15 ? 'critico' : v < 25 || v > 110 ? 'atencao' : 'normal') as 'normal'|'atencao'|'critico' },
     { label: 'kW',       key: 'consumo'           as keyof LgmvKpis, param: '',                    compute: (_: number) => 'normal' as 'normal'|'atencao'|'critico' },
   ]
+
+  // ── Métricas de confiabilidade da frota do cliente ──
+  const mttrLimite = config.mttrLimiteHoras ?? 48
+  const mtbfLimite = config.mtbfLimiteDias  ?? 90
+  const periodoHoras = 365 * 24 // 12 meses em horas por equipamento
+  const nEquip = metricas.length
+
+  // Total de horas de reparo = soma de (mttrHoras * totalCorretivas) por equipamento
+  const horasReparo = metricas.reduce((s, m) =>
+    s + (m.mttrHoras !== null ? m.mttrHoras * m.totalCorretivas : 0), 0)
+  // Total de horas-frota disponíveis
+  const horasFrota = nEquip * periodoHoras
+  const disponibilidade = horasFrota > 0
+    ? Math.max(0, Math.min(100, +((horasFrota - horasReparo) / horasFrota * 100).toFixed(1)))
+    : null
+
+  // MTTR médio ponderado por número de corretivas
+  const totalCorretivas = metricas.reduce((s, m) => s + m.totalCorretivas, 0)
+  const mttrMedioFrota = totalCorretivas > 0
+    ? +(metricas.reduce((s, m) => s + (m.mttrHoras ?? 0) * m.totalCorretivas, 0) / totalCorretivas).toFixed(1)
+    : null
+
+  // MTBF médio simples dos equipamentos que têm dado
+  const comMtbf = metricas.filter((m) => m.mtbfDias !== null)
+  const mtbfMedioFrota = comMtbf.length > 0
+    ? +(comMtbf.reduce((s, m) => s + m.mtbfDias!, 0) / comMtbf.length).toFixed(1)
+    : null
+
+  function semMttr(v: number | null) {
+    if (v === null) return null
+    if (v <= mttrLimite / 2) return { cls: 'bg-green-100 text-green-800', dot: 'bg-green-400' }
+    if (v <= mttrLimite)     return { cls: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-400' }
+    return { cls: 'bg-red-100 text-red-800', dot: 'bg-red-400' }
+  }
+  function semMtbf(v: number | null) {
+    if (v === null) return null
+    if (v >= mtbfLimite)     return { cls: 'bg-green-100 text-green-800', dot: 'bg-green-400' }
+    if (v >= mtbfLimite / 2) return { cls: 'bg-yellow-100 text-yellow-800', dot: 'bg-yellow-400' }
+    return { cls: 'bg-red-100 text-red-800', dot: 'bg-red-400' }
+  }
 
   const totalOs = Object.values(dash.porStatus).reduce((s, n) => s + n, 0)
   const contratoAtivo = dash.contrato
@@ -166,6 +222,104 @@ export default async function ClienteDetalhePage({ params }: Props) {
           </div>
         ))}
       </div>
+
+      {/* ── Confiabilidade da frota ── */}
+      {nEquip > 0 && (
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <ShieldCheck size={15} className="text-primary" /> Confiabilidade da Frota
+              <span className="text-xs font-normal text-gray-400">— últimos 12 meses · {nEquip} equipamento{nEquip !== 1 ? 's' : ''}</span>
+            </p>
+            <a href={`/equipamentos/confiabilidade`} className="text-xs text-primary font-semibold hover:underline">
+              Ver por equipamento →
+            </a>
+          </div>
+
+          {/* Barra de disponibilidade */}
+          {disponibilidade !== null && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />
+                  Funcionando
+                </span>
+                <span className="text-xs font-bold text-gray-800">{disponibilidade}%</span>
+                <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                  {(100 - disponibilidade).toFixed(1)}%
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />
+                  Em reparo
+                </span>
+              </div>
+              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden flex">
+                <div
+                  className="h-full bg-green-400 rounded-l-full transition-all"
+                  style={{ width: `${disponibilidade}%` }}
+                />
+                <div
+                  className="h-full bg-red-400 rounded-r-full transition-all"
+                  style={{ width: `${(100 - disponibilidade).toFixed(1)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Métricas numéricas */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5 flex items-center gap-1">
+                <Clock size={10} /> MTTR médio
+              </p>
+              {mttrMedioFrota !== null ? (
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-xl font-bold text-gray-900">
+                    {mttrMedioFrota < 24 ? `${mttrMedioFrota}h` : `${(mttrMedioFrota / 24).toFixed(1)}d`}
+                  </p>
+                  {semMttr(mttrMedioFrota) && (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${semMttr(mttrMedioFrota)!.cls}`}>
+                      {mttrMedioFrota <= mttrLimite / 2 ? 'Bom' : mttrMedioFrota <= mttrLimite ? 'Atenção' : 'Crítico'}
+                    </span>
+                  )}
+                </div>
+              ) : <p className="text-xl font-bold text-gray-300">—</p>}
+              <p className="text-[10px] text-gray-400 mt-0.5">limite {mttrLimite}h</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5 flex items-center gap-1">
+                <RefreshCw size={10} /> MTBF médio
+              </p>
+              {mtbfMedioFrota !== null ? (
+                <div className="flex items-baseline gap-1.5">
+                  <p className="text-xl font-bold text-gray-900">{mtbfMedioFrota}d</p>
+                  {semMtbf(mtbfMedioFrota) && (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${semMtbf(mtbfMedioFrota)!.cls}`}>
+                      {mtbfMedioFrota >= mtbfLimite ? 'Bom' : mtbfMedioFrota >= mtbfLimite / 2 ? 'Atenção' : 'Crítico'}
+                    </span>
+                  )}
+                </div>
+              ) : <p className="text-xl font-bold text-gray-300">—</p>}
+              <p className="text-[10px] text-gray-400 mt-0.5">limite {mtbfLimite}d</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">Falhas (12m)</p>
+              <p className="text-xl font-bold text-gray-900">{totalCorretivas}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">O.S. corretivas concluídas</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-400 mb-0.5">Horas parado</p>
+              <p className="text-xl font-bold text-gray-900">
+                {horasReparo < 24
+                  ? `${horasReparo.toFixed(1)}h`
+                  : `${(horasReparo / 24).toFixed(1)}d`}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">tempo total em reparo</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Próxima O.S. + Contrato detalhe */}
       {(dash.proximaOs || contratoAtivo) && (
