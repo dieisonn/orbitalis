@@ -3,6 +3,7 @@ import { ConfiguracaoForm } from './form'
 import { GoogleCalendarCard } from './google-calendar-card'
 import { ResponsavelTecnicoCard } from './responsavel-tecnico-card'
 import { LgmvRecomputeCard } from './lgmv-recompute-card'
+import { ConfiabilidadeCard } from './confiabilidade-card'
 
 type Config = {
   nomeEmpresa: string
@@ -16,6 +17,8 @@ type Config = {
   googleEmail?: string | null
   responsavelTecnicoId?: string | null
   responsavelTecnico?: { id: string; nome: string | null; email: string; crea: string | null } | null
+  mttrLimiteHoras?: number | null
+  mtbfLimiteDias?: number | null
 }
 
 type Tecnico = { id: string; email: string; nome: string | null; crea: string | null }
@@ -74,6 +77,11 @@ export default async function ConfiguracoesPage({
         tecnicos={tecnicos}
         responsavelTecnicoId={config.responsavelTecnicoId ?? null}
         responsavelTecnico={config.responsavelTecnico ?? null}
+      />
+
+      <ConfiabilidadeCard
+        mttrLimiteHoras={config.mttrLimiteHoras ?? null}
+        mtbfLimiteDias={config.mtbfLimiteDias ?? null}
       />
 
       <LgmvRecomputeCard />

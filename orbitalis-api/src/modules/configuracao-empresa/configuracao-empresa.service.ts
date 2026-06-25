@@ -12,6 +12,8 @@ type UpsertDto = {
   telefone?: string;
   endereco?: string;
   responsavelTecnicoId?: string | null;
+  mttrLimiteHoras?: number | null;
+  mtbfLimiteDias?: number | null;
 };
 
 const INCLUDE_RESPONSAVEL = {
@@ -36,6 +38,8 @@ export class ConfiguracaoEmpresaService {
       updatedAt: new Date(),
       responsavelTecnicoId: null,
       responsavelTecnico: null,
+      mttrLimiteHoras: null,
+      mtbfLimiteDias: null,
     };
   }
 

@@ -306,6 +306,10 @@ model ConfiguracaoEmpresa {
   responsavelTecnicoId     String?   @unique @map("responsavel_tecnico_id") @db.Uuid
   responsavelTecnico       Usuario?  @relation(fields: [responsavelTecnicoId], references: [id], onDelete: SetNull)
 
+  // Thresholds de confiabilidade (MTTR/MTBF)
+  mttrLimiteHoras          Int?      @map("mttr_limite_horas")
+  mtbfLimiteDias           Int?      @map("mtbf_limite_dias")
+
   @@map("configuracao_empresa")
 }
 

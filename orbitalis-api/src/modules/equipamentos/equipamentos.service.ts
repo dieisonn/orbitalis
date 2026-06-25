@@ -147,4 +147,90 @@ export class EquipamentosService {
       data: { deletedAt: new Date() },
     });
   }
+
+  async getMetricasConfiabilidade(periodo = 365) {
+    const desde = new Date();
+    desde.setDate(desde.getDate() - periodo);
+
+    const [equipamentos, itens] = await Promise.all([
+      this.prisma.equipamento.findMany({
+        where: { deletedAt: null },
+        include: { ambiente: { include: { cliente: true } } },
+        orderBy: { nome: 'asc' },
+      }),
+      this.prisma.ordemServicoItem.findMany({
+        where: {
+          ordemServico: {
+            tipo: 'corretiva',
+            status: 'concluida',
+            dataConclusao: { gte: desde },
+          },
+        },
+        select: {
+          equipamentoId: true,
+          ordemServico: {
+            select: { dataAgendamento: true, dataConclusao: true },
+          },
+        },
+        orderBy: { ordemServico: { dataConclusao: 'asc' } },
+      }),
+    ]);
+
+    const itensPorEquip = new Map<string, typeof itens>();
+    for (const item of itens) {
+      if (!itensPorEquip.has(item.equipamentoId)) {
+        itensPorEquip.set(item.equipamentoId, []);
+      }
+      itensPorEquip.get(item.equipamentoId)!.push(item);
+    }
+
+    return equipamentos.map((eq) => {
+      const equItems = itensPorEquip.get(eq.id) ?? [];
+
+      const mttrHoras =
+        equItems.length > 0
+          ? +(
+              equItems.reduce((sum, i) => {
+                const diff =
+                  (i.ordemServico.dataConclusao!.getTime() -
+                    i.ordemServico.dataAgendamento.getTime()) /
+                  3_600_000;
+                return sum + diff;
+              }, 0) / equItems.length
+            ).toFixed(1)
+          : null;
+
+      let mtbfDias: number | null = null;
+      if (equItems.length >= 2) {
+        const intervals: number[] = [];
+        for (let i = 1; i < equItems.length; i++) {
+          const diff =
+            (equItems[i].ordemServico.dataConclusao!.getTime() -
+              equItems[i - 1].ordemServico.dataConclusao!.getTime()) /
+            86_400_000;
+          intervals.push(diff);
+        }
+        mtbfDias = +(intervals.reduce((a, b) => a + b, 0) / intervals.length).toFixed(1);
+      }
+
+      return {
+        id: eq.id,
+        nome: eq.nome,
+        marca: eq.marca,
+        tipoEquipamento: eq.tipoEquipamento,
+        cliente:
+          eq.ambiente?.cliente?.nomeFantasia ??
+          eq.ambiente?.cliente?.razaoSocial ??
+          null,
+        ambiente: eq.ambiente?.nome ?? null,
+        totalCorretivas: equItems.length,
+        ultimaCorretiva:
+          equItems.length > 0
+            ? equItems[equItems.length - 1].ordemServico.dataConclusao
+            : null,
+        mttrHoras,
+        mtbfDias,
+      };
+    });
+  }
 }

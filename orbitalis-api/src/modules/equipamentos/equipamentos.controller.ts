@@ -36,6 +36,13 @@ export class EquipamentosController {
     return this.equipamentosService.findAll(Number(page) || 1, Number(perPage) || 20);
   }
 
+  // GET /api/v1/equipamentos/metricas-confiabilidade
+  @Get('metricas-confiabilidade')
+  @Roles(UsuarioTipo.admin)
+  getMetricasConfiabilidade(@Query('periodo') periodo?: string) {
+    return this.equipamentosService.getMetricasConfiabilidade(Number(periodo) || 365);
+  }
+
   // GET /api/v1/equipamentos/:id
   @Get(':id')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)

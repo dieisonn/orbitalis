@@ -1,11 +1,12 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
-import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle, Activity } from 'lucide-react'
+import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle, Activity, Clock, RefreshCw } from 'lucide-react'
 import { LgmvUpload } from '@/components/ui/lgmv-upload'
 import { LgmvDiagnosticosTable } from './lgmv-diagnosticos-table'
 import type { DiagnosticoResumido } from './lgmv-diagnosticos-table'
 
 type Props = { params: Promise<{ id: string }> }
+type Config = { mttrLimiteHoras: number | null; mtbfLimiteDias: number | null }
 
 type Equipamento = {
   id: string
@@ -75,11 +76,13 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
 
   let hist: Historico
   let diagnosticos: DiagnosticoResumido[] = []
+  let config: Config = { mttrLimiteHoras: null, mtbfLimiteDias: null }
   try {
     [hist] = await Promise.all([
       api.get<Historico>(`/equipamentos/${id}/historico`),
     ])
     diagnosticos = await api.get<DiagnosticoResumido[]>(`/diagnosticos-lgmv/equipamento/${id}`).catch(() => [])
+    config = await api.get<Config>('/configuracao').catch(() => ({ mttrLimiteHoras: null, mtbfLimiteDias: null }))
   } catch {
     notFound()
   }
@@ -92,6 +95,53 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
   const totalMaoObra = osConcluidas.reduce((s, i) => s + (Number(i.ordemServico.valorMaoObra) || 0), 0)
   const totalPecas   = osConcluidas.reduce((s, i) => s + (Number(i.ordemServico.valorPecas)   || 0), 0)
   const totalGasto   = totalMaoObra + totalPecas + (Number(eq.valorAquisicao) || 0)
+
+  // MTTR e MTBF — últimos 12 meses, só corretivas concluídas
+  const dozeAtras = new Date(); dozeAtras.setFullYear(dozeAtras.getFullYear() - 1)
+  const mttrLimite = config.mttrLimiteHoras ?? 48
+  const mtbfLimite = config.mtbfLimiteDias  ?? 90
+  const corretivasConcl = itens
+    .filter((i) =>
+      i.ordemServico.tipo === 'corretiva' &&
+      i.ordemServico.status === 'concluida' &&
+      i.ordemServico.dataConclusao !== null &&
+      new Date(i.ordemServico.dataConclusao) >= dozeAtras,
+    )
+    .sort((a, b) =>
+      new Date(a.ordemServico.dataConclusao!).getTime() -
+      new Date(b.ordemServico.dataConclusao!).getTime(),
+    )
+
+  const mttrHoras = corretivasConcl.length > 0
+    ? +(corretivasConcl.reduce((sum, i) => {
+        const diff = (new Date(i.ordemServico.dataConclusao!).getTime() - new Date(i.ordemServico.dataAgendamento).getTime()) / 3_600_000
+        return sum + diff
+      }, 0) / corretivasConcl.length).toFixed(1)
+    : null
+
+  let mtbfDias: number | null = null
+  if (corretivasConcl.length >= 2) {
+    const intervals: number[] = []
+    for (let i = 1; i < corretivasConcl.length; i++) {
+      const diff = (new Date(corretivasConcl[i].ordemServico.dataConclusao!).getTime() -
+        new Date(corretivasConcl[i - 1].ordemServico.dataConclusao!).getTime()) / 86_400_000
+      intervals.push(diff)
+    }
+    mtbfDias = +(intervals.reduce((a, b) => a + b, 0) / intervals.length).toFixed(1)
+  }
+
+  function semaforoMttr(v: number | null) {
+    if (v === null) return null
+    if (v <= mttrLimite / 2) return { cls: 'bg-green-100 text-green-800', label: 'Bom' }
+    if (v <= mttrLimite)     return { cls: 'bg-yellow-100 text-yellow-800', label: 'Atenção' }
+    return { cls: 'bg-red-100 text-red-800', label: 'Crítico' }
+  }
+  function semaforoMtbf(v: number | null) {
+    if (v === null) return null
+    if (v >= mtbfLimite)     return { cls: 'bg-green-100 text-green-800', label: 'Bom' }
+    if (v >= mtbfLimite / 2) return { cls: 'bg-yellow-100 text-yellow-800', label: 'Atenção' }
+    return { cls: 'bg-red-100 text-red-800', label: 'Crítico' }
+  }
 
   // Custo acumulado ao longo do tempo (para exibição linha a linha)
   let acumulado = Number(eq.valorAquisicao) || 0
@@ -194,6 +244,59 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
         <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 shadow-sm">
           <p className="text-xs text-primary/70 mb-1 flex items-center gap-1"><TrendingUp size={11} />Custo Total (acq. + serviços)</p>
           <p className="text-lg font-bold text-primary">{fmtBRL(totalGasto) ?? 'R$ 0,00'}</p>
+        </div>
+      </div>
+
+      {/* MTTR / MTBF */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
+          <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+            <Clock size={11} />MTTR — Tempo Médio de Reparo
+            <span className="text-gray-300 ml-1">(12 meses)</span>
+          </p>
+          {mttrHoras !== null ? (
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl font-bold text-gray-900">
+                {mttrHoras < 24 ? `${mttrHoras}h` : `${(mttrHoras / 24).toFixed(1)}d`}
+              </p>
+              {semaforoMttr(mttrHoras) && (
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${semaforoMttr(mttrHoras)!.cls}`}>
+                  {semaforoMttr(mttrHoras)!.label}
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="text-2xl font-bold text-gray-300">—</p>
+          )}
+          <p className="text-xs text-gray-400 mt-1">
+            {corretivasConcl.length} corretiva{corretivasConcl.length !== 1 ? 's' : ''} concluída{corretivasConcl.length !== 1 ? 's' : ''} · limite {mttrLimite}h
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
+          <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+            <RefreshCw size={11} />MTBF — Intervalo Médio entre Falhas
+            <span className="text-gray-300 ml-1">(12 meses)</span>
+          </p>
+          {mtbfDias !== null ? (
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl font-bold text-gray-900">{mtbfDias}d</p>
+              {semaforoMtbf(mtbfDias) && (
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${semaforoMtbf(mtbfDias)!.cls}`}>
+                  {semaforoMtbf(mtbfDias)!.label}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="text-2xl font-bold text-gray-300">—</p>
+              <p className="text-xs text-gray-400 mt-1">Mínimo 2 corretivas concluídas · limite {mtbfLimite}d</p>
+            </div>
+          )}
+          {mtbfDias !== null && (
+            <p className="text-xs text-gray-400 mt-1">
+              {corretivasConcl.length} corretivas · {corretivasConcl.length - 1} intervalo{corretivasConcl.length - 1 !== 1 ? 's' : ''} · limite {mtbfLimite}d
+            </p>
+          )}
         </div>
       </div>
 
