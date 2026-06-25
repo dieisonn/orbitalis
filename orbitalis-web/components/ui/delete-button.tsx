@@ -8,7 +8,7 @@ export function DeleteButton({
   action,
   label = 'Excluir',
 }: {
-  action: () => Promise<void>
+  action: () => Promise<unknown>
   label?: string
 }) {
   const [isPending, startTransition] = useTransition()
