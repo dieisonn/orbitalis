@@ -57,37 +57,37 @@ export default async function ClientesPage({ searchParams }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Razão Social</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CPF/CNPJ</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Telefone</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Endereço</th>
-                <th className="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambientes</th>
-                <th className="px-6 py-3" />
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Razão Social</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CPF/CNPJ</th>
+                <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Telefone</th>
+                <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Endereço</th>
+                <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amb.</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {clientes.map((c) => (
                 <tr key={c.id} className="hover:bg-surface transition-colors">
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">{c.razaoSocial}</p>
                     {c.nomeFantasia && <p className="text-xs text-gray-400">{c.nomeFantasia}</p>}
                   </td>
-                  <td className="px-6 py-4 text-gray-600 font-mono text-xs">{c.documento}</td>
-                  <td className="px-6 py-4 text-gray-500 text-xs whitespace-nowrap">
+                  <td className="hidden sm:table-cell px-4 py-3 text-gray-600 font-mono text-xs">{c.documento}</td>
+                  <td className="hidden md:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                     {c.telefone
                       ? <span className="inline-flex items-center gap-1"><Phone size={11} className="text-primary/40" />{c.telefone}</span>
                       : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="px-6 py-4 text-gray-500 max-w-xs truncate">{c.endereco}</td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="hidden md:table-cell px-4 py-3 text-gray-500 max-w-xs truncate">{c.endereco}</td>
+                  <td className="px-4 py-3 text-center">
                     <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold">
                       <Building2 size={12} />{c.ambientes?.length ?? 0}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <a href={`/clientes/${c.id}`} className="text-xs font-semibold text-primary hover:underline">Ver</a>
-                      <a href={`/clientes/${c.id}/editar`} className="text-xs font-semibold text-gray-500 hover:underline">Editar</a>
+                      <a href={`/clientes/${c.id}/editar`} className="hidden sm:inline text-xs font-semibold text-gray-500 hover:underline">Editar</a>
                       <DeleteButton action={deletarCliente.bind(null, c.id)} />
                     </div>
                   </td>

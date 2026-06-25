@@ -303,20 +303,20 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                 <button
                   type="button"
                   onClick={() => toggleCollapse(clienteId)}
-                  className="w-full flex items-center justify-between px-6 py-3.5 bg-primary/5 border-b border-border hover:bg-primary/10 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3.5 bg-primary/5 border-b border-border hover:bg-primary/10 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <ChevronDown
                       size={14}
-                      className={`text-primary/60 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+                      className={`text-primary/60 transition-transform duration-200 shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}
                     />
-                    <span className="font-bold text-primary text-sm">{clienteNome}</span>
+                    <span className="font-bold text-primary text-sm truncate">{clienteNome}</span>
                     {clienteRazaoSocial && (
-                      <span className="text-xs text-gray-400">{clienteRazaoSocial}</span>
+                      <span className="hidden sm:inline text-xs text-gray-400 truncate">{clienteRazaoSocial}</span>
                     )}
                   </div>
-                  <span className="text-xs text-gray-400 font-medium">
-                    {items.length} equipamento{items.length !== 1 ? 's' : ''} · {totalTipos} tipo{totalTipos !== 1 ? 's' : ''}
+                  <span className="text-xs text-gray-400 font-medium shrink-0 ml-2">
+                    {items.length} eq. · {totalTipos} tipo{totalTipos !== 1 ? 's' : ''}
                   </span>
                 </button>
 
@@ -334,14 +334,14 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             title="Selecionar grupo"
                           />
                         </th>
-                        {['Equipamento', 'Ambiente', 'Potência', 'Marca / Modelo', 'Nº Série', 'Condição', 'QR', ''].map((h) => (
-                          <th
-                            key={h}
-                            className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
-                          >
-                            {h}
-                          </th>
-                        ))}
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipamento</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Potência</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Marca / Modelo</th>
+                        <th className="hidden md:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nº Série</th>
+                        <th className="hidden md:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Condição</th>
+                        <th className="hidden lg:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">QR</th>
+                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -372,7 +372,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             </td>
 
                             {/* Ambiente */}
-                            <td className="px-4 py-3">
+                            <td className="hidden sm:table-cell px-4 py-3">
                               {eq.ambiente ? (
                                 <>
                                   <p className="text-sm text-gray-700 font-medium">{eq.ambiente.nome}</p>
@@ -398,18 +398,18 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             </td>
 
                             {/* Marca / Modelo */}
-                            <td className="px-4 py-3">
+                            <td className="hidden sm:table-cell px-4 py-3">
                               <p className="text-sm text-gray-700 font-medium">{eq.marca}</p>
                               {eq.modelo && <p className="text-xs text-gray-400">{eq.modelo}</p>}
                             </td>
 
                             {/* Nº Série */}
-                            <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                            <td className="hidden md:table-cell px-4 py-3 font-mono text-xs text-gray-500">
                               {eq.numeroSerie || <span className="text-gray-300 not-italic font-sans">—</span>}
                             </td>
 
                             {/* Condição */}
-                            <td className="px-4 py-3">
+                            <td className="hidden md:table-cell px-4 py-3">
                               {eq.condicao ? (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${eq.condicao === 'novo' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                                   <BadgeCheck size={10} />
@@ -422,7 +422,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             </td>
 
                             {/* QR */}
-                            <td className="px-4 py-3">
+                            <td className="hidden lg:table-cell px-4 py-3">
                               <QrModal equipamentoId={eq.id} codigoQr={eq.codigoQr} nome={eq.nome} />
                             </td>
 

@@ -1,6 +1,7 @@
 ﻿import { api } from '@/lib/api'
 import { criarContrato } from '../actions'
 import { FileText } from 'lucide-react'
+import { SubmitBtn } from './submit-btn'
 
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 type Props = { searchParams: Promise<{ clienteId?: string }> }
@@ -82,10 +83,7 @@ export default async function NovoContratoPage({ searchParams }: Props) {
               className="flex-1 py-2.5 text-sm text-center border border-border rounded-xl hover:bg-surface transition-colors">
               Cancelar
             </a>
-            <button type="submit"
-              className="flex-1 py-2.5 text-sm font-semibold bg-action text-white rounded-xl hover:bg-action/90 transition-colors">
-              Criar Contrato
-            </button>
+            <SubmitBtn />
           </div>
         </form>
       </div>

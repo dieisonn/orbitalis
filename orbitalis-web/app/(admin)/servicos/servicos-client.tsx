@@ -137,11 +137,12 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface">
-              {['Sigla', 'Nome', 'Cor', 'Google Agenda', 'Valor Padrão', 'Ações'].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
-                  {h}
-                </th>
-              ))}
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sigla</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nome</th>
+              <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cor</th>
+              <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Google Agenda</th>
+              <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Valor Padrão</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -298,19 +299,19 @@ function TipoRow({
         </span>
       </td>
       <td className="px-4 py-3 font-medium text-gray-900">{ts.nome}</td>
-      <td className="px-4 py-3">
+      <td className="hidden md:table-cell px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded" style={{ backgroundColor: ts.corHex }} />
           <span className="text-xs font-mono text-gray-500">{ts.corHex}</span>
         </div>
       </td>
-      <td className="px-4 py-3">
+      <td className="hidden md:table-cell px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 rounded" style={{ backgroundColor: cor?.hex ?? '#039BE5' }} />
           <span className="text-xs text-gray-500">{cor?.label ?? `#${ts.calendarColorId}`}</span>
         </div>
       </td>
-      <td className="px-4 py-3 text-gray-500 text-sm">
+      <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-sm">
         {ts.valorPadrao != null
           ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(ts.valorPadrao))
           : <span className="text-gray-300">—</span>}

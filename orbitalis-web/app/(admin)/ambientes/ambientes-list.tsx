@@ -108,22 +108,22 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
                 <button
                   type="button"
                   onClick={() => toggle(cliente.id)}
-                  className="w-full flex items-center justify-between px-6 py-3 bg-primary/5 border-b border-border hover:bg-primary/10 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border hover:bg-primary/10 transition-colors"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <ChevronDown
                       size={14}
-                      className={`text-primary/60 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+                      className={`text-primary/60 transition-transform duration-200 shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}
                     />
-                    <span className="font-bold text-primary text-sm">
+                    <span className="font-bold text-primary text-sm truncate">
                       {cliente.nomeFantasia ?? cliente.razaoSocial}
                     </span>
                     {cliente.nomeFantasia && (
-                      <span className="text-xs text-gray-400">{cliente.razaoSocial}</span>
+                      <span className="hidden sm:inline text-xs text-gray-400 truncate">{cliente.razaoSocial}</span>
                     )}
                   </div>
-                  <span className="text-xs text-gray-400 font-medium">
-                    {ambs.length} ambiente(s) · {totalEqs} equipamento(s)
+                  <span className="text-xs text-gray-400 font-medium shrink-0 ml-2">
+                    {ambs.length} amb. · {totalEqs} eq.
                   </span>
                 </button>
 
@@ -132,32 +132,30 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border bg-surface">
-                        {['Ambiente', 'Localização Interna', 'Área', 'Cap. Térmica', 'Equipamentos', ''].map((h) => (
-                          <th
-                            key={h}
-                            className="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right"
-                          >
-                            {h}
-                          </th>
-                        ))}
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Localização</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Área</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cap. Térmica</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equip.</th>
+                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {ambs.map((a) => (
                         <tr key={a.id} className="hover:bg-surface/50 transition-colors">
-                          <td className="px-5 py-3 font-semibold text-gray-900">{a.nome}</td>
-                          <td className="px-5 py-3 text-gray-500 text-xs">{a.localizacaoInterna}</td>
-                          <td className="px-5 py-3 text-gray-500 text-xs whitespace-nowrap">
+                          <td className="px-4 py-3 font-semibold text-gray-900">{a.nome}</td>
+                          <td className="px-4 py-3 text-gray-500 text-xs">{a.localizacaoInterna}</td>
+                          <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                             {Number(a.metrosQuadrados).toFixed(0)} m²
                           </td>
-                          <td className="px-5 py-3 text-gray-500 text-xs">{a.capacidadeTermica}</td>
-                          <td className="px-5 py-3">
+                          <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs">{a.capacidadeTermica}</td>
+                          <td className="px-4 py-3">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg">
                               <Cpu size={10} />
                               {a.equipamentos?.length ?? 0}
                             </span>
                           </td>
-                          <td className="px-5 py-3 text-right">
+                          <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <a
                                 href={`/ambientes/${a.id}/editar`}

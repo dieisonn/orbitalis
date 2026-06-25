@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
       <Sidebar config={config} />
-      <main className="flex-1 p-4 pt-16 md:p-8 md:pt-8 overflow-y-auto print:p-0 print:w-full print:overflow-visible">
+      <main className="flex-1 pt-16 pr-4 pb-4 pl-14 md:p-8 overflow-y-auto print:p-0 print:w-full print:overflow-visible">
         {children}
       </main>
     </div>

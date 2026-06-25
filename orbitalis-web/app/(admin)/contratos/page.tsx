@@ -43,12 +43,12 @@ export default async function ContratosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                <th className="text-left px-5 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
+                <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
                 <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Descrição</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor/mês</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">O.S. inclusas</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
+                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor/mês</th>
+                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">O.S.</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -61,11 +61,20 @@ export default async function ContratosPage() {
 
                 return (
                   <tr key={c.id} className="hover:bg-surface/60">
-                    <td className="px-5 py-3 font-medium text-gray-800">
-                      {c.cliente.nomeFantasia ?? c.cliente.razaoSocial}
+                    <td className="px-4 py-3 font-medium text-gray-800">
+                      <div>{c.cliente.nomeFantasia ?? c.cliente.razaoSocial}</div>
+                      <div className="sm:hidden mt-1">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          vencido ? 'bg-red-100 text-red-700' :
+                          !c.ativo ? 'bg-gray-100 text-gray-500' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{c.descricao}</td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate text-xs">{c.descricao}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">
                       <span className="text-xs">{fmtDate(c.vigenciaInicio)}</span>
                       <span className="text-gray-300 mx-1">→</span>
                       <span className={`text-xs font-semibold ${vencido ? 'text-red-600' : urgente ? 'text-yellow-600' : 'text-gray-700'}`}>
@@ -75,9 +84,9 @@ export default async function ContratosPage() {
                         <AlertTriangle size={11} className={`inline ml-1 ${vencido ? 'text-red-500' : 'text-yellow-500'}`} />
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 font-mono text-xs">{fmtBRL(c.valorMensal)}</td>
-                    <td className="px-4 py-3 text-gray-500">{c.numOsIncluidas ?? '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden md:table-cell px-4 py-3 text-gray-700 font-mono text-xs">{fmtBRL(c.valorMensal)}</td>
+                    <td className="hidden md:table-cell px-4 py-3 text-gray-500 text-xs">{c.numOsIncluidas ?? '—'}</td>
+                    <td className="hidden sm:table-cell px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                         vencido ? 'bg-red-100 text-red-700' :
                         !c.ativo ? 'bg-gray-100 text-gray-500' :
