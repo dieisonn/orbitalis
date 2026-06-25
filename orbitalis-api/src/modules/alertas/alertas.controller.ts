@@ -27,6 +27,11 @@ export class AlertasController {
     return this.alertasService.updateConfig(body);
   }
 
+  @Patch('resolver-todos')
+  resolverTodos() {
+    return this.alertasService.resolverTodos();
+  }
+
   @Patch(':id/resolver')
   resolver(@Param('id') id: string) {
     return this.alertasService.resolver(id);

@@ -98,7 +98,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface">
-              <th className="px-4 py-3 w-10">
+              <th className="px-3 py-3 w-10">
                 <input
                   type="checkbox"
                   className="rounded border-gray-300"
@@ -107,11 +107,22 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                   onChange={toggleAll}
                 />
               </th>
-              {['Nº', 'Cliente / Ambiente', 'Status', 'Origem', 'Técnico', 'Data', 'Itens', 'Ação'].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
-                  {h}
-                </th>
-              ))}
+              {/* Nº — sempre visível */}
+              <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nº</th>
+              {/* Cliente/Ambiente — sempre visível */}
+              <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente / Cliente</th>
+              {/* Status — oculto no mobile (aparece inline na célula de ambiente) */}
+              <th className="hidden sm:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              {/* Origem — oculto no mobile */}
+              <th className="hidden sm:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Origem</th>
+              {/* Técnico — oculto no mobile e tablet estreito */}
+              <th className="hidden md:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Técnico</th>
+              {/* Data — oculto no mobile */}
+              <th className="hidden sm:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Data</th>
+              {/* Itens — oculto no mobile */}
+              <th className="hidden sm:table-cell px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">Itens</th>
+              {/* Ação — sempre visível */}
+              <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Ação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -124,7 +135,8 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                   key={os.id}
                   className={`hover:bg-surface transition-colors align-middle${isSelected ? ' bg-blue-50' : ''}`}
                 >
-                  <td className="px-4 py-4">
+                  {/* Checkbox */}
+                  <td className="px-3 py-3">
                     <input
                       type="checkbox"
                       className="rounded border-gray-300"
@@ -132,10 +144,11 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                       onChange={() => toggleOne(os.id)}
                     />
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  {/* Nº */}
+                  <td className="px-3 py-3 whitespace-nowrap">
                     {os.tipoServico ? (
                       <span
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-white text-xs font-bold"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-white text-xs font-bold"
                         style={{ backgroundColor: os.tipoServico.corHex }}
                       >
                         {os.tipoServico.sigla}-{os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 4).toUpperCase()}
@@ -146,37 +159,48 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-4">
-                    <div className="font-medium text-gray-900">{os.ambiente?.nome ?? '—'}</div>
+                  {/* Ambiente / Cliente — mostra status no mobile (sm:hidden) */}
+                  <td className="px-3 py-3 min-w-0">
+                    <div className="font-medium text-gray-900 truncate max-w-[180px] sm:max-w-none">{os.ambiente?.nome ?? '—'}</div>
                     {clienteNome && (
-                      <div className="text-xs text-gray-400 mt-0.5">{clienteNome}</div>
+                      <div className="text-xs text-gray-400 mt-0.5 truncate max-w-[180px] sm:max-w-none">{clienteNome}</div>
                     )}
+                    {/* Status visível só no mobile */}
+                    <div className="mt-1.5 sm:hidden">
+                      <StatusBadge status={os.status} />
+                    </div>
                     {os.observacoesGerais && (
-                      <div className="text-xs text-gray-400 mt-1 max-w-[220px] truncate italic" title={os.observacoesGerais}>
+                      <div className="hidden sm:block text-xs text-gray-400 mt-1 max-w-[220px] truncate italic" title={os.observacoesGerais}>
                         {os.observacoesGerais}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-4">
+                  {/* Status — oculto no mobile */}
+                  <td className="hidden sm:table-cell px-3 py-3">
                     <StatusBadge status={os.status} />
                   </td>
-                  <td className="px-4 py-4 text-gray-500">
+                  {/* Origem — oculto no mobile */}
+                  <td className="hidden sm:table-cell px-3 py-3 text-gray-500 text-xs">
                     {ORIGEM_LABEL[os.origem] ?? os.origem}
                   </td>
-                  <td className="px-4 py-4 text-gray-500 text-xs">
+                  {/* Técnico — oculto no mobile/tablet */}
+                  <td className="hidden md:table-cell px-3 py-3 text-gray-500 text-xs">
                     {os.tecnico ? (
                       <span>{os.tecnico.nome ?? os.tecnico.email}</span>
                     ) : (
                       <span className="italic text-gray-400">Não atribuído</span>
                     )}
                   </td>
-                  <td className="px-4 py-4 text-gray-500 text-xs whitespace-nowrap">
+                  {/* Data — oculto no mobile */}
+                  <td className="hidden sm:table-cell px-3 py-3 text-gray-500 text-xs whitespace-nowrap">
                     {new Date(os.dataAgendamento).toLocaleDateString('pt-BR')}
                   </td>
-                  <td className="px-4 py-4 text-center font-semibold text-gray-600">
+                  {/* Itens — oculto no mobile */}
+                  <td className="hidden sm:table-cell px-3 py-3 text-center font-semibold text-gray-600">
                     {os.itens?.length ?? 0}
                   </td>
-                  <td className="px-4 py-3">
+                  {/* Ação */}
+                  <td className="px-3 py-3">
                     <OsActionsMenu
                       osId={os.id}
                       status={os.status}

@@ -20,6 +20,15 @@ export class AlertasService {
     });
   }
 
+  async resolverTodos() {
+    const agora = new Date();
+    const { count } = await this.prisma.alertaOcorrencia.updateMany({
+      where: { resolvido: false },
+      data: { resolvido: true, resolvidoEm: agora },
+    });
+    return { resolvidos: count };
+  }
+
   async getConfig() {
     let cfg = await this.prisma.alertaConfig.findFirst();
     if (!cfg) {

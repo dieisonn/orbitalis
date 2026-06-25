@@ -24,6 +24,7 @@ import {
   CalendarDays,
   Briefcase,
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 const NAV = [
   { href: '/dashboard',              label: 'Cockpit',           icon: LayoutDashboard },
@@ -116,8 +117,9 @@ export default function Sidebar({ config }: { config?: Config }) {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-white/10">
+        {/* Tema + Logout */}
+        <div className="p-3 border-t border-white/10 space-y-0.5">
+          <ThemeToggle />
           <form action={logout}>
             <button
               type="submit"

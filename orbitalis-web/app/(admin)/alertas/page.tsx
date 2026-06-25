@@ -2,6 +2,7 @@
 import { Bell } from 'lucide-react'
 import { AlertaCard } from './alerta-card'
 import { AlertaConfigForm } from './alerta-config-form'
+import { ResolverTodosBtn } from './resolver-todos-btn'
 
 type AlertaOcorrencia = {
   id: string
@@ -38,7 +39,7 @@ export default async function AlertasPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             <Bell size={22} />
@@ -53,6 +54,9 @@ export default async function AlertasPage({ searchParams }: Props) {
             {ativos.length} alerta{ativos.length !== 1 ? 's' : ''} ativo{ativos.length !== 1 ? 's' : ''}
           </p>
         </div>
+        {!showResolvidos && tab !== 'config' && ativos.length > 0 && (
+          <ResolverTodosBtn total={ativos.length} />
+        )}
       </div>
 
       {/* Tabs */}
