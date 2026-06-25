@@ -46,16 +46,21 @@ function CustomTick({ x, y, payload, atualLabel }: {
 }) {
   if (!payload) return null
   const isAtual = payload.value === atualLabel
+  const cx = Number(x ?? 0)
+  const cy = Number(y ?? 0)
   return (
-    <text
-      x={Number(x ?? 0)} y={Number(y ?? 0) + 12}
-      textAnchor="middle"
-      fontSize={isAtual ? 12 : 11}
-      fontWeight={isAtual ? 700 : 400}
-      fill={isAtual ? '#0505ad' : '#6b7280'}
-    >
-      {payload.value}
-    </text>
+    <g transform={`translate(${cx},${cy})`}>
+      <text
+        x={0} y={0} dy={4}
+        textAnchor="end"
+        transform="rotate(-40)"
+        fontSize={isAtual ? 11 : 10}
+        fontWeight={isAtual ? 700 : 400}
+        fill={isAtual ? '#0505ad' : '#6b7280'}
+      >
+        {payload.value}
+      </text>
+    </g>
   )
 }
 
@@ -82,6 +87,8 @@ export function OsChart({ data, ano }: { data: Ponto[]; ano: number }) {
           dataKey="mes"
           tick={(props) => <CustomTick {...props} atualLabel={mostrarLinha ? atualLabel : ''} />}
           interval={0}
+          height={48}
+          tickLine={false}
         />
         <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
         <Tooltip

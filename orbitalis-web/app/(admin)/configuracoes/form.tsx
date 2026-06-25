@@ -42,20 +42,20 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Preview */}
       <div className="rounded-xl overflow-hidden border border-border shadow-sm">
-        <div className="flex items-center gap-4 p-5" style={{ backgroundColor: cor }}>
+        <div className="flex items-center gap-4 p-4" style={{ backgroundColor: cor }}>
           {logoPreview ? (
-            <div className="bg-white rounded-xl p-2 shrink-0">
-              <img src={logoPreview} alt="Logo" className="h-12 w-auto object-contain"
+            <div className="bg-white rounded-xl p-2 shrink-0 max-w-[45%]">
+              <img src={logoPreview} alt="Logo" className="h-10 w-auto max-w-full object-contain"
                 onError={() => setLogoPreview('')} />
             </div>
           ) : (
-            <div className="bg-white/20 rounded-xl px-4 py-2">
+            <div className="bg-white/20 rounded-xl px-4 py-2 shrink-0">
               <span className="text-white font-black text-lg">LOGO</span>
             </div>
           )}
-          <div className="text-white min-w-0">
-            <p className="font-bold text-lg leading-tight">Preview do sidebar</p>
-            <p className="text-white/60 text-xs">Assim aparecerá para os usuários</p>
+          <div className="text-white min-w-0 flex-1">
+            <p className="font-bold text-base leading-tight">Preview do sidebar</p>
+            <p className="text-white/60 text-xs mt-0.5">Assim aparecerá para os usuários</p>
           </div>
         </div>
       </div>

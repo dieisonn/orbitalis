@@ -129,26 +129,31 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
 
                 {/* Tabela (ocultável) */}
                 {!isCollapsed && (
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-fixed">
                     <thead>
                       <tr className="border-b border-border bg-surface">
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Localização</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Área</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cap. Térmica</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equip.</th>
-                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide"></th>
+                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Localização</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Área</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Cap. Térmica</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Equip.</th>
+                        <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-20"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
                       {ambs.map((a) => (
                         <tr key={a.id} className="hover:bg-surface/50 transition-colors">
-                          <td className="px-4 py-3 font-semibold text-gray-900">{a.nome}</td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">{a.localizacaoInterna}</td>
+                          <td className="px-4 py-3 overflow-hidden">
+                            <div className="font-semibold text-gray-900 truncate">{a.nome}</div>
+                            {a.localizacaoInterna && (
+                              <div className="sm:hidden text-xs text-gray-500 mt-0.5 truncate">{a.localizacaoInterna}</div>
+                            )}
+                          </td>
+                          <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs truncate">{a.localizacaoInterna}</td>
                           <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                             {Number(a.metrosQuadrados).toFixed(0)} m²
                           </td>
-                          <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs">{a.capacidadeTermica}</td>
+                          <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs truncate">{a.capacidadeTermica}</td>
                           <td className="px-4 py-3">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg">
                               <Cpu size={10} />
@@ -156,7 +161,7 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-1.5">
                               <a
                                 href={`/ambientes/${a.id}/editar`}
                                 className="text-xs font-semibold text-primary hover:underline"

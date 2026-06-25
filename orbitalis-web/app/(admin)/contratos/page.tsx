@@ -1,5 +1,7 @@
 ﻿import { api } from '@/lib/api'
 import { FileText, Plus, AlertTriangle } from 'lucide-react'
+import { DeleteButton } from '@/components/ui/delete-button'
+import { excluirContrato } from './actions'
 
 type Contrato = {
   id: string; descricao: string; valorMensal: number | null
@@ -46,8 +48,8 @@ export default async function ContratosPage() {
                 <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
                 <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Descrição</th>
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
-                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor/mês</th>
-                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">O.S.</th>
+                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor Total</th>
+                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="Ordens de Serviço incluídas mensalmente no contrato">O.S./mês</th>
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -59,10 +61,13 @@ export default async function ContratosPage() {
                 const vencido = diasRestantes < 0
                 const urgente = !vencido && diasRestantes <= 30
 
+                const meses = Math.max(1, Math.round((fim - new Date(c.vigenciaInicio).getTime()) / (30 * 86_400_000)))
+                const valorTotal = c.valorMensal != null ? c.valorMensal * meses : null
+
                 return (
                   <tr key={c.id} className="hover:bg-surface/60">
-                    <td className="px-4 py-3 font-medium text-gray-800">
-                      <div>{c.cliente.nomeFantasia ?? c.cliente.razaoSocial}</div>
+                    <td className="px-4 py-3 font-medium text-gray-800 overflow-hidden">
+                      <div className="truncate">{c.cliente.nomeFantasia ?? c.cliente.razaoSocial}</div>
                       <div className="sm:hidden mt-1">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           vencido ? 'bg-red-100 text-red-700' :
@@ -73,7 +78,9 @@ export default async function ContratosPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate text-xs">{c.descricao}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs overflow-hidden">
+                      <div className="truncate">{c.descricao}</div>
+                    </td>
                     <td className="hidden sm:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">
                       <span className="text-xs">{fmtDate(c.vigenciaInicio)}</span>
                       <span className="text-gray-300 mx-1">→</span>
@@ -84,7 +91,12 @@ export default async function ContratosPage() {
                         <AlertTriangle size={11} className={`inline ml-1 ${vencido ? 'text-red-500' : 'text-yellow-500'}`} />
                       )}
                     </td>
-                    <td className="hidden md:table-cell px-4 py-3 text-gray-700 font-mono text-xs">{fmtBRL(c.valorMensal)}</td>
+                    <td className="hidden md:table-cell px-4 py-3 text-gray-700 font-mono text-xs">
+                      {fmtBRL(valorTotal)}
+                      {c.valorMensal != null && (
+                        <div className="text-[10px] text-gray-400">{fmtBRL(c.valorMensal)}/mês × {meses}</div>
+                      )}
+                    </td>
                     <td className="hidden md:table-cell px-4 py-3 text-gray-500 text-xs">{c.numOsIncluidas ?? '—'}</td>
                     <td className="hidden sm:table-cell px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
@@ -96,7 +108,10 @@ export default async function ContratosPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <a href={`/contratos/${c.id}`} className="text-primary text-xs font-semibold hover:underline">Ver</a>
+                      <div className="flex items-center justify-end gap-2">
+                        <a href={`/contratos/${c.id}`} className="text-primary text-xs font-semibold hover:underline">Ver</a>
+                        <DeleteButton action={excluirContrato.bind(null, c.id)} />
+                      </div>
                     </td>
                   </tr>
                 )

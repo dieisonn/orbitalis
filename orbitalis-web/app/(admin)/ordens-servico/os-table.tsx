@@ -95,7 +95,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
   return (
     <>
       <div className="bg-white rounded-xl border border-border overflow-hidden mt-4">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr className="border-b border-border bg-surface">
               <th className="px-3 py-3 w-10">
@@ -108,8 +108,8 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                 />
               </th>
               {/* Nº — sempre visível */}
-              <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nº</th>
-              {/* Cliente/Ambiente — sempre visível */}
+              <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[84px]">Nº</th>
+              {/* Cliente/Ambiente — sempre visível, toma espaço restante */}
               <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente / Cliente</th>
               {/* Status — oculto no mobile (aparece inline na célula de ambiente) */}
               <th className="hidden sm:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
@@ -122,7 +122,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
               {/* Itens — oculto no mobile */}
               <th className="hidden sm:table-cell px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">Itens</th>
               {/* Ação — sempre visível */}
-              <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Ação</th>
+              <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">Ação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -160,10 +160,10 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                     )}
                   </td>
                   {/* Ambiente / Cliente — mostra status no mobile (sm:hidden) */}
-                  <td className="px-3 py-3 min-w-0">
-                    <div className="font-medium text-gray-900 truncate max-w-[180px] sm:max-w-none">{os.ambiente?.nome ?? '—'}</div>
+                  <td className="px-3 py-3 min-w-0 overflow-hidden">
+                    <div className="font-medium text-gray-900 truncate">{os.ambiente?.nome ?? '—'}</div>
                     {clienteNome && (
-                      <div className="text-xs text-gray-400 mt-0.5 truncate max-w-[180px] sm:max-w-none">{clienteNome}</div>
+                      <div className="text-xs text-gray-400 mt-0.5 truncate">{clienteNome}</div>
                     )}
                     {/* Status visível só no mobile */}
                     <div className="mt-1.5 sm:hidden">

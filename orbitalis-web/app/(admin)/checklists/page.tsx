@@ -32,33 +32,33 @@ export default async function ChecklistsPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Checklists PMOC</h1>
           <p className="text-gray-500 text-sm mt-1">Templates de itens de manutenção usados nas O.S.</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div className="flex flex-wrap items-center gap-2">
           <form action={importarPmocSplitHiwall}>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-primary text-sm font-semibold rounded-lg border border-primary hover:bg-primary/5 transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-white text-primary text-xs font-semibold rounded-lg border border-primary hover:bg-primary/5 transition-colors"
               title="Importar checklist padrão PMOC Split Hi-Wall (ABRAVA)"
             >
-              <Download size={14} />
+              <Download size={13} />
               PMOC Split Hi-Wall
             </button>
           </form>
           <form action={importarAnvisa}>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-primary text-sm font-semibold rounded-lg border border-primary hover:bg-primary/5 transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-white text-primary text-xs font-semibold rounded-lg border border-primary hover:bg-primary/5 transition-colors"
               title="Importar checklist padrão ANVISA — Climatização em Serviços de Saúde (RDC 09/2003)"
             >
-              <Download size={14} />
+              <Download size={13} />
               ANVISA (RDC 09/2003)
             </button>
           </form>
-          <a href="/checklists/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
+          <a href="/checklists/novo" className="inline-flex items-center gap-2 px-3 py-2 bg-action text-white text-xs font-semibold rounded-lg hover:bg-action/90 transition-colors">
             + Novo Checklist
           </a>
         </div>

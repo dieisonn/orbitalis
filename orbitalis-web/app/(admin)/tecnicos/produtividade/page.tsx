@@ -62,19 +62,19 @@ export default async function ProdutividadePage({ searchParams }: Props) {
         <div className="space-y-4">
           {tecnicos.map((t, idx) => (
             <div key={t.id} className="bg-white rounded-xl border border-border p-5">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+                <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${
                     idx === 0 ? 'bg-yellow-400' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-orange-400' : 'bg-primary/30'
                   }`}>
                     #{idx + 1}
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900">{t.nome}</p>
-                    <p className="text-xs text-gray-400">{t.email}{t.especialidade ? ` · ${t.especialidade}` : ''}</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-gray-900 truncate">{t.nome}</p>
+                    <p className="text-xs text-gray-400 truncate">{t.email}{t.especialidade ? ` · ${t.especialidade}` : ''}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap justify-end">
+                <div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                     t.taxaConclusao >= 80 ? 'bg-green-100 text-green-700' :
                     t.taxaConclusao >= 50 ? 'bg-yellow-100 text-yellow-700' :
