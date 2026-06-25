@@ -152,7 +152,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
       </div>
 
       {/* Status das O.S. */}
-      <div className="grid grid-cols-5 gap-2 mb-4">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
         {[
           { key: 'aberta', label: 'Abertas', color: 'text-blue-600 bg-blue-50' },
           { key: 'agendada', label: 'Agendadas', color: 'text-orange-600 bg-orange-50' },

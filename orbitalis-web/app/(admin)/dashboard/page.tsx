@@ -150,7 +150,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       </div>
 
       {/* KPIs secundários */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white border border-border rounded-xl p-4">
           <p className="text-xs text-gray-400 mb-1.5">Taxa de corretivas (mês)</p>
           <p className="text-2xl font-bold tabular-nums text-gray-900">{taxaCorretivas}%</p>

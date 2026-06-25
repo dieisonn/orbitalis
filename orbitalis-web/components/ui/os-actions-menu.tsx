@@ -278,9 +278,14 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
   function handleOpen() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
+      const menuW = 208
       const up = window.innerHeight - r.bottom < 320
+      const left = Math.min(
+        window.innerWidth - menuW - 8,
+        Math.max(8, r.right - menuW),
+      )
       setOpenUp(up)
-      setPos({ top: up ? r.top : r.bottom + 4, left: r.right - 208 })
+      setPos({ top: up ? r.top : r.bottom + 4, left })
     }
     setOpen((v) => !v)
     setPanel('menu')

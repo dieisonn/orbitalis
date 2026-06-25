@@ -234,7 +234,7 @@ export default async function OsDetailPage({ params }: Props) {
 
       {/* Financeiro */}
       {(os.valorMaoObra != null || os.valorPecas != null) && (
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
             <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
               <DollarSign size={10} /> Mão de Obra
