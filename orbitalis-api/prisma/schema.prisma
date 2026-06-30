@@ -39,6 +39,7 @@ enum AlertaTipo {
   equipamento_reincidente
   contrato_vencendo
   plano_vencendo
+  mttr_critico
 }
 
 enum AlertaSeveridade {
@@ -309,6 +310,7 @@ model ConfiguracaoEmpresa {
   // Thresholds de confiabilidade (MTTR/MTBF)
   mttrLimiteHoras          Int?      @map("mttr_limite_horas")
   mtbfLimiteDias           Int?      @map("mtbf_limite_dias")
+  custoHoraParada          Decimal?  @map("custo_hora_parada") @db.Decimal(10, 2)
 
   @@map("configuracao_empresa")
 }

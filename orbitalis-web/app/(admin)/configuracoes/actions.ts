@@ -45,11 +45,13 @@ export async function salvarResponsavelTecnico(responsavelTecnicoId: string | nu
 export async function salvarThresholdsConfiabilidade(
   mttrLimiteHoras: number | null,
   mtbfLimiteDias: number | null,
+  custoHoraParada: number | null = null,
 ) {
   try {
     await api.patch('/configuracao', {
       mttrLimiteHoras: mttrLimiteHoras ?? null,
       mtbfLimiteDias: mtbfLimiteDias ?? null,
+      custoHoraParada: custoHoraParada ?? null,
     })
     revalidatePath('/configuracoes')
     return { ok: true as const }

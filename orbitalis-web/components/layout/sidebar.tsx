@@ -46,7 +46,7 @@ const NAV = [
 
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null } | null
 
-export default function Sidebar({ config }: { config?: Config }) {
+export default function Sidebar({ config, alertasCount = 0 }: { config?: Config; alertasCount?: number }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
 
@@ -98,6 +98,7 @@ export default function Sidebar({ config }: { config?: Config }) {
           {NAV.map(({ href, label, icon: Icon }) => {
             const exactMatch = href === '/dashboard' || href === '/ordens-servico/agenda'
             const active = path === href || (!exactMatch && path.startsWith(href))
+            const isAlertas = href === '/alertas'
             return (
               <Link
                 key={href}
@@ -111,7 +112,12 @@ export default function Sidebar({ config }: { config?: Config }) {
                 ].join(' ')}
               >
                 <Icon size={15} className="shrink-0" />
-                {label}
+                <span className="flex-1">{label}</span>
+                {isAlertas && alertasCount > 0 && (
+                  <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                    {alertasCount > 99 ? '99+' : alertasCount}
+                  </span>
+                )}
               </Link>
             )
           })}

@@ -155,7 +155,7 @@ export class EquipamentosService {
     const equipWhere: any = { deletedAt: null };
     if (clienteId) equipWhere.ambiente = { cliente: { id: clienteId } };
 
-    const [equipamentos, itens] = await Promise.all([
+    const [equipamentos, itensCorretivos, itensPreventivos] = await Promise.all([
       this.prisma.equipamento.findMany({
         where: equipWhere,
         include: { ambiente: { include: { cliente: true } } },
@@ -172,23 +172,47 @@ export class EquipamentosService {
         select: {
           equipamentoId: true,
           ordemServico: {
-            select: { dataAgendamento: true, dataConclusao: true },
+            select: { dataAgendamento: true, dataConclusao: true, dataInicio: true },
           },
         },
         orderBy: { ordemServico: { dataConclusao: 'asc' } },
       }),
+      this.prisma.ordemServicoItem.findMany({
+        where: {
+          ordemServico: {
+            tipo: 'preventiva',
+            status: 'concluida',
+            dataConclusao: { gte: desde },
+          },
+        },
+        select: {
+          equipamentoId: true,
+          ordemServico: { select: { dataConclusao: true } },
+        },
+      }),
     ]);
 
-    const itensPorEquip = new Map<string, typeof itens>();
-    for (const item of itens) {
+    // Agrupar itens por equipamento
+    const itensPorEquip = new Map<string, typeof itensCorretivos>();
+    for (const item of itensCorretivos) {
       if (!itensPorEquip.has(item.equipamentoId)) {
         itensPorEquip.set(item.equipamentoId, []);
       }
       itensPorEquip.get(item.equipamentoId)!.push(item);
     }
 
+    // Agrupar preventivas por equipamento (para calcular retrabalho)
+    const prevPorEquip = new Map<string, Date[]>();
+    for (const item of itensPreventivos) {
+      if (!prevPorEquip.has(item.equipamentoId)) {
+        prevPorEquip.set(item.equipamentoId, []);
+      }
+      prevPorEquip.get(item.equipamentoId)!.push(item.ordemServico.dataConclusao!);
+    }
+
     return equipamentos.map((eq) => {
       const equItems = itensPorEquip.get(eq.id) ?? [];
+      const prevDates = prevPorEquip.get(eq.id) ?? [];
 
       const mttrHoras =
         equItems.length > 0
@@ -216,6 +240,30 @@ export class EquipamentosService {
         mtbfDias = +(intervals.reduce((a, b) => a + b, 0) / intervals.length).toFixed(1);
       }
 
+      // SLA de atendimento: tempo médio entre dataAgendamento e dataInicio (quando disponível)
+      const comSla = equItems.filter((i) => i.ordemServico.dataInicio !== null && i.ordemServico.dataInicio !== undefined);
+      const slaHoras = comSla.length > 0
+        ? +(comSla.reduce((sum, i) => {
+            const diff = (i.ordemServico.dataInicio!.getTime() - i.ordemServico.dataAgendamento.getTime()) / 3_600_000;
+            return sum + Math.max(0, diff);
+          }, 0) / comSla.length).toFixed(1)
+        : null;
+
+      // Retrabalho: corretivas dentro de 30 dias após uma preventiva no mesmo equipamento
+      let retrabalhoCount = 0;
+      for (const corr of equItems) {
+        const corrDate = corr.ordemServico.dataAgendamento.getTime();
+        const isRetrabalho = prevDates.some((prevDate) => {
+          const diff = (corrDate - prevDate.getTime()) / 86_400_000;
+          return diff >= 0 && diff <= 30;
+        });
+        if (isRetrabalho) retrabalhoCount++;
+      }
+      const taxaRetrabalho =
+        equItems.length > 0
+          ? +((retrabalhoCount / equItems.length) * 100).toFixed(1)
+          : null;
+
       return {
         id: eq.id,
         nome: eq.nome,
@@ -233,6 +281,9 @@ export class EquipamentosService {
             : null,
         mttrHoras,
         mtbfDias,
+        retrabalhoCount,
+        taxaRetrabalho,
+        slaHoras,
       };
     });
   }

@@ -19,6 +19,7 @@ type Config = {
   responsavelTecnico?: { id: string; nome: string | null; email: string; crea: string | null } | null
   mttrLimiteHoras?: number | null
   mtbfLimiteDias?: number | null
+  custoHoraParada?: number | null
 }
 
 type Tecnico = { id: string; email: string; nome: string | null; crea: string | null }
@@ -82,6 +83,7 @@ export default async function ConfiguracoesPage({
       <ConfiabilidadeCard
         mttrLimiteHoras={config.mttrLimiteHoras ?? null}
         mtbfLimiteDias={config.mtbfLimiteDias ?? null}
+        custoHoraParada={config.custoHoraParada ?? null}
       />
 
       <LgmvRecomputeCard />

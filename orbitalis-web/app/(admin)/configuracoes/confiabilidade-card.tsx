@@ -6,9 +6,10 @@ import { Activity } from 'lucide-react'
 type Props = {
   mttrLimiteHoras: number | null
   mtbfLimiteDias: number | null
+  custoHoraParada: number | null
 }
 
-export function ConfiabilidadeCard({ mttrLimiteHoras, mtbfLimiteDias }: Props) {
+export function ConfiabilidadeCard({ mttrLimiteHoras, mtbfLimiteDias, custoHoraParada }: Props) {
   const [isPending, startTransition] = useTransition()
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,11 +19,13 @@ export function ConfiabilidadeCard({ mttrLimiteHoras, mtbfLimiteDias }: Props) {
     const fd = new FormData(e.currentTarget)
     const mttr = fd.get('mttrLimiteHoras')
     const mtbf = fd.get('mtbfLimiteDias')
+    const custo = fd.get('custoHoraParada')
     setError(null); setSuccess(false)
     startTransition(async () => {
       const result = await salvarThresholdsConfiabilidade(
         mttr ? Number(mttr) : null,
         mtbf ? Number(mtbf) : null,
+        custo ? Number(custo) : null,
       )
       if (!result.ok) { setError(result.error ?? 'Erro ao salvar'); return }
       setSuccess(true)
@@ -37,12 +40,12 @@ export function ConfiabilidadeCard({ mttrLimiteHoras, mtbfLimiteDias }: Props) {
         </div>
         <div>
           <p className="font-semibold text-gray-900 text-sm">Thresholds de Confiabilidade</p>
-          <p className="text-xs text-gray-400 mt-0.5">Limites para classificação de MTTR e MTBF no semáforo de risco.</p>
+          <p className="text-xs text-gray-400 mt-0.5">Limites para semáforo de MTTR/MTBF e custo de indisponibilidade.</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Limite MTTR (horas)
@@ -71,6 +74,23 @@ export function ConfiabilidadeCard({ mttrLimiteHoras, mtbfLimiteDias }: Props) {
             />
             <p className="text-xs text-gray-400 mt-1">
               Vermelho se MTBF &lt; limite/2 · Amarelo se &lt; limite
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Custo/hora parada (R$)
+            </label>
+            <input
+              name="custoHoraParada"
+              type="number"
+              min={0}
+              step="0.01"
+              defaultValue={custoHoraParada ?? ''}
+              placeholder="Ex.: 500"
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Usado para calcular custo estimado de indisponibilidade
             </p>
           </div>
         </div>

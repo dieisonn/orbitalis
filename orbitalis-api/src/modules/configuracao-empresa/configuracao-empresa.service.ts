@@ -14,6 +14,7 @@ type UpsertDto = {
   responsavelTecnicoId?: string | null;
   mttrLimiteHoras?: number | null;
   mtbfLimiteDias?: number | null;
+  custoHoraParada?: number | null;
 };
 
 const INCLUDE_RESPONSAVEL = {
@@ -40,6 +41,7 @@ export class ConfiguracaoEmpresaService {
       responsavelTecnico: null,
       mttrLimiteHoras: null,
       mtbfLimiteDias: null,
+      custoHoraParada: null,
     };
   }
 

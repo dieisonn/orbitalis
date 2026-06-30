@@ -4,6 +4,7 @@ import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangl
 import { LgmvUpload } from '@/components/ui/lgmv-upload'
 import { LgmvDiagnosticosTable } from './lgmv-diagnosticos-table'
 import type { DiagnosticoResumido } from './lgmv-diagnosticos-table'
+import { MttrTrendChart } from './mttr-trend-chart'
 
 type Props = { params: Promise<{ id: string }> }
 type Config = { mttrLimiteHoras: number | null; mtbfLimiteDias: number | null }
@@ -142,6 +143,25 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
     if (v >= mtbfLimite / 2) return { cls: 'bg-yellow-100 text-yellow-800', label: 'Atenção' }
     return { cls: 'bg-red-100 text-red-800', label: 'Crítico' }
   }
+
+  // Tendência MTTR por mês (últimos 12 meses, ordenado cronologicamente)
+  const mttrPorMes = new Map<string, { soma: number; count: number }>()
+  for (const i of corretivasConcl) {
+    const d = new Date(i.ordemServico.dataConclusao!)
+    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const atual = mttrPorMes.get(chave) ?? { soma: 0, count: 0 }
+    const diff = (d.getTime() - new Date(i.ordemServico.dataAgendamento).getTime()) / 3_600_000
+    mttrPorMes.set(chave, { soma: atual.soma + diff, count: atual.count + 1 })
+  }
+  const dadosTendencia = [...mttrPorMes.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([chave, { soma, count }]) => {
+      const [ano, mes] = chave.split('-')
+      return {
+        mes: new Date(Number(ano), Number(mes) - 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
+        mttr: +(soma / count).toFixed(1),
+      }
+    })
 
   // Custo acumulado ao longo do tempo (para exibição linha a linha)
   let acumulado = Number(eq.valorAquisicao) || 0
@@ -299,6 +319,11 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {/* Gráfico de tendência MTTR */}
+      {dadosTendencia.length >= 2 && (
+        <MttrTrendChart dados={dadosTendencia} limite={mttrLimite} />
+      )}
 
       {/* Histórico linha a linha */}
       <div>

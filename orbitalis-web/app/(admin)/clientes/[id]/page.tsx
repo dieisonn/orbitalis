@@ -30,7 +30,7 @@ type MetricaEquip = {
   mtbfDias: number | null
 }
 
-type Config = { mttrLimiteHoras: number | null; mtbfLimiteDias: number | null }
+type Config = { mttrLimiteHoras: number | null; mtbfLimiteDias: number | null; custoHoraParada: number | null }
 
 type LgmvKpis = {
   superaquecimento?: { media: number }
@@ -62,7 +62,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
   let dash: Dashboard | undefined
   let lgmvEquips: LgmvEquip[] = []
   let metricas: MetricaEquip[] = []
-  let config: Config = { mttrLimiteHoras: null, mtbfLimiteDias: null }
+  let config: Config = { mttrLimiteHoras: null, mtbfLimiteDias: null, custoHoraParada: null }
   try {
     ;[cliente, dash] = await Promise.all([
       api.get<Cliente>(`/clientes/${id}`),
@@ -71,7 +71,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
     lgmvEquips = await api.get<LgmvEquip[]>(`/diagnosticos-lgmv/cliente/${id}`).catch(() => [])
     ;[metricas, config] = await Promise.all([
       api.get<MetricaEquip[]>(`/equipamentos/metricas-confiabilidade?clienteId=${id}`).catch(() => []),
-      api.get<Config>('/configuracao').catch(() => ({ mttrLimiteHoras: null, mtbfLimiteDias: null })),
+      api.get<Config>('/configuracao').catch(() => ({ mttrLimiteHoras: null, mtbfLimiteDias: null, custoHoraParada: null })),
     ])
   } catch {
     /* empty */
@@ -100,8 +100,9 @@ export default async function ClienteDetalhePage({ params }: Props) {
   ]
 
   // ── Métricas de confiabilidade da frota do cliente ──
-  const mttrLimite = config.mttrLimiteHoras ?? 48
-  const mtbfLimite = config.mtbfLimiteDias  ?? 90
+  const mttrLimite  = config.mttrLimiteHoras ?? 48
+  const mtbfLimite  = config.mtbfLimiteDias  ?? 90
+  const custoPorH   = config.custoHoraParada ? Number(config.custoHoraParada) : null
   const periodoHoras = 365 * 24 // 12 meses em horas por equipamento
   const nEquip = metricas.length
 
@@ -318,6 +319,19 @@ export default async function ClienteDetalhePage({ params }: Props) {
               <p className="text-[10px] text-gray-400 mt-0.5">tempo total em reparo</p>
             </div>
           </div>
+
+          {/* Custo estimado de indisponibilidade */}
+          {custoPorH !== null && horasReparo > 0 && (
+            <div className="mt-4 pt-4 border-t border-border flex items-center justify-between flex-wrap gap-2">
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <DollarSign size={12} className="text-red-500" />
+                Custo estimado de indisponibilidade ({horasReparo.toFixed(1)}h × {fmtBRL(custoPorH)}/h)
+              </p>
+              <p className="text-base font-bold text-red-600">
+                {fmtBRL(horasReparo * custoPorH)}
+              </p>
+            </div>
+          )}
         </div>
       )}
 

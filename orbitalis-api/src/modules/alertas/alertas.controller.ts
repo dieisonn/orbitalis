@@ -11,6 +11,12 @@ import { UsuarioTipo } from '@prisma/client';
 export class AlertasController {
   constructor(private readonly alertasService: AlertasService) {}
 
+  @Get('count')
+  async count() {
+    const total = await this.alertasService.contarAtivos();
+    return { total };
+  }
+
   @Get()
   findAll(@Query('resolvido') resolvido?: string) {
     const r = resolvido === 'true' ? true : resolvido === 'false' ? false : undefined;

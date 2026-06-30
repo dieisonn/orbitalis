@@ -187,6 +187,94 @@ export class AlertasService {
       }
     }
 
+    // ── Regra 5: Planos de manutenção vencendo ───────────────────────────────
+    const limiarPlano = new Date(agora);
+    limiarPlano.setDate(limiarPlano.getDate() + cfg.planoVencendoDias);
+
+    const planosVencendo = await this.prisma.planoManutencao.findMany({
+      where: {
+        ativo: true,
+        dataFim: { gte: agora, lte: limiarPlano },
+      },
+      include: { cliente: { select: { razaoSocial: true } } },
+    });
+
+    for (const plano of planosVencendo) {
+      const existente = await this.prisma.alertaOcorrencia.findFirst({
+        where: { tipo: AlertaTipo.plano_vencendo, referenciaId: plano.id, resolvido: false },
+      });
+      if (!existente) {
+        const dias = Math.ceil((plano.dataFim!.getTime() - agora.getTime()) / 86_400_000);
+        await this.prisma.alertaOcorrencia.create({
+          data: {
+            tipo: AlertaTipo.plano_vencendo,
+            severidade: dias <= 7 ? AlertaSeveridade.critico : AlertaSeveridade.aviso,
+            titulo: `Plano de ${plano.cliente.razaoSocial} vence em ${dias} dias`,
+            descricao: `O plano preventivo (a cada ${plano.frequenciaDias}d) de ${plano.cliente.razaoSocial} vence em ${plano.dataFim!.toLocaleDateString('pt-BR')}. Renove para manter a cobertura.`,
+            referenciaId: plano.id,
+          },
+        });
+        criados++;
+      }
+    }
+
+    // ── Regra 6: MTTR crítico ─────────────────────────────────────────────────
+    const configEmpresa = await this.prisma.configuracaoEmpresa.findFirst();
+    const mttrLimite = configEmpresa?.mttrLimiteHoras ?? 48;
+
+    const ha12Meses = new Date(agora);
+    ha12Meses.setFullYear(ha12Meses.getFullYear() - 1);
+
+    const itensCorretivos = await this.prisma.ordemServicoItem.findMany({
+      where: {
+        ordemServico: {
+          tipo: 'corretiva',
+          status: 'concluida',
+          dataConclusao: { gte: ha12Meses },
+        },
+      },
+      select: {
+        equipamentoId: true,
+        ordemServico: { select: { dataAgendamento: true, dataConclusao: true } },
+      },
+    });
+
+    const mttrPorEquip = new Map<string, { soma: number; count: number }>();
+    for (const item of itensCorretivos) {
+      const diff =
+        (item.ordemServico.dataConclusao!.getTime() - item.ordemServico.dataAgendamento.getTime()) /
+        3_600_000;
+      const atual = mttrPorEquip.get(item.equipamentoId) ?? { soma: 0, count: 0 };
+      mttrPorEquip.set(item.equipamentoId, { soma: atual.soma + diff, count: atual.count + 1 });
+    }
+
+    for (const [equipId, { soma, count }] of mttrPorEquip.entries()) {
+      const mttr = soma / count;
+      if (mttr > mttrLimite) {
+        const existente = await this.prisma.alertaOcorrencia.findFirst({
+          where: { tipo: AlertaTipo.mttr_critico, referenciaId: equipId, resolvido: false },
+        });
+        if (!existente) {
+          const equipamento = await this.prisma.equipamento.findUnique({
+            where: { id: equipId },
+            include: { ambiente: { include: { cliente: true } } },
+          });
+          if (equipamento) {
+            await this.prisma.alertaOcorrencia.create({
+              data: {
+                tipo: AlertaTipo.mttr_critico,
+                severidade: AlertaSeveridade.critico,
+                titulo: `MTTR crítico: ${equipamento.nome}`,
+                descricao: `${equipamento.nome} (${equipamento.ambiente.cliente.razaoSocial}) tem MTTR médio de ${mttr.toFixed(1)}h nos últimos 12 meses (limite: ${mttrLimite}h).`,
+                referenciaId: equipId,
+              },
+            });
+            criados++;
+          }
+        }
+      }
+    }
+
     return criados;
   }
 
