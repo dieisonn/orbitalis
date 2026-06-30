@@ -26,6 +26,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { SearchButton } from '@/components/ui/search-palette'
 
 const NAV_GROUPS = [
   {
@@ -147,6 +148,11 @@ export default function Sidebar({ config, alertasCount = 0 }: { config?: Config;
           >
             <X size={16} />
           </button>
+        </div>
+
+        {/* Busca */}
+        <div className="px-3 py-2 border-b border-white/10">
+          <SearchButton />
         </div>
 
         {/* Nav */}

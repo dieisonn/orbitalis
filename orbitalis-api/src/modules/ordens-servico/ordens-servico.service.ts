@@ -138,8 +138,10 @@ export class OrdensServicoService {
     em60Dias.setDate(em60Dias.getDate() + 60);
     const em90Dias = new Date(agora);
     em90Dias.setDate(em90Dias.getDate() + 90);
+    const ha90Dias = new Date(agora);
+    ha90Dias.setDate(ha90Dias.getDate() - 90);
 
-    const [contagens, atrasadas, totalMes, concluidasMes, tecnicos, itensComTipo, planosRaw, custoMesRaw, osCorretivas, osConcluidas180, tempoMedioRaw] =
+    const [contagens, atrasadas, totalMes, concluidasMes, tecnicos, itensComTipo, planosRaw, custoMesRaw, osCorretivas, osConcluidas180, tempoMedioRaw, osSemTecnicoRaw] =
       await Promise.all([
         // Contagem por status (total geral)
         this.prisma.ordemServico.groupBy({
@@ -229,6 +231,25 @@ export class OrdensServicoService {
           },
           select: { dataAgendamento: true, dataConclusao: true },
         }),
+
+        // O.S. sem técnico atribuído (aberta/agendada)
+        this.prisma.ordemServico.findMany({
+          where: { status: { in: ['aberta', 'agendada'] }, tecnicoId: null },
+          select: {
+            id: true,
+            numero: true,
+            tipo: true,
+            dataAgendamento: true,
+            ambiente: {
+              select: {
+                nome: true,
+                cliente: { select: { nomeFantasia: true, razaoSocial: true } },
+              },
+            },
+          },
+          orderBy: { dataAgendamento: 'asc' },
+          take: 10,
+        }),
       ]);
 
     const porStatus = contagens.reduce(
@@ -300,6 +321,54 @@ export class OrdensServicoService {
         )
       : null;
 
+    // Top 5 equipamentos com mais corretivas nos últimos 90 dias
+    const topEquipRaw = await this.prisma.ordemServicoItem.groupBy({
+      by: ['equipamentoId'],
+      where: {
+        equipamento: { deletedAt: null },
+        ordemServico: { tipo: 'corretiva', dataConclusao: { gte: ha90Dias } },
+      },
+      _count: { equipamentoId: true },
+      orderBy: { _count: { equipamentoId: 'desc' } },
+      take: 5,
+    });
+
+    const topEquipDetalhes = topEquipRaw.length > 0
+      ? await this.prisma.equipamento.findMany({
+          where: { id: { in: topEquipRaw.map((e) => e.equipamentoId!).filter(Boolean) } },
+          select: {
+            id: true,
+            nome: true,
+            tipoEquipamento: true,
+            ambiente: {
+              select: { nome: true, cliente: { select: { nomeFantasia: true, razaoSocial: true } } },
+            },
+          },
+        })
+      : [];
+
+    const topEquipamentos = topEquipRaw
+      .filter((e) => e.equipamentoId)
+      .map((e) => {
+        const det = topEquipDetalhes.find((d) => d.id === e.equipamentoId);
+        return {
+          id: e.equipamentoId as string,
+          nome: det?.nome ?? '—',
+          tipoEquipamento: det?.tipoEquipamento ?? '',
+          cliente: det?.ambiente?.cliente?.nomeFantasia ?? det?.ambiente?.cliente?.razaoSocial ?? '',
+          totalCorretivas: e._count.equipamentoId,
+        };
+      });
+
+    const osSemTecnico = osSemTecnicoRaw.map((os) => ({
+      id: os.id,
+      numero: os.numero,
+      tipo: os.tipo,
+      dataAgendamento: os.dataAgendamento,
+      cliente: os.ambiente?.cliente?.nomeFantasia ?? os.ambiente?.cliente?.razaoSocial ?? '—',
+      ambiente: os.ambiente?.nome ?? '—',
+    }));
+
     return {
       porStatus,
       atrasadas,
@@ -315,6 +384,8 @@ export class OrdensServicoService {
       taxaCorretivas,
       tempoMedioAtendimento,
       totalConcluidasRecente: osConcluidas180,
+      topEquipamentos,
+      osSemTecnico,
     };
   }
 

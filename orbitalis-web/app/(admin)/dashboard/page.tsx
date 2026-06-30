@@ -3,6 +3,7 @@ import { api } from '@/lib/api'
 import {
   CalendarClock, User, Wrench,
   ClipboardList, Clock, AlertTriangle, CheckCircle, XCircle,
+  UserX, Cpu,
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
 import { YearSelector } from '@/components/ui/year-selector'
@@ -14,6 +15,9 @@ type Tecnico = {
 }
 type PlanoVencendo = { id: string; dataFim: string | null; ativo: boolean; cliente: string }
 type PlanosVencendo = { vermelho: PlanoVencendo[]; amarelo: PlanoVencendo[]; verde: PlanoVencendo[] }
+type TopEquip = { id: string; nome: string; tipoEquipamento: string; cliente: string; totalCorretivas: number }
+type OsSemTecnico = { id: string; numero: number | null; tipo: string; dataAgendamento: string; cliente: string; ambiente: string }
+
 type Painel = {
   porStatus: Record<string, number>
   atrasadas: number
@@ -25,6 +29,8 @@ type Painel = {
   taxaCorretivas: number
   tempoMedioAtendimento: number | null
   totalConcluidasRecente: number
+  topEquipamentos: TopEquip[]
+  osSemTecnico: OsSemTecnico[]
 }
 type Historico = {
   mes: string; aberta: number; agendada: number
@@ -64,6 +70,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     planosVencendo: { vermelho: [], amarelo: [], verde: [] },
     custoTotalMes: 0, taxaCorretivas: 0,
     tempoMedioAtendimento: null, totalConcluidasRecente: 0,
+    topEquipamentos: [], osSemTecnico: [],
   }
 
   const [painel, historico] = await Promise.all([
@@ -72,7 +79,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   ])
 
   const { porStatus, atrasadas, taxaConclusao, porTecnico, porTipoEquipamento, planosVencendo,
-          custoTotalMes, taxaCorretivas, tempoMedioAtendimento } = painel
+          custoTotalMes, taxaCorretivas, tempoMedioAtendimento, topEquipamentos, osSemTecnico } = painel
 
   const total = Object.values(porStatus).reduce<number>((s, n) => s + (n ?? 0), 0)
   const maxTecnico = porTecnico[0]?.total ?? 1
@@ -293,6 +300,85 @@ export default async function DashboardPage({ searchParams }: Props) {
                     <div className="w-full bg-gray-100 rounded-full h-1">
                       <div className="bg-primary/40 h-1 rounded-full transition-all" style={{ width: `${pct}%` }} />
                     </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Top equipamentos problemáticos + OS sem técnico */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+        {/* Top 5 equipamentos com mais corretivas (90 dias) */}
+        <div className="bg-white rounded-xl border border-border p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Cpu size={14} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700">Top equipamentos problemáticos</h2>
+            <span className="ml-auto text-xs text-gray-400">últimos 90 dias</span>
+          </div>
+          {topEquipamentos.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">Nenhuma corretiva registrada.</p>
+          ) : (
+            <div className="space-y-3">
+              {topEquipamentos.map((eq, i) => (
+                <div key={eq.id} className="flex items-center gap-3">
+                  <span className="text-[11px] text-gray-300 tabular-nums w-4 shrink-0">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <a href={`/equipamentos/${eq.id}/historico`} className="flex-1 min-w-0 hover:text-primary transition-colors">
+                    <p className="text-sm font-medium text-gray-800 truncate">{eq.nome}</p>
+                    <p className="text-xs text-gray-400 truncate">{eq.tipoEquipamento}{eq.cliente ? ` · ${eq.cliente}` : ''}</p>
+                  </a>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full tabular-nums shrink-0 ${
+                    eq.totalCorretivas >= 5 ? 'bg-red-100 text-red-700' :
+                    eq.totalCorretivas >= 3 ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {eq.totalCorretivas}×
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* O.S. sem técnico atribuído */}
+        <div className="bg-white rounded-xl border border-border p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <UserX size={14} className="text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-700">O.S. sem técnico</h2>
+            <span className={`ml-auto text-xs font-bold tabular-nums px-2 py-0.5 rounded-full ${
+              osSemTecnico.length > 0 ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'
+            }`}>
+              {osSemTecnico.length}
+            </span>
+          </div>
+          {osSemTecnico.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-6">Todas as O.S. têm técnico atribuído.</p>
+          ) : (
+            <div className="divide-y divide-border/60">
+              {osSemTecnico.map((os) => {
+                const num = os.numero != null ? `OS-${String(os.numero).padStart(4, '0')}` : `OS-${os.id.slice(0, 6).toUpperCase()}`
+                const atrasada = new Date(os.dataAgendamento) < new Date()
+                return (
+                  <div key={os.id} className="flex items-center gap-3 py-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <a href={`/ordens-servico/${os.id}`} className="text-sm font-medium text-gray-800 hover:text-primary">
+                          {num}
+                        </a>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${os.tipo === 'corretiva' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                          {os.tipo}
+                        </span>
+                        {atrasada && <span className="text-[10px] text-red-500 font-semibold">atrasada</span>}
+                      </div>
+                      <p className="text-xs text-gray-400 truncate">{os.cliente} · {os.ambiente}</p>
+                    </div>
+                    <span className="text-[11px] text-gray-400 tabular-nums shrink-0">
+                      {fmtData(os.dataAgendamento)}
+                    </span>
                   </div>
                 )
               })}

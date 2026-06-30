@@ -1,5 +1,6 @@
 import { api } from '@/lib/api'
 import Sidebar from '@/components/layout/sidebar'
+import { SearchPalette } from '@/components/ui/search-palette'
 
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null }
 
@@ -15,6 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <main className="flex-1 pt-16 pr-4 pb-4 pl-14 md:p-8 overflow-y-auto print:p-0 print:w-full print:overflow-visible">
         {children}
       </main>
+      <SearchPalette />
     </div>
   )
 }
