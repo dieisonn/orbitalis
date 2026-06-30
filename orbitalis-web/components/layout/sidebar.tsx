@@ -137,9 +137,9 @@ export default function Sidebar({ config, alertasCount = 0 }: { config?: Config;
         ].join(' ')}
       >
         {/* Logo */}
-        <div className="px-4 py-5 border-b border-white/10 flex items-center justify-between">
-          <div className="bg-white/95 rounded-xl px-3 py-2 flex items-center">
-            <img src={logoSrc} alt={nomeExibido} className="h-12 w-auto object-contain" />
+        <div className="h-16 px-4 flex items-center justify-between shrink-0">
+          <div className="bg-white rounded-lg px-2.5 py-1.5 flex items-center">
+            <img src={logoSrc} alt={nomeExibido} className="h-8 w-auto object-contain" />
           </div>
           <button
             className="md:hidden p-1 text-white/50 hover:text-white"
@@ -151,56 +151,55 @@ export default function Sidebar({ config, alertasCount = 0 }: { config?: Config;
         </div>
 
         {/* Busca */}
-        <div className="px-3 py-2 border-b border-white/10">
+        <div className="px-2.5 pb-3">
           <SearchButton />
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-2 overflow-y-auto">
-          {NAV_GROUPS.map((group, gi) => (
-            <div key={group.label} className={gi > 0 ? 'mt-1' : ''}>
-              {/* Separador + rótulo do grupo */}
-              {gi > 0 && <div className="mx-4 my-1 border-t border-white/8" />}
-              <p className="px-5 pt-2 pb-1 text-[9px] font-bold tracking-widest text-white/30 uppercase select-none">
+        <nav className="flex-1 px-2.5 overflow-y-auto space-y-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="px-2.5 mb-1 text-[10px] font-semibold tracking-wider text-white/30 uppercase select-none">
                 {group.label}
               </p>
-
-              {group.items.map(({ href, label, icon: Icon }) => {
-                const active   = isActive(href, path)
-                const isAlertas = href === '/alertas'
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={() => setOpen(false)}
-                    className={[
-                      'flex items-center gap-3 px-5 py-2 text-[13px] font-medium transition-colors',
-                      active
-                        ? 'bg-white/12 text-white'
-                        : 'text-white/60 hover:bg-white/8 hover:text-white/90',
-                    ].join(' ')}
-                  >
-                    <Icon size={15} className="shrink-0" />
-                    <span className="flex-1">{label}</span>
-                    {isAlertas && alertasCount > 0 && (
-                      <span className="ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
-                        {alertasCount > 99 ? '99+' : alertasCount}
-                      </span>
-                    )}
-                  </Link>
-                )
-              })}
+              <div className="space-y-0.5">
+                {group.items.map(({ href, label, icon: Icon }) => {
+                  const active   = isActive(href, path)
+                  const isAlertas = href === '/alertas'
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setOpen(false)}
+                      className={[
+                        'flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors',
+                        active
+                          ? 'bg-white/15 text-white'
+                          : 'text-white/55 hover:bg-white/8 hover:text-white/90',
+                      ].join(' ')}
+                    >
+                      <Icon size={15} className="shrink-0" />
+                      <span className="flex-1 truncate">{label}</span>
+                      {isAlertas && alertasCount > 0 && (
+                        <span className="ml-auto min-w-[17px] h-[17px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
+                          {alertasCount > 99 ? '99+' : alertasCount}
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
           ))}
         </nav>
 
         {/* Tema + Logout */}
-        <div className="p-3 border-t border-white/10 space-y-0.5">
+        <div className="p-2.5 mt-2 border-t border-white/10 space-y-0.5 shrink-0">
           <ThemeToggle />
           <form action={logout}>
             <button
               type="submit"
-              className="flex items-center gap-3 w-full px-3 py-2 text-[13px] text-white/50 hover:text-white/80 transition-colors rounded-lg hover:bg-white/8"
+              className="flex items-center gap-2.5 w-full px-2.5 py-1.5 text-[13px] text-white/55 hover:text-white/90 transition-colors rounded-lg hover:bg-white/8"
             >
               <LogOut size={14} />
               Sair

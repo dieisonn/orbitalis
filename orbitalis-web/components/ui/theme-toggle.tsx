@@ -57,7 +57,7 @@ export function ThemeToggle() {
       type="button"
       onClick={cycle}
       title={`Tema atual: ${label} — clique para alternar`}
-      className="flex items-center gap-3 w-full px-3 py-2 text-[13px] text-white/50 hover:text-white/80 transition-colors rounded-lg hover:bg-white/8"
+      className="flex items-center gap-2.5 w-full px-2.5 py-1.5 text-[13px] text-white/55 hover:text-white/90 transition-colors rounded-lg hover:bg-white/8"
     >
       <Icon size={14} />
       {label}
