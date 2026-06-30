@@ -50,13 +50,7 @@ function grupo(titulo: string, items: ResultItem[], onNavigate: (href: string) =
 }
 
 async function fetchBusca(q: string): Promise<Results> {
-  const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
-  // Busca o token do cookie
-  const token = document.cookie.split('; ').find((c) => c.startsWith('orbitalis_token='))?.split('=')[1] ?? ''
-  const res = await fetch(`${base}/busca?q=${encodeURIComponent(q)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  })
+  const res = await fetch(`/api/busca?q=${encodeURIComponent(q)}`, { cache: 'no-store' })
   if (!res.ok) return { clientes: [], ordens: [], equipamentos: [], ambientes: [] }
   return res.json()
 }
