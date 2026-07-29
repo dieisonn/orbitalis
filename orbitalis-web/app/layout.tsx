@@ -11,7 +11,16 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Orbitalis — Gestão de Ativos',
   description: 'DADOS EM ÓRBITA. MANUTENÇÃO EM DIA.',
-  icons: { icon: '/favicon.ico' },
+  icons: { icon: '/favicon.ico', apple: '/logo.png' },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'Orbitalis',
+    statusBarStyle: 'black-translucent',
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

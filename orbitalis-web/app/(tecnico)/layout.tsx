@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/lib/auth'
 import { ClipboardList, LogOut } from 'lucide-react'
+import { OfflineBanner } from '@/components/ui/offline-banner'
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -17,6 +18,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         </div>
         <span className="text-sm font-semibold text-white/75 tracking-wide">Portal do Técnico</span>
       </header>
+
+      <OfflineBanner />
 
       {/* Conteúdo principal */}
       <main className="px-4 py-4 pb-20 max-w-xl mx-auto">{children}</main>

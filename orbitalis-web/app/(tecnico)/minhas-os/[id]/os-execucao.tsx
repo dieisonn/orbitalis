@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useTransition } from 'react'
+import { useRef, useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   CheckCircle2,
@@ -11,9 +11,11 @@ import {
   RotateCcw,
   Save,
   CheckCheck,
+  Clock,
 } from 'lucide-react'
 import SignatureCanvas, { type SignatureCanvasHandle } from '@/components/ui/signature-canvas'
 import { atualizarStatusOs, sincronizarOs } from './actions'
+import { saveLocalSync, loadLocalSync, clearLocalSync, hasPendingSync } from '@/lib/sync-queue'
 
 type ChecklistItem = {
   id: string
@@ -58,6 +60,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
+  const [pendingSync, setPendingSync] = useState(false)
   const sigRef = useRef<SignatureCanvasHandle>(null)
 
   const [checked, setChecked] = useState<Record<string, Set<string>>>(() => {
@@ -84,6 +87,29 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     }
     return init
   })
+
+  // Auto-sync: drena fila local quando reconectar
+  useEffect(() => {
+    setPendingSync(hasPendingSync(os.id))
+
+    async function trySync() {
+      if (!navigator.onLine) return
+      const queued = loadLocalSync(os.id)
+      if (!queued) { setPendingSync(false); return }
+      try {
+        await sincronizarOs(os.id, queued)
+        clearLocalSync(os.id)
+        setPendingSync(false)
+        router.refresh()
+      } catch {
+        // silently retry on next online event
+      }
+    }
+
+    trySync()
+    window.addEventListener('online', trySync)
+    return () => window.removeEventListener('online', trySync)
+  }, [os.id])
 
   function toggleChecklist(itemId: string, clId: string) {
     setSaved(false)
@@ -142,10 +168,21 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   function handleSalvar() {
     setError(null)
     setSaved(false)
+    const payload = buildPayload(false)
+
+    if (!navigator.onLine) {
+      saveLocalSync(os.id, payload)
+      setSaved(true)
+      setPendingSync(true)
+      return
+    }
+
     startTransition(async () => {
       try {
-        await sincronizarOs(os.id, buildPayload(false))
+        await sincronizarOs(os.id, payload)
         setSaved(true)
+        clearLocalSync(os.id)
+        setPendingSync(false)
         router.refresh()
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao salvar progresso')
@@ -360,6 +397,14 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
           <p className="text-[10px] text-gray-400 text-center">
             Peça ao cliente para assinar acima
           </p>
+        </div>
+      )}
+
+      {/* Sync pendente */}
+      {pendingSync && (
+        <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
+          <Clock size={14} className="shrink-0" />
+          Progresso salvo localmente — será sincronizado ao reconectar
         </div>
       )}
 

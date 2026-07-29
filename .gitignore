@@ -6,6 +6,12 @@ node_modules/
 orbitalis-web/.next/
 orbitalis-web/out/
 
+# PWA — gerados em build
+orbitalis-web/public/sw.js
+orbitalis-web/public/workbox-*.js
+orbitalis-web/public/sw.js.map
+orbitalis-web/public/workbox-*.js.map
+
 # NestJS build
 orbitalis-api/dist/
 
@@ -36,3 +42,5 @@ npm-debug.log*
 # Playwright
 test-results/
 playwright-report/
+
+.vercel
