@@ -44,6 +44,46 @@ export async function login(email: string, password: string) {
   )
 }
 
+export async function registrar(
+  nomeEmpresa: string,
+  slug: string,
+  nomeAdmin: string,
+  email: string,
+  password: string,
+) {
+  const res = await fetch(`${BASE}/auth/registrar`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nomeEmpresa, slug, nomeAdmin, email, senha: password }),
+    cache: 'no-store',
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.message ?? 'Erro ao criar conta')
+  }
+
+  const { access_token, role } = await res.json()
+  const store = await cookies()
+
+  store.set('orbitalis_token', access_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 8,
+    path: '/',
+  })
+
+  store.set('orbitalis_role', role, {
+    httpOnly: false,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 8,
+    path: '/',
+  })
+
+  redirect('/dashboard')
+}
+
 export async function logout() {
   const store = await cookies()
   store.delete('orbitalis_token')

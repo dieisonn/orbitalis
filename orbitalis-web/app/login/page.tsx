@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { login } from '@/lib/auth'
 import { Mail, Lock, ArrowRight, QrCode, ClipboardList, BarChart3 } from 'lucide-react'
 
@@ -142,7 +143,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-300 mt-10">
+          <p className="text-center text-xs text-gray-400 mt-8">
+            Ainda não tem conta?{' '}
+            <Link href="/registro" className="text-primary font-medium hover:underline">
+              Registrar minha empresa
+            </Link>
+          </p>
+          <p className="text-center text-xs text-gray-300 mt-3">
             Acesso restrito a administradores e técnicos autorizados.
           </p>
         </div>

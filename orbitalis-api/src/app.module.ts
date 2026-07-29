@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthController } from './health.controller';
 import { AuthModule } from './modules/auth/auth.module';
@@ -23,6 +25,9 @@ import { FinanceiroModule } from './modules/financeiro/financeiro.module';
 
 @Module({
   controllers: [HealthController],
+  providers: [
+    { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
+  ],
   imports: [
     PrismaModule,
     AuthModule,

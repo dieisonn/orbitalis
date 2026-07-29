@@ -67,6 +67,21 @@ enum OsItemStatus {
 }
 
 // ─────────────────────────────────────────
+// empresas  (multi-tenancy — cada empresa é um tenant)
+// ─────────────────────────────────────────
+model Empresa {
+  id           String   @id @default(uuid()) @db.Uuid
+  slug         String   @unique @db.VarChar(100)
+  nomeEmpresa  String   @map("nome_empresa") @db.VarChar(255)
+  nomeFantasia String?  @map("nome_fantasia") @db.VarChar(255)
+  plano        String   @default("basico") @db.VarChar(50)
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  @@map("empresas")
+}
+
+// ─────────────────────────────────────────
 // usuarios
 // ─────────────────────────────────────────
 model Usuario {
@@ -79,6 +94,7 @@ model Usuario {
   especialidade String?     @db.VarChar(100)
   crea          String?     @db.VarChar(20)
   dataCriacao   DateTime    @default(now()) @map("data_criacao")
+  empresaId     String?     @map("empresa_id") @db.Uuid
 
   cliente                        Cliente?
   ordensComoTecnico              OrdemServico[]    @relation("TecnicoOrdens")
@@ -101,6 +117,7 @@ model Cliente {
   endereco     String    @db.Text
   telefone     String?   @db.VarChar(20)
   deletedAt    DateTime? @map("deleted_at")
+  empresaId    String?   @map("empresa_id") @db.Uuid
 
   usuario          Usuario?          @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
   ambientes        Ambiente[]
@@ -122,6 +139,7 @@ model Ambiente {
   capacidadeTermica  String    @map("capacidade_termica") @db.VarChar(50)
   localizacaoInterna String    @map("localizacao_interna") @db.Text
   deletedAt          DateTime? @map("deleted_at")
+  empresaId          String?   @map("empresa_id") @db.Uuid
 
   cliente       Cliente        @relation(fields: [clienteId], references: [id])
   equipamentos  Equipamento[]
@@ -148,6 +166,7 @@ model Equipamento {
   diagnosticoInicial String?   @map("diagnostico_inicial") @db.Text
   valorAquisicao     Decimal?  @map("valor_aquisicao") @db.Decimal(10, 2)
   deletedAt          DateTime? @map("deleted_at")
+  empresaId          String?   @map("empresa_id") @db.Uuid
 
   ambiente         Ambiente                @relation(fields: [ambienteId], references: [id])
   itensOs          OrdemServicoItem[]
@@ -162,9 +181,10 @@ model Equipamento {
 // modelos_checklist
 // ─────────────────────────────────────────
 model ModeloChecklist {
-  id    String @id @default(uuid()) @db.Uuid
-  nome  String @db.VarChar(150)
-  itens Json
+  id        String  @id @default(uuid()) @db.Uuid
+  nome      String  @db.VarChar(150)
+  itens     Json
+  empresaId String? @map("empresa_id") @db.Uuid
 
   planoConfigs PlanoEquipamentoConfig[]
 
@@ -185,6 +205,7 @@ model PlanoManutencao {
   proximaGeracao DateTime  @map("proxima_geracao")
   ultimaGeracao  DateTime? @map("ultima_geracao")
   dataFim        DateTime? @map("data_fim")
+  empresaId      String?   @map("empresa_id") @db.Uuid
 
   tipoServicoId  String?   @map("tipo_servico_id") @db.Uuid
 
@@ -242,6 +263,7 @@ model OrdemServico {
   horaInicio            String?  @map("hora_inicio") @db.VarChar(5)
   horaFim               String?  @map("hora_fim") @db.VarChar(5)
   dataCriacao           DateTime @default(now()) @map("data_criacao")
+  empresaId             String?  @map("empresa_id") @db.Uuid
 
   ambiente     Ambiente                        @relation(fields: [ambienteId], references: [id])
   plano        PlanoManutencao?                @relation(fields: [planoId], references: [id], onDelete: SetNull)
@@ -284,6 +306,7 @@ model TipoServico {
   valorPadrao     Decimal? @map("valor_padrao") @db.Decimal(10, 2)
   ativo           Boolean  @default(true)
   sistema         Boolean  @default(false)
+  empresaId       String?  @map("empresa_id") @db.Uuid
 
   ordensServico OrdemServico[]
   planos        PlanoManutencao[]
@@ -321,6 +344,7 @@ model ConfiguracaoEmpresa {
   mttrLimiteHoras          Int?      @map("mttr_limite_horas")
   mtbfLimiteDias           Int?      @map("mtbf_limite_dias")
   custoHoraParada          Decimal?  @map("custo_hora_parada") @db.Decimal(10, 2)
+  empresaId                String?   @map("empresa_id") @db.Uuid
 
   @@map("configuracao_empresa")
 }
@@ -340,6 +364,7 @@ model Contrato {
   ativo          Boolean   @default(true)
   criadoEm       DateTime  @default(now()) @map("criado_em")
   updatedAt      DateTime  @updatedAt @map("updated_at")
+  empresaId      String?   @map("empresa_id") @db.Uuid
 
   cliente Cliente @relation(fields: [clienteId], references: [id])
 
@@ -352,10 +377,11 @@ model Contrato {
 // ─────────────────────────────────────────
 model AlertaConfig {
   id                      String @id @default(uuid()) @db.Uuid
-  osSemAtualizacaoDias    Int    @default(3)  @map("os_sem_atualizacao_dias")
-  equipamentoCorretivasMes Int   @default(3)  @map("equipamento_corretivas_mes")
-  contratoVencendoDias    Int    @default(30) @map("contrato_vencendo_dias")
-  planoVencendoDias       Int    @default(30) @map("plano_vencendo_dias")
+  osSemAtualizacaoDias    Int     @default(3)  @map("os_sem_atualizacao_dias")
+  equipamentoCorretivasMes Int    @default(3)  @map("equipamento_corretivas_mes")
+  contratoVencendoDias    Int     @default(30) @map("contrato_vencendo_dias")
+  planoVencendoDias       Int     @default(30) @map("plano_vencendo_dias")
+  empresaId               String? @map("empresa_id") @db.Uuid
 
   @@map("alerta_config")
 }
@@ -373,6 +399,7 @@ model AlertaOcorrencia {
   resolvido    Boolean          @default(false)
   criadoEm    DateTime          @default(now()) @map("criado_em")
   resolvidoEm DateTime?         @map("resolvido_em")
+  empresaId   String?           @map("empresa_id") @db.Uuid
 
   @@index([resolvido, criadoEm])
   @@map("alerta_ocorrencias")
@@ -413,6 +440,7 @@ model Orcamento {
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
   aprovadoEm  DateTime? @map("aprovado_em")
   rejeitadoEm DateTime? @map("rejeitado_em")
+  empresaId   String?   @map("empresa_id") @db.Uuid
 
   @@index([clienteId])
   @@index([status])
