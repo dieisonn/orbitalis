@@ -520,7 +520,7 @@ export class OrdensServicoService {
       },
       include: {
         ambiente: { select: { nome: true } },
-        tecnico: { select: { email: true } },
+        tecnico: { select: { email: true, nome: true } },
         itens: { select: { id: true, statusItem: true } },
       },
       orderBy: { dataAgendamento: 'desc' },

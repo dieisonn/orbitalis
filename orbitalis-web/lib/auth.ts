@@ -38,7 +38,7 @@ export async function login(email: string, password: string) {
 
   // Redireciona pela role diretamente no Server Action
   redirect(
-    role === 'cliente' ? '/meus-ambientes' :
+    role === 'cliente' ? '/meu-painel' :
     role === 'tecnico' ? '/minhas-os' :
     '/dashboard',
   )

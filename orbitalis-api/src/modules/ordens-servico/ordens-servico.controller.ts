@@ -95,9 +95,9 @@ export class OrdensServicoController {
     return this.ordensServicoService.presignedUrl(filename);
   }
 
-  // GET /api/v1/ordens-servico/:id — Admin ou Técnico
+  // GET /api/v1/ordens-servico/:id — Admin, Técnico ou Cliente
   @Get(':id')
-  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico, UsuarioTipo.cliente)
   findOne(@Param('id') id: string) {
     return this.ordensServicoService.findOne(id);
   }

@@ -133,6 +133,19 @@ export class OrcamentosService {
     });
   }
 
+  async listarDoCliente(usuarioId: string) {
+    const cliente = await this.prisma.cliente.findFirst({ where: { usuarioId } });
+    if (!cliente) return [];
+    return this.prisma.orcamento.findMany({
+      where: { clienteId: cliente.id },
+      include: {
+        itens: true,
+        criadoPor: { select: { nome: true } },
+      },
+      orderBy: { criadoEm: 'desc' },
+    });
+  }
+
   async excluir(id: string) {
     const orc = await this.prisma.orcamento.findUnique({ where: { id } });
     if (!orc) throw new NotFoundException('Orçamento não encontrado');

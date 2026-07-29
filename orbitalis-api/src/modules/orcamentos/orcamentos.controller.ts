@@ -22,6 +22,12 @@ export class OrcamentosController {
     return this.svc.listar(clienteId, status);
   }
 
+  @Get('meus')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.cliente)
+  listarMeus(@Req() req: any) {
+    return this.svc.listarDoCliente(req.user.sub);
+  }
+
   @Get(':id')
   buscar(@Param('id') id: string) {
     return this.svc.buscarPorId(id);
