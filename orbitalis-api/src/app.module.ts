@@ -23,6 +23,7 @@ import { BuscaModule } from './modules/busca/busca.module';
 import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
 import { ConvitesModule } from './modules/convites/convites.module';
+import { PerfilModule } from './modules/perfil/perfil.module';
 
 @Module({
   controllers: [HealthController],
@@ -51,6 +52,7 @@ import { ConvitesModule } from './modules/convites/convites.module';
     OrcamentosModule,
     FinanceiroModule,
     ConvitesModule,
+    PerfilModule,
   ],
 })
 export class AppModule {}

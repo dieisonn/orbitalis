@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ReceiptText,
   TrendingUp,
+  UserCircle,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
@@ -76,6 +77,7 @@ const NAV_GROUPS = [
       { href: '/checklists',    label: 'Checklists',       icon: ClipboardCheck },
       { href: '/servicos',      label: 'Tipos de Serviço', icon: Briefcase },
       { href: '/configuracoes', label: 'Configurações',    icon: Settings },
+      { href: '/perfil',        label: 'Meu Perfil',       icon: UserCircle },
     ],
   },
 ]
@@ -97,10 +99,11 @@ function isActive(href: string, path: string): boolean {
 }
 
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null } | null
+type UserInfo = { nome: string | null; email: string } | null
 
 const STORAGE_KEY = 'orbitalis-nav-collapsed'
 
-export default function Sidebar({ config, alertasCount = 0 }: { config?: Config; alertasCount?: number }) {
+export default function Sidebar({ config, alertasCount = 0, user }: { config?: Config; alertasCount?: number; user?: UserInfo }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
   const [collapsed, setCollapsed] = useState<Set<string>>(
@@ -228,8 +231,23 @@ export default function Sidebar({ config, alertasCount = 0 }: { config?: Config;
           })}
         </nav>
 
-        {/* Rodapé: tema + logout */}
+        {/* Rodapé: usuário + tema + logout */}
         <div className="px-2 py-2 border-t border-white/8 shrink-0 space-y-0.5">
+          {user && (
+            <Link
+              href="/perfil"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-white/8 transition-colors mb-1 group"
+            >
+              <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center text-xs font-black text-white shrink-0 group-hover:bg-white/20 transition-colors">
+                {(user.nome ?? user.email).charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white/80 truncate leading-tight">{user.nome ?? '—'}</p>
+                <p className="text-[10px] text-white/35 truncate leading-tight">{user.email}</p>
+              </div>
+            </Link>
+          )}
           <ThemeToggle />
           <form action={logout}>
             <button
