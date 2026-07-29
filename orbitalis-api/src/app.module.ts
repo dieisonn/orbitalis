@@ -22,6 +22,7 @@ import { DiagnosticosLgmvModule } from './modules/diagnosticos-lgmv/diagnosticos
 import { BuscaModule } from './modules/busca/busca.module';
 import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
+import { ConvitesModule } from './modules/convites/convites.module';
 
 @Module({
   controllers: [HealthController],
@@ -49,6 +50,7 @@ import { FinanceiroModule } from './modules/financeiro/financeiro.module';
     BuscaModule,
     OrcamentosModule,
     FinanceiroModule,
+    ConvitesModule,
   ],
 })
 export class AppModule {}

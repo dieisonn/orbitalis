@@ -66,6 +66,11 @@ enum OsItemStatus {
   concluido
 }
 
+enum ConviteTipo {
+  tecnico
+  cliente
+}
+
 // ─────────────────────────────────────────
 // empresas  (multi-tenancy — cada empresa é um tenant)
 // ─────────────────────────────────────────
@@ -79,6 +84,23 @@ model Empresa {
   criadoEm     DateTime @default(now()) @map("criado_em")
 
   @@map("empresas")
+}
+
+// ─────────────────────────────────────────
+// convites  (links de acesso para técnicos e clientes)
+// ─────────────────────────────────────────
+model Convite {
+  id        String      @id @default(uuid()) @db.Uuid
+  token     String      @unique @default(uuid()) @db.Uuid
+  tipo      ConviteTipo
+  email     String?     @db.VarChar(255)
+  clienteId String?     @map("cliente_id") @db.Uuid
+  expiresAt DateTime    @map("expires_at")
+  usadoEm   DateTime?   @map("usado_em")
+  criadoEm  DateTime    @default(now()) @map("criado_em")
+  empresaId String?     @map("empresa_id") @db.Uuid
+
+  @@map("convites")
 }
 
 // ─────────────────────────────────────────

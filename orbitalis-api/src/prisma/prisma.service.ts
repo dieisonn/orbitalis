@@ -7,6 +7,7 @@ const TENANT_MODELS = new Set([
   'usuario', 'cliente', 'ambiente', 'equipamento', 'contrato',
   'orcamento', 'planoManutencao', 'ordemServico', 'tipoServico',
   'configuracaoEmpresa', 'alertaConfig', 'alertaOcorrencia', 'modeloChecklist',
+  'convite',
 ]);
 
 // Operações de leitura/escrita em lote que aceitam where livre

@@ -3,6 +3,7 @@ import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { ExportarClientesButton, ImportarClientesButton } from '@/components/ui/clientes-import-export'
+import { ConvidarBtn } from '@/components/ui/convidar-btn'
 import { deletarCliente } from './actions'
 import { Users, Building2, Phone } from 'lucide-react'
 
@@ -88,6 +89,7 @@ export default async function ClientesPage({ searchParams }: Props) {
                     <div className="flex items-center justify-end gap-2">
                       <a href={`/clientes/${c.id}`} className="text-xs font-semibold text-primary hover:underline">Ver</a>
                       <a href={`/clientes/${c.id}/editar`} className="hidden sm:inline text-xs font-semibold text-gray-500 hover:underline">Editar</a>
+                      <ConvidarBtn tipo="cliente" clienteId={c.id} label="Convidar" variant="link" />
                       <DeleteButton action={deletarCliente.bind(null, c.id)} />
                     </div>
                   </td>

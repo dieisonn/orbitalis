@@ -2,6 +2,7 @@
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
+import { ConvidarBtn } from '@/components/ui/convidar-btn'
 import { deletarUsuario } from './actions'
 import { UserCog, Phone, Wrench } from 'lucide-react'
 
@@ -36,9 +37,12 @@ export default async function UsuariosPage({ searchParams }: Props) {
           <h1 className="text-xl font-semibold text-gray-900">Técnicos</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} técnico(s) cadastrado(s)</p>
         </div>
-        <a href="/usuarios/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
-          + Novo Técnico
-        </a>
+        <div className="flex items-center gap-2">
+          <ConvidarBtn tipo="tecnico" />
+          <a href="/usuarios/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
+            + Novo Técnico
+          </a>
+        </div>
       </div>
 
       {tecnicos.length === 0 ? (
