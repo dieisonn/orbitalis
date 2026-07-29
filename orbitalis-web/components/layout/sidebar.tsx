@@ -27,6 +27,7 @@ import {
   ReceiptText,
   TrendingUp,
   UserCircle,
+  UsersRound,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
@@ -59,6 +60,7 @@ const NAV_GROUPS = [
       { href: '/ambientes',   label: 'Ambientes',   icon: Building2 },
       { href: '/equipamentos', label: 'Equipamentos', icon: Cpu },
       { href: '/usuarios',    label: 'Técnicos',    icon: UserCog },
+      { href: '/equipe',      label: 'Equipe',      icon: UsersRound },
     ],
   },
   {

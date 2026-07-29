@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -39,5 +40,14 @@ export class ConvitesController {
   @HttpCode(HttpStatus.CREATED)
   aceitar(@Param('token') token: string, @Body() dto: AceitarConviteDto) {
     return this.svc.aceitar(token, dto);
+  }
+
+  // DELETE /api/v1/convites/:id — revoga convite pendente (admin)
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UsuarioTipo.admin)
+  revogar(@Param('id') id: string) {
+    return this.svc.revogar(id);
   }
 }

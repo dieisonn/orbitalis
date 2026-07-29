@@ -60,6 +60,16 @@ export class ConvitesService {
     };
   }
 
+  async revogar(id: string) {
+    const convite = await this.prisma.convite.findFirst({
+      where: { id, usadoEm: null },
+      select: { id: true },
+    });
+    if (!convite) throw new NotFoundException('Convite não encontrado');
+    // deleteMany aplica tenant filter automaticamente
+    await this.prisma.convite.deleteMany({ where: { id } });
+  }
+
   async aceitar(token: string, dto: AceitarConviteDto) {
     const convite = await this.prisma.convite.findUnique({ where: { token } });
     if (!convite) throw new NotFoundException('Convite não encontrado');
