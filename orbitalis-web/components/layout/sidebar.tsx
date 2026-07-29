@@ -24,6 +24,7 @@ import {
   Briefcase,
   ShieldCheck,
   ChevronDown,
+  ReceiptText,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
@@ -41,11 +42,18 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'Comercial',
+    defaultOpen: true,
+    items: [
+      { href: '/orcamentos', label: 'Orçamentos', icon: ReceiptText },
+      { href: '/contratos',  label: 'Contratos',  icon: FileText },
+    ],
+  },
+  {
     label: 'Cadastros',
     defaultOpen: true,
     items: [
       { href: '/clientes',    label: 'Clientes',    icon: Users },
-      { href: '/contratos',   label: 'Contratos',   icon: FileText },
       { href: '/ambientes',   label: 'Ambientes',   icon: Building2 },
       { href: '/equipamentos', label: 'Equipamentos', icon: Cpu },
       { href: '/usuarios',    label: 'Técnicos',    icon: UserCog },

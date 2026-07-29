@@ -53,6 +53,14 @@ enum OsTipo {
   corretiva
 }
 
+enum OrcamentoStatus {
+  rascunho
+  enviado
+  aprovado
+  rejeitado
+  expirado
+}
+
 enum OsItemStatus {
   pendente
   concluido
@@ -76,6 +84,7 @@ model Usuario {
   ordensComoTecnico              OrdemServico[]    @relation("TecnicoOrdens")
   planosComoTecnico              PlanoManutencao[] @relation("TecnicoPlanos")
   configuracaoEmpresaResponsavel ConfiguracaoEmpresa?
+  orcamentosCriados              Orcamento[]       @relation("OrcamentoCriadoPor")
 
   @@map("usuarios")
 }
@@ -97,6 +106,7 @@ model Cliente {
   ambientes        Ambiente[]
   planosManutencao PlanoManutencao[]
   contratos        Contrato[]
+  orcamentos       Orcamento[]
 
   @@map("clientes")
 }
@@ -377,6 +387,49 @@ model AuditoriaConflitoSincronizacao {
   ordemServico OrdemServico @relation(fields: [ordemServicoId], references: [id])
 
   @@map("auditoria_conflitos_sincronizacao")
+}
+
+// ─────────────────────────────────────────
+// orcamentos  (proposta comercial)
+// ─────────────────────────────────────────
+model Orcamento {
+  id           String          @id @default(uuid()) @db.Uuid
+  numero       Int             @unique @default(autoincrement())
+  status       OrcamentoStatus @default(rascunho)
+  titulo       String          @db.VarChar(255)
+  validadeDias Int             @default(30) @map("validade_dias")
+  observacoes  String?         @db.Text
+  tokenPublico String          @unique @default(uuid()) @map("token_publico") @db.Uuid
+
+  clienteId   String   @map("cliente_id") @db.Uuid
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+
+  criadoPorId String?  @map("criado_por_id") @db.Uuid
+  criadoPor   Usuario? @relation("OrcamentoCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+
+  itens        OrcamentoItem[]
+
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+  aprovadoEm  DateTime? @map("aprovado_em")
+  rejeitadoEm DateTime? @map("rejeitado_em")
+
+  @@index([clienteId])
+  @@index([status])
+  @@map("orcamentos")
+}
+
+model OrcamentoItem {
+  id            String    @id @default(uuid()) @db.Uuid
+  descricao     String    @db.VarChar(255)
+  quantidade    Decimal   @default(1) @db.Decimal(10, 3)
+  unidade       String    @default("un") @db.VarChar(20)
+  precoUnitario Decimal   @map("preco_unitario") @db.Decimal(10, 2)
+
+  orcamentoId String    @map("orcamento_id") @db.Uuid
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+
+  @@map("orcamento_itens")
 }
 
 // ─────────────────────────────────────────
