@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ChevronDown,
   ReceiptText,
+  TrendingUp,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
@@ -63,6 +64,7 @@ const NAV_GROUPS = [
     label: 'Análise',
     defaultOpen: true,
     items: [
+      { href: '/financeiro',                  label: 'Financeiro',     icon: TrendingUp },
       { href: '/equipamentos/confiabilidade', label: 'Confiabilidade', icon: ShieldCheck },
       { href: '/relatorios',                  label: 'Relatórios',     icon: FileSpreadsheet },
     ],
