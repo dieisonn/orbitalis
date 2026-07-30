@@ -108,3 +108,16 @@ export async function getUserId(): Promise<string | undefined> {
     return undefined
   }
 }
+
+export async function getEmpresaId(): Promise<string | undefined> {
+  const store = await cookies()
+  const token = store.get('orbitalis_token')?.value
+  if (!token) return undefined
+  try {
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'))
+    return payload.empresaId as string | undefined
+  } catch {
+    return undefined
+  }
+}

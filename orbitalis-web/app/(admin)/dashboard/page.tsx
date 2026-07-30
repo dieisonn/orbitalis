@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
+import { getRole, getEmpresaId } from '@/lib/auth'
 import {
   CalendarClock, User, Wrench,
   ClipboardList, Clock, AlertTriangle, CheckCircle, XCircle,
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
 import { YearSelector } from '@/components/ui/year-selector'
+import { OnboardingCard } from '@/components/ui/onboarding-card'
 
 type TaxaConclusao = { concluidas: number; total: number; percentual: number }
 type Tecnico = {
@@ -73,9 +75,12 @@ export default async function DashboardPage({ searchParams }: Props) {
     topEquipamentos: [], osSemTecnico: [],
   }
 
-  const [painel, historico] = await Promise.all([
+  const [painel, historico, onboarding, role, empresaId] = await Promise.all([
     api.get<Painel>('/ordens-servico/painel').catch(() => defaultPainel),
     api.get<Historico[]>(`/ordens-servico/historico?ano=${ano}`).catch(() => [] as Historico[]),
+    api.get<{ etapas: Record<string, boolean> }>('/onboarding').catch(() => null),
+    getRole(),
+    getEmpresaId(),
   ])
 
   const { porStatus, atrasadas, taxaConclusao, porTecnico, porTipoEquipamento, planosVencendo,
@@ -102,6 +107,11 @@ export default async function DashboardPage({ searchParams }: Props) {
         <h1 className="text-xl font-semibold text-gray-900">Cockpit</h1>
         <p className="text-sm text-gray-400 mt-0.5">Visão em tempo real das Ordens de Serviço</p>
       </div>
+
+      {/* Onboarding — só para admin, desaparece quando concluído ou dispensado */}
+      {role === 'admin' && onboarding && (
+        <OnboardingCard etapas={onboarding.etapas} empresaId={empresaId} />
+      )}
 
       {/* Status — cards coloridos */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
