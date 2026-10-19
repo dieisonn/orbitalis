@@ -95,7 +95,6 @@ const S = {
   }),
   sectionHeader: (cor: string): CSSProperties => ({
     backgroundColor: cor + '18',
-    borderBottom: `1px solid ${cor}30`,
     padding: '5px 12px',
   }),
   sectionBody: { padding: '8px 12px' } as CSSProperties,
@@ -520,7 +519,7 @@ function MiniHeader({ cor, nomeEmpresa, logoUrl, titulo, sub, right }: {
   titulo: string; sub?: string; right?: string
 }) {
   return (
-    <div style={{ backgroundColor: cor + '0e', borderBottom: `2px solid ${cor}`, padding: '7px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+    <div style={{ backgroundColor: cor + '0e', padding: '7px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         {logoUrl ? (
           <img src={logoUrl} alt={nomeEmpresa} style={{ height: '28px', width: 'auto', objectFit: 'contain' }} />

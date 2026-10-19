@@ -3,7 +3,7 @@
 import { Printer } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 
-const APP_URL = 'https://orbitalis-web.vercel.app'
+import { APP_URL } from '@/lib/app-url'
 
 type Equipamento = {
   id: string

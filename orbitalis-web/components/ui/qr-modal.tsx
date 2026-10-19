@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { QrCode, X, Printer } from 'lucide-react'
 
-const APP_URL = 'https://orbitalis-web.vercel.app'
+import { APP_URL } from '@/lib/app-url'
 
 type Props = {
   equipamentoId: string
