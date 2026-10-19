@@ -20,12 +20,16 @@
    - A variável `DATABASE_URL` é injetada automaticamente
 
 3. **Configurar variáveis de ambiente**
-   No Railway → Variables, adicionar:
+   No Railway → Variables, adicionar (modelo completo em `orbitalis-api/.env.example`):
    ```
-   JWT_SECRET=<gere com: openssl rand -base64 32>
+   JWT_SECRET=<gere com: openssl rand -base64 32>   # OBRIGATÓRIA: a API não sobe sem ela
    JWT_EXPIRES_IN=8h
    NODE_ENV=production
+   FRONTEND_URL=https://www.orbitalis.com.br
    ```
+   Opcionais (a funcionalidade fica desativada se faltarem): `SMTP_*` e `ADMIN_EMAIL` (e-mails),
+   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` (Google Agenda),
+   `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` / `EVOLUTION_INSTANCE` (WhatsApp) e `S3_*` (evidências).
 
 4. **Deploy**
    ```bash
@@ -35,8 +39,8 @@
    railway up
    ```
    O `railway.json` já configura:
-   - Build: `npm install && npm run build && npx prisma generate`
-   - Start: `npx prisma db push && node dist/main`
+   - Build: via `Dockerfile` (instala dependências, `prisma generate` e `npm run build`)
+   - Start: `npx prisma migrate deploy && node dist/src/main` (aplica só as migrações versionadas em `prisma/migrations`; nunca usa `db push`)
 
    > Para re-deploys futuros: `cd orbitalis-api && railway up`
    > **Auto-deploy via GitHub**: se quiser auto-deploy no push, configure no painel Railway →
@@ -69,7 +73,8 @@
    (usar a URL obtida no passo 6 do Railway)
 
 3. **Deploy**
-   - Vercel faz build automático a cada push para `main`
+   - Vercel faz build automático a cada push para `master`
+   - O build usa `next build --webpack` (o `next-pwa` não é compatível com o Turbopack do Next 16)
 
 ---
 
