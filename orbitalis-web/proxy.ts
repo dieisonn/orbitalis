@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // Rotas públicas que não precisam de token
-const PUBLIC = ['/login', '/e/']
+// /o/ = orçamento público (link enviado ao cliente), /convite/ e /registro = cadastro por convite
+const PUBLIC = ['/login', '/e/', '/o/', '/convite/', '/registro']
 
 // Rotas exclusivas de admin
-const ADMIN_ONLY = ['/dashboard', '/clientes', '/ambientes', '/equipamentos', '/ordens-servico', '/planos-manutencao', '/usuarios', '/checklists']
-const CLIENT_ONLY = ['/meus-ambientes', '/abrir-chamado', '/historico']
+const ADMIN_ONLY = [
+  '/dashboard', '/clientes', '/ambientes', '/equipamentos', '/ordens-servico', '/planos-manutencao',
+  '/usuarios', '/checklists', '/alertas', '/orcamentos', '/contratos', '/equipe', '/financeiro',
+  '/relatorios', '/servicos', '/tecnicos', '/configuracoes',
+]
+const CLIENT_ONLY = ['/meus-ambientes', '/abrir-chamado', '/historico', '/meu-painel', '/meus-orcamentos']
 const TECNICO_ONLY = ['/minhas-os']
 
 export function proxy(request: NextRequest) {
