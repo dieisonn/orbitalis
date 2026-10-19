@@ -1,7 +1,7 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { StatusBadge } from '@/components/ui/status-badge'
+import { StatusBadge, type OsStatus } from '@/components/ui/status-badge'
 import { ArrowLeft, Cpu, ClipboardCheck } from 'lucide-react'
 
 type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; marcado: boolean }
@@ -96,7 +96,7 @@ export default async function OsClienteDetalhePage({
               <p className="text-sm text-gray-400 mt-0.5">{os.ambiente.localizacaoInterna}</p>
             )}
           </div>
-          <StatusBadge status={os.status} />
+          <StatusBadge status={os.status as OsStatus} />
         </div>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mt-4 pt-4 border-t border-border">

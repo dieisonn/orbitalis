@@ -1,4 +1,4 @@
-type OsStatus = 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'
+export type OsStatus = 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'
 
 const CONFIG: Record<OsStatus, { dot: string; text: string; bg: string; label: string }> = {
   aberta:       { dot: 'bg-blue-500',    text: 'text-blue-700',   bg: 'bg-blue-50',    label: 'Aberta' },

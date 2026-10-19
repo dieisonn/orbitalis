@@ -13,9 +13,9 @@ export function proxy(request: NextRequest) {
   const role  = request.cookies.get('orbitalis_role')?.value
   const { pathname } = request.nextUrl
 
-  // Raiz → redireciona pela role
+  // Raiz → landing pública sem token; com token redireciona pela role
   if (pathname === '/') {
-    if (!token) return NextResponse.redirect(new URL('/login', request.url))
+    if (!token) return NextResponse.next()
     if (role === 'cliente') return NextResponse.redirect(new URL('/meus-ambientes', request.url))
     if (role === 'tecnico') return NextResponse.redirect(new URL('/minhas-os', request.url))
     return NextResponse.redirect(new URL('/dashboard', request.url))
