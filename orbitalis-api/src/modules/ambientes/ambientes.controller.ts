@@ -13,6 +13,7 @@ import { UsuarioTipo } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { AmbientesService } from './ambientes.service';
 import { CreateAmbienteDto } from './dto/create-ambiente.dto';
 
@@ -42,8 +43,8 @@ export class AmbientesController {
   // GET /api/v1/ambientes/:id
   @Get(':id')
   @Roles(UsuarioTipo.admin, UsuarioTipo.cliente)
-  findOne(@Param('id') id: string) {
-    return this.ambientesService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.ambientesService.findOne(id, user);
   }
 
   // PATCH /api/v1/ambientes/:id

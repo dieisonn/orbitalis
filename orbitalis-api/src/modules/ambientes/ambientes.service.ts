@@ -29,12 +29,22 @@ export class AmbientesService {
     return { data, total, page, perPage };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user?: { id: string; role: string }) {
     const ambiente = await this.prisma.ambiente.findFirst({
       where: { id, deletedAt: null },
       include: { equipamentos: { where: { deletedAt: null } } },
     });
     if (!ambiente) throw new NotFoundException('Ambiente não encontrado');
+
+    // Cliente só enxerga os próprios ambientes (responde "não encontrado" para não revelar o id)
+    if (user?.role === 'cliente') {
+      const dono = await this.prisma.cliente.findFirst({
+        where: { id: ambiente.clienteId, usuarioId: user.id, deletedAt: null },
+        select: { id: true },
+      });
+      if (!dono) throw new NotFoundException('Ambiente não encontrado');
+    }
+
     return ambiente;
   }
 

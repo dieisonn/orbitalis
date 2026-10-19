@@ -613,8 +613,8 @@ export class OrdensServicoService {
     }
   }
 
-  findOne(id: string) {
-    return this.prisma.ordemServico.findUnique({
+  async findOne(id: string, user?: { id: string; role: string }) {
+    const os = await this.prisma.ordemServico.findUnique({
       where: { id },
       include: {
         itens:       { include: { equipamento: true } },
@@ -623,6 +623,14 @@ export class OrdensServicoService {
         tipoServico: true,
       },
     });
+
+    // Cliente só enxerga O.S. dos próprios ambientes. Responde "não encontrada"
+    // (e não "proibido") para não revelar que o id existe.
+    if (os && user?.role === 'cliente' && os.ambiente.cliente.usuarioId !== user.id) {
+      throw new NotFoundException('Ordem de Serviço não encontrada');
+    }
+
+    return os;
   }
 
   // PATCH /ordens-servico/:id/triar — Admin despacha a O.S. para o técnico (§US07)

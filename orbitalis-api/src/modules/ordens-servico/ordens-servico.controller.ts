@@ -98,8 +98,8 @@ export class OrdensServicoController {
   // GET /api/v1/ordens-servico/:id — Admin, Técnico ou Cliente
   @Get(':id')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico, UsuarioTipo.cliente)
-  findOne(@Param('id') id: string) {
-    return this.ordensServicoService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.findOne(id, user);
   }
 
   // PATCH /api/v1/ordens-servico/:id/triar — Admin (§US07)
