@@ -238,7 +238,19 @@ export class PlanosManutencaoService {
 
     for (const dataGeracao of datasParaGerar) {
       // Cria uma O.S. por equipamento (sem vincular evento do Calendar individualmente)
+      let novasNaData = 0;
       for (const config of configs) {
+        // Idempotência: não recria se este equipamento já tem O.S. deste plano nesta data
+        const jaExiste = await this.prisma.ordemServico.findFirst({
+          where: {
+            planoId: plano.id,
+            dataAgendamento: dataGeracao,
+            itens: { some: { equipamentoId: config.equipamentoId } },
+          },
+          select: { id: true },
+        });
+        if (jaExiste) continue;
+
         await this.prisma.$transaction(async (tx) => {
           const created = await tx.ordemServico.create({
             data: {
@@ -265,10 +277,11 @@ export class PlanosManutencaoService {
         });
 
         totalGeradas++;
+        novasNaData++;
       }
 
       // UM evento por visita — todos os equipamentos do cliente agrupados
-      if (configs.length > 0) {
+      if (configs.length > 0 && novasNaData > 0) {
         const d = dataGeracao;
         const dateLabel = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
         const payload: CalendarEventPayload = {
