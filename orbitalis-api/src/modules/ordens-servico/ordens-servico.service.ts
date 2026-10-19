@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { OsStatus } from '@prisma/client';
+import { OsOrigem, OsStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
@@ -51,12 +51,25 @@ export class OrdensServicoService {
   // 1. Cria a O.S. pai para o ambiente
   // 2. Varre os equipamentos do ambiente e cria os itens filhos
   // 3. Faz deep copy do checklist ativo para cada item (snapshot)
-  async create(dto: CreateOrdemServicoDto) {
+  async create(dto: CreateOrdemServicoDto, user?: { id: string; role: string }) {
     const ambiente = await this.prisma.ambiente.findUnique({
       where: { id: dto.ambienteId },
       include: { equipamentos: { where: { deletedAt: null } } },
     });
     if (!ambiente) throw new NotFoundException('Ambiente não encontrado');
+
+    // Cliente só abre chamado nos próprios ambientes e não escolhe técnico nem origem
+    if (user?.role === 'cliente') {
+      const dono = await this.prisma.cliente.findFirst({
+        where: { id: ambiente.clienteId, usuarioId: user.id, deletedAt: null },
+        select: { id: true },
+      });
+      if (!dono) throw new NotFoundException('Ambiente não encontrado');
+      dto = { ...dto, origem: OsOrigem.portal_cliente, tecnicoId: undefined };
+    }
+
+    // Com técnico definido já nasce agendada (não precisa passar pela triagem)
+    const statusInicial: OsStatus = dto.tecnicoId ? 'agendada' : 'aberta';
 
     let equipamentosParaItens = ambiente.equipamentos;
     if (dto.equipamentoId) {
@@ -75,7 +88,7 @@ export class OrdensServicoService {
         data: {
           ambienteId:        dto.ambienteId,
           tecnicoId:         dto.tecnicoId,
-          status:            'aberta',
+          status:            statusInicial,
           tipo:              dto.tipo ?? 'corretiva',
           origem:            dto.origem,
           dataAgendamento:   new Date(dto.dataAgendamento),
@@ -107,6 +120,27 @@ export class OrdensServicoService {
         },
       });
     });
+
+    // Avisa o técnico quando a O.S. já nasce agendada
+    if (result && statusInicial === 'agendada' && dto.tecnicoId) {
+      this.prisma.usuario
+        .findFirst({ where: { id: dto.tecnicoId, tipo: 'tecnico' }, select: { email: true, nome: true } })
+        .then((tec) => {
+          if (!tec) return;
+          const osNumero = result.numero != null
+            ? `OS-${String(result.numero).padStart(4, '0')}`
+            : `OS-${result.id.slice(0, 6).toUpperCase()}`;
+          return this.notificacoes.notificarOsAgendada({
+            tecnicoEmail: tec.email,
+            tecnicoNome: tec.nome,
+            osNumero,
+            clienteNome: result.ambiente.cliente.razaoSocial,
+            ambienteNome: result.ambiente.nome,
+            dataAgendamento: dto.dataAgendamento,
+          });
+        })
+        .catch(() => null);
+    }
 
     // Cria evento no Google Calendar em background (sem bloquear resposta)
     if (result) {
@@ -420,6 +454,16 @@ export class OrdensServicoService {
         );
       }
 
+      // Só aceita itens que pertencem a esta O.S.
+      const itensDaOs = await tx.ordemServicoItem.findMany({
+        where: { ordemServicoId: id },
+        select: { id: true },
+      });
+      const idsValidos = new Set(itensDaOs.map((i) => i.id));
+      if (dto.itens.some((i) => !idsValidos.has(i.itemId))) {
+        throw new BadRequestException('Há itens que não pertencem a esta Ordem de Serviço');
+      }
+
       // Atualiza cada item do checklist com os dados coletados offline
       for (const item of dto.itens) {
         await tx.ordemServicoItem.update({
@@ -458,6 +502,10 @@ export class OrdensServicoService {
   ) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
+    if (os.status === 'cancelada') {
+      throw new BadRequestException('Não é possível concluir uma O.S. cancelada');
+    }
+    const jaConcluida = os.status === 'concluida';
 
     const updated = await this.prisma.ordemServico.update({
       where: { id },
@@ -476,7 +524,7 @@ export class OrdensServicoService {
     });
 
     const clienteEmail = updated.ambiente.cliente.usuario?.email;
-    if (clienteEmail) {
+    if (clienteEmail && !jaConcluida) {
       const osNumero = updated.numero != null ? `OS-${String(updated.numero).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`;
       this.notificacoes.notificarOsConcluida({
         clienteEmail,
@@ -699,15 +747,38 @@ export class OrdensServicoService {
   async alterarStatus(id: string, status: OsStatus) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
-    return this.prisma.ordemServico.update({ where: { id }, data: { status } });
+    const agora = new Date();
+    return this.prisma.ordemServico.update({
+      where: { id },
+      data: {
+        status,
+        // Mantém as datas coerentes com o status (cockpit, MTTR, financeiro e PMOC dependem delas)
+        dataConclusao: status === 'concluida' ? (os.dataConclusao ?? agora) : null,
+        ...(status === 'em_andamento' && !os.dataInicio ? { dataInicio: agora } : {}),
+      },
+    });
   }
 
   // PATCH /ordens-servico/bulk-status — Altera status de múltiplas O.S. de uma vez
   async bulkAlterarStatus(ids: string[], status: OsStatus) {
+    const agora = new Date();
     const { count } = await this.prisma.ordemServico.updateMany({
       where: { id: { in: ids } },
-      data: { status },
+      data: { status, ...(status !== 'concluida' ? { dataConclusao: null } : {}) },
     });
+    // Mantém as datas coerentes com o status
+    if (status === 'concluida') {
+      await this.prisma.ordemServico.updateMany({
+        where: { id: { in: ids }, dataConclusao: null },
+        data: { dataConclusao: agora },
+      });
+    }
+    if (status === 'em_andamento') {
+      await this.prisma.ordemServico.updateMany({
+        where: { id: { in: ids }, dataInicio: null },
+        data: { dataInicio: agora },
+      });
+    }
     return { atualizadas: count };
   }
 

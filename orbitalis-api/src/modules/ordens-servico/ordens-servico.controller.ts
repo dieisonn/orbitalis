@@ -27,8 +27,8 @@ export class OrdensServicoController {
   // POST /api/v1/ordens-servico — Admin, Cliente ou Técnico (chamado via QR)
   @Post()
   @Roles(UsuarioTipo.admin, UsuarioTipo.cliente, UsuarioTipo.tecnico)
-  create(@Body() dto: CreateOrdemServicoDto) {
-    return this.ordensServicoService.create(dto);
+  create(@Body() dto: CreateOrdemServicoDto, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.create(dto, user);
   }
 
   // GET /api/v1/ordens-servico/meus — histórico do cliente autenticado
