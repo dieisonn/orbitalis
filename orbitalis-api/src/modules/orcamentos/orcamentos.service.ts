@@ -113,6 +113,10 @@ export class OrcamentosService {
     if (orc.status !== 'enviado')
       throw new BadRequestException('Este orçamento não está disponível para aprovação');
 
+    const validade = new Date(orc.criadoEm.getTime() + orc.validadeDias * 86_400_000);
+    if (validade < new Date())
+      throw new BadRequestException('Este orçamento está vencido. Solicite uma nova proposta.');
+
     return this.prisma.orcamento.update({
       where: { id: orc.id },
       data: { status: OrcamentoStatus.aprovado, aprovadoEm: new Date() },

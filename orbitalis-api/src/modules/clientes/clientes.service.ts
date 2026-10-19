@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 
@@ -17,7 +18,7 @@ export class ClientesService {
     });
     if (existe) throw new ConflictException('Documento já cadastrado');
 
-    const senhaTemporaria = Math.random().toString(36).slice(-8);
+    const senhaTemporaria = randomBytes(9).toString('base64url').slice(0, 10);
     const senhaHash = await bcrypt.hash(senhaTemporaria, 10);
 
     return this.prisma.$transaction(async (tx) => {

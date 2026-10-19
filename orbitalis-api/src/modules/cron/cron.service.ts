@@ -34,6 +34,8 @@ export class CronService {
         tipoServico: { select: { id: true, sigla: true, calendarColorId: true } },
         tecnico: { select: { id: true, nome: true } },
         equipamentosConfig: {
+          // Ignora equipamentos/ambientes/clientes excluídos (soft delete)
+          where: { equipamento: { deletedAt: null, ambiente: { deletedAt: null, cliente: { deletedAt: null } } } },
           include: {
             equipamento: {
               select: {
