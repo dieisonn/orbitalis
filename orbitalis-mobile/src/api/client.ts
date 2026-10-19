@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store'
 
-const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.100.45:3000/api/v1'
+// Em desenvolvimento local, defina EXPO_PUBLIC_API_URL (ex.: http://SEU_IP:3000/api/v1)
+const BASE = process.env.EXPO_PUBLIC_API_URL ?? 'https://orbitalis-api-production.up.railway.app/api/v1'
 
 async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync('orbitalis_token')
