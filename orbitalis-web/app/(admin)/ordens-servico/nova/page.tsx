@@ -1,5 +1,6 @@
 import { api } from '@/lib/api'
 import { NovaOsForm } from './form'
+import type { ModeloResumo } from '@/lib/checklist'
 
 type Ambiente = {
   id: string
@@ -13,10 +14,11 @@ type Tecnico = { id: string; email: string; nome: string | null }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string; ativo: boolean }
 
 export default async function NovaOsPage() {
-  const [ambientesRes, tecnicosRes, tiposServico] = await Promise.all([
+  const [ambientesRes, tecnicosRes, tiposServico, modelosRes] = await Promise.all([
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
     api.get<TipoServico[]>('/tipos-servico').catch(() => [] as TipoServico[]),
+    api.get<{ data: ModeloResumo[] }>('/modelos-checklist?perPage=500').catch(() => ({ data: [] as ModeloResumo[] })),
   ])
   const ambientes = ambientesRes.data
   const tecnicos  = tecnicosRes.data
@@ -42,7 +44,12 @@ export default async function NovaOsPage() {
               </p>
             </div>
           ) : (
-            <NovaOsForm ambientes={ambientes} tecnicos={tecnicos} tiposServico={tiposServico.filter((t) => t.ativo)} />
+            <NovaOsForm
+              ambientes={ambientes}
+              tecnicos={tecnicos}
+              tiposServico={tiposServico.filter((t) => t.ativo)}
+              modelos={modelosRes.data}
+            />
           )}
         </div>
       </div>

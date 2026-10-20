@@ -31,6 +31,11 @@ export class CreateOrdemServicoDto {
   @IsUUID()
   equipamentoId?: string;
 
+  // Checklist escolhido; se omitido, o sistema sugere pelo tipo e pelo tipo de serviço
+  @IsOptional()
+  @IsUUID()
+  modeloChecklistId?: string;
+
   @IsDateString()
   dataAgendamento: string;
 

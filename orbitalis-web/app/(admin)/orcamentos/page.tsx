@@ -12,6 +12,7 @@ type Orcamento = {
   validadeDias: number
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
   _count: { itens: number }
+  ordemServico: { id: string; numero: number | null } | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -90,6 +91,11 @@ export default async function OrcamentosPage() {
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${STATUS_COLOR[orc.status]}`}>
                       {STATUS_LABEL[orc.status]}
                     </span>
+                    {orc.ordemServico && (
+                      <Link href={`/ordens-servico/${orc.ordemServico.id}`} className="ml-2 text-[11px] text-primary hover:underline">
+                        O.S. #{String(orc.ordemServico.numero ?? '').padStart(4, '0')}
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}

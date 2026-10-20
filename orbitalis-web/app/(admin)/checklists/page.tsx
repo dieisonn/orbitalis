@@ -1,13 +1,17 @@
-﻿import { Suspense } from 'react'
+import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
-import { deletarChecklist, importarPmocSplitHiwall, importarAnvisa } from './actions'
+import { deletarChecklist, importarPmocSplitHiwall, importarAnvisa, importarCorretiva } from './actions'
 import { ClipboardCheck, Pencil, Download } from 'lucide-react'
 
 type TipoItem = 'texto' | 'numero' | 'escolha_unica' | 'multipla_escolha'
 type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: TipoItem; unidade?: string; opcoes?: string[] }
-type Modelo = { id: string; nome: string; itens: ChecklistItem[] }
+type Modelo = {
+  id: string; nome: string; itens: ChecklistItem[]
+  tipo: 'preventiva' | 'corretiva' | null
+  tipoServico: { id: string; sigla: string; nome: string; corHex: string } | null
+}
 
 const TIPO_LABELS: Record<TipoItem, string> = {
   texto:            'Texto',
@@ -34,8 +38,8 @@ export default async function ChecklistsPage({ searchParams }: Props) {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Checklists PMOC</h1>
-          <p className="text-gray-500 text-sm mt-1">Templates de itens de manutenção usados nas O.S.</p>
+          <h1 className="text-xl font-semibold text-gray-900">Checklists</h1>
+          <p className="text-gray-500 text-sm mt-1">Um checklist para cada caso: tipo de manutenção e tipo de serviço. É copiado para cada O.S.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <form action={importarPmocSplitHiwall}>
@@ -46,6 +50,16 @@ export default async function ChecklistsPage({ searchParams }: Props) {
             >
               <Download size={13} />
               PMOC Split Hi-Wall
+            </button>
+          </form>
+          <form action={importarCorretiva}>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-white text-primary text-xs font-semibold rounded-lg border border-primary hover:bg-primary/5 transition-colors"
+              title="Importar checklist padrão de manutenção corretiva (diagnóstico e reparo)"
+            >
+              <Download size={13} />
+              Corretiva padrão
             </button>
           </form>
           <form action={importarAnvisa}>
@@ -68,7 +82,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
         <div className="bg-white rounded-xl p-12 text-center border border-border">
           <ClipboardCheck size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhum checklist criado ainda.</p>
-          <p className="text-xs text-gray-400 mt-1">Use o botão "PMOC Split Hi-Wall (ABRAVA)" para importar o checklist padrão.</p>
+          <p className="text-xs text-gray-400 mt-1">Use os botões acima para importar um checklist padrão (PMOC, corretiva ou ANVISA) ou crie o seu.</p>
         </div>
       ) : (
         <>
@@ -82,7 +96,17 @@ export default async function ChecklistsPage({ searchParams }: Props) {
                       <p className="font-semibold text-gray-900">{m.nome}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{itens.length} item(ns)</p>
                     </div>
-                    <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary font-semibold rounded-lg">PMOC</span>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary font-semibold rounded-lg">
+                        {m.tipo === 'preventiva' ? 'Preventiva' : m.tipo === 'corretiva' ? 'Corretiva' : 'Qualquer tipo'}
+                      </span>
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-lg font-semibold text-white"
+                        style={{ backgroundColor: m.tipoServico?.corHex ?? '#9ca3af' }}
+                      >
+                        {m.tipoServico ? m.tipoServico.nome : 'Qualquer serviço'}
+                      </span>
+                    </div>
                   </div>
 
                   {itens.length > 0 && (

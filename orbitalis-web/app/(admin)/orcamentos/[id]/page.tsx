@@ -2,9 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FileText, ExternalLink, Printer } from 'lucide-react'
-import { OrcamentoActions } from './actions'
+import { OrcamentoActions, GerarOsPanel } from './actions'
+import { TIPO_OS_LABEL, type TipoOs } from '@/lib/checklist'
 
-type OrcItem = { id: string; descricao: string; quantidade: number; unidade: string; precoUnitario: number }
+type OrcItem = { id: string; descricao: string; quantidade: number; unidade: string; precoUnitario: number; categoria: 'servico' | 'peca' }
 type Orcamento = {
   id: string; numero: number; status: string; titulo: string
   validadeDias: number; observacoes: string | null; tokenPublico: string
@@ -12,6 +13,12 @@ type Orcamento = {
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null; documento: string; endereco: string }
   criadoPor: { nome: string | null; email: string } | null
   itens: OrcItem[]
+  tipoOs: TipoOs
+  ambienteId: string | null
+  ambiente: { id: string; nome: string } | null
+  tipoServico: { id: string; sigla: string; nome: string; corHex: string } | null
+  modeloChecklist: { id: string; nome: string } | null
+  ordemServico: { id: string; numero: number | null; status: string } | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -32,6 +39,15 @@ export default async function OrcamentoPage({ params }: Props) {
   let orc: Orcamento
   try { orc = await api.get<Orcamento>(`/orcamentos/${id}`) }
   catch { notFound() }
+
+  // Orçamento aprovado sem O.S. (cliente com vários ambientes): admin escolhe o ambiente
+  const ambientesParaGerar =
+    orc.status === 'aprovado' && !orc.ordemServico
+      ? await api
+          .get<{ data: { id: string; nome: string }[] }>(`/ambientes?clienteId=${orc.cliente.id}&perPage=200`)
+          .then((r) => r.data)
+          .catch(() => [])
+      : []
 
   const total = orc.itens.reduce((acc, it) => acc + Number(it.quantidade) * Number(it.precoUnitario), 0)
   const webOrigin = process.env.NEXT_PUBLIC_WEB_URL ?? ''
@@ -72,18 +88,26 @@ export default async function OrcamentoPage({ params }: Props) {
             <p className="font-medium text-blue-800">Link de aprovação enviado ao cliente</p>
             <p className="text-xs text-blue-600 truncate mt-0.5">{linkPublico}</p>
           </div>
-          <button
-            onClick={() => {}}
-            className="text-xs text-blue-700 font-medium hover:text-blue-900 shrink-0"
-          >
-            Copiar
-          </button>
         </div>
       )}
 
       {orc.status === 'aprovado' && (
-        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
-          ✓ Aprovado pelo cliente em {fmt(orc.aprovadoEm)}
+        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800 space-y-3">
+          <p>✓ Aprovado pelo cliente em {fmt(orc.aprovadoEm)}</p>
+          {orc.ordemServico ? (
+            <p>
+              O.S.{' '}
+              <Link href={`/ordens-servico/${orc.ordemServico.id}`} className="font-semibold underline">
+                #{String(orc.ordemServico.numero ?? '').padStart(4, '0')}
+              </Link>{' '}
+              gerada automaticamente — faça a triagem (técnico e data) para agendar.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <p>Nenhuma O.S. foi gerada ainda: escolha o ambiente onde o serviço será executado.</p>
+              <GerarOsPanel orcamentoId={orc.id} ambienteId={orc.ambienteId} ambientes={ambientesParaGerar} />
+            </div>
+          )}
         </div>
       )}
 
@@ -113,6 +137,26 @@ export default async function OrcamentoPage({ params }: Props) {
         </div>
       </div>
 
+      {/* Execução */}
+      <div className="bg-card border border-border rounded-xl p-5 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Manutenção</p>
+          <p className="text-foreground">{TIPO_OS_LABEL[orc.tipoOs] ?? '—'}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Serviço</p>
+          <p className="text-foreground">{orc.tipoServico ? `${orc.tipoServico.sigla} — ${orc.tipoServico.nome}` : '—'}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Ambiente</p>
+          <p className="text-foreground">{orc.ambiente?.nome ?? 'Definir na aprovação'}</p>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Checklist</p>
+          <p className="text-foreground">{orc.modeloChecklist?.nome ?? 'Automático'}</p>
+        </div>
+      </div>
+
       {/* Itens */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="px-5 py-3 border-b border-border">
@@ -134,6 +178,9 @@ export default async function OrcamentoPage({ params }: Props) {
                 <tr key={item.id}>
                   <td className="px-5 py-3 text-foreground">
                     {item.descricao}
+                    <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">
+                      {item.categoria === 'peca' ? 'Peça' : 'Serviço'}
+                    </span>
                     <span className="text-xs text-muted-foreground ml-1 sm:hidden">
                       × {item.quantidade} {item.unidade}
                     </span>

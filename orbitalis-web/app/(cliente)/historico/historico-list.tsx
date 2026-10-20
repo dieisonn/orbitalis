@@ -12,6 +12,7 @@ const ORIGEM_LABEL: Record<string, string> = {
   manual_admin:          'Admin',
   preventiva_automatica: 'Preventiva',
   portal_cliente:        'Solicitado por você',
+  orcamento_aprovado:        'Orçamento aprovado',
 }
 
 function fmtData(iso: string) {

@@ -29,6 +29,12 @@ export class ModelosChecklistController {
     return this.service.seedAnvisa();
   }
 
+  @Post('seed-corretiva')
+  @Roles(UsuarioTipo.admin)
+  seedCorretiva() {
+    return this.service.seedCorretiva();
+  }
+
   @Get(':id')
   @Roles(UsuarioTipo.admin)
   findOne(@Param('id') id: string) {

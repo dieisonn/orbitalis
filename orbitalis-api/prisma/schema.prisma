@@ -31,6 +31,7 @@ enum OsOrigem {
   manual_admin
   preventiva_automatica
   portal_cliente
+  orcamento_aprovado
 }
 
 enum AlertaTipo {
@@ -166,6 +167,7 @@ model Ambiente {
   cliente       Cliente        @relation(fields: [clienteId], references: [id])
   equipamentos  Equipamento[]
   ordensServico OrdemServico[]
+  orcamentos    Orcamento[]
 
   @@map("ambientes")
 }
@@ -203,13 +205,20 @@ model Equipamento {
 // modelos_checklist
 // ─────────────────────────────────────────
 model ModeloChecklist {
-  id        String  @id @default(uuid()) @db.Uuid
-  nome      String  @db.VarChar(150)
-  itens     Json
-  empresaId String? @map("empresa_id") @db.Uuid
+  id            String  @id @default(uuid()) @db.Uuid
+  nome          String  @db.VarChar(150)
+  itens         Json
+  // Caso de uso do checklist: preventiva/corretiva (null = serve para qualquer tipo)
+  tipo          OsTipo?
+  // Tipo de serviço específico (null = serve para qualquer serviço)
+  tipoServicoId String? @map("tipo_servico_id") @db.Uuid
+  empresaId     String? @map("empresa_id") @db.Uuid
 
+  tipoServico  TipoServico?             @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
   planoConfigs PlanoEquipamentoConfig[]
+  orcamentos   Orcamento[]
 
+  @@index([tipo])
   @@map("modelos_checklist")
 }
 
@@ -294,6 +303,7 @@ model OrdemServico {
   itens            OrdemServicoItem[]
   conflitos        AuditoriaConflitoSincronizacao[]
   diagnosticosLgmv DiagnosticoLgmv[]
+  orcamento        Orcamento?
 
   @@index([status])
   @@map("ordens_servico")
@@ -330,8 +340,10 @@ model TipoServico {
   sistema         Boolean  @default(false)
   empresaId       String?  @map("empresa_id") @db.Uuid
 
-  ordensServico OrdemServico[]
-  planos        PlanoManutencao[]
+  ordensServico    OrdemServico[]
+  planos           PlanoManutencao[]
+  modelosChecklist ModeloChecklist[]
+  orcamentos       Orcamento[]
 
   @@map("tipos_servico")
 }
@@ -453,6 +465,19 @@ model Orcamento {
   clienteId   String   @map("cliente_id") @db.Uuid
   cliente     Cliente  @relation(fields: [clienteId], references: [id])
 
+  // Como a O.S. será gerada quando o orçamento for aprovado
+  ambienteId        String? @map("ambiente_id") @db.Uuid
+  tipoOs            OsTipo  @default(corretiva) @map("tipo_os")
+  tipoServicoId     String? @map("tipo_servico_id") @db.Uuid
+  modeloChecklistId String? @map("modelo_checklist_id") @db.Uuid
+  // O.S. gerada a partir deste orçamento (preenchida na aprovação)
+  ordemServicoId    String? @unique @map("ordem_servico_id") @db.Uuid
+
+  ambiente        Ambiente?        @relation(fields: [ambienteId], references: [id], onDelete: SetNull)
+  tipoServico     TipoServico?     @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
+  modeloChecklist ModeloChecklist? @relation(fields: [modeloChecklistId], references: [id], onDelete: SetNull)
+  ordemServico    OrdemServico?    @relation(fields: [ordemServicoId], references: [id], onDelete: SetNull)
+
   criadoPorId String?  @map("criado_por_id") @db.Uuid
   criadoPor   Usuario? @relation("OrcamentoCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
 
@@ -475,6 +500,8 @@ model OrcamentoItem {
   quantidade    Decimal   @default(1) @db.Decimal(10, 3)
   unidade       String    @default("un") @db.VarChar(20)
   precoUnitario Decimal   @map("preco_unitario") @db.Decimal(10, 2)
+  // 'servico' (mão de obra) ou 'peca' — alimenta valorMaoObra/valorPecas da O.S. gerada
+  categoria     String    @default("servico") @db.VarChar(10)
 
   orcamentoId String    @map("orcamento_id") @db.Uuid
   orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)

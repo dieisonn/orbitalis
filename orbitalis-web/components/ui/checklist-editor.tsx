@@ -3,6 +3,7 @@
 import { useTransition, useState } from 'react'
 import { Plus, Trash2, GripVertical, X } from 'lucide-react'
 import { criarChecklist, atualizarChecklist, type ChecklistItem } from '@/app/(admin)/checklists/actions'
+import { TIPO_OS_LABEL, type TipoOs } from '@/lib/checklist'
 
 type TipoItem = 'texto' | 'numero' | 'escolha_unica' | 'multipla_escolha'
 
@@ -13,16 +14,26 @@ const TIPOS: { value: TipoItem; label: string }[] = [
   { value: 'multipla_escolha',  label: 'Múltipla escolha' },
 ]
 
+type TipoServicoOpt = { id: string; sigla: string; nome: string }
+
 type Props = {
   initialNome?: string
   initialItens?: ChecklistItem[]
+  initialTipo?: TipoOs | null
+  initialTipoServicoId?: string | null
+  tiposServico?: TipoServicoOpt[]
   checklistId?: string
 }
 
-export function ChecklistEditor({ initialNome = '', initialItens = [], checklistId }: Props) {
+export function ChecklistEditor({
+  initialNome = '', initialItens = [], initialTipo = null, initialTipoServicoId = null,
+  tiposServico = [], checklistId,
+}: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [nome, setNome] = useState(initialNome)
+  const [tipo, setTipo] = useState<TipoOs | ''>(initialTipo ?? '')
+  const [tipoServicoId, setTipoServicoId] = useState(initialTipoServicoId ?? '')
   const [itens, setItens] = useState<ChecklistItem[]>(
     initialItens.map((i) => ({ tipo: 'texto' as TipoItem, ...i }))
   )
@@ -85,12 +96,13 @@ export function ChecklistEditor({ initialNome = '', initialItens = [], checklist
     if (!nome.trim()) { setError('Informe o nome do checklist'); return }
     if (itens.length === 0) { setError('Adicione ao menos um item'); return }
     setError(null)
+    const caso = { tipo: tipo || null, tipoServicoId: tipoServicoId || null }
     startTransition(async () => {
       try {
         if (checklistId) {
-          await atualizarChecklist(checklistId, nome.trim(), itens)
+          await atualizarChecklist(checklistId, nome.trim(), itens, caso)
         } else {
-          await criarChecklist(nome.trim(), itens)
+          await criarChecklist(nome.trim(), itens, caso)
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao salvar'
@@ -114,6 +126,40 @@ export function ChecklistEditor({ initialNome = '', initialItens = [], checklist
           placeholder="Ex: Preventiva Mensal Split"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
+      </div>
+
+      {/* Para qual caso este checklist vale */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de manutenção</label>
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as TipoOs | '')}
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+          >
+            <option value="">Qualquer tipo</option>
+            {(Object.keys(TIPO_OS_LABEL) as TipoOs[]).map((t) => (
+              <option key={t} value={t}>{TIPO_OS_LABEL[t]}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de serviço</label>
+          <select
+            value={tipoServicoId}
+            onChange={(e) => setTipoServicoId(e.target.value)}
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+          >
+            <option value="">Qualquer serviço</option>
+            {tiposServico.map((ts) => (
+              <option key={ts.id} value={ts.id}>{ts.sigla} — {ts.nome}</option>
+            ))}
+          </select>
+        </div>
+        <p className="sm:col-span-2 text-xs text-gray-400 -mt-2">
+          O sistema sugere este checklist automaticamente em O.S., planos e orçamentos do mesmo tipo/serviço.
+          Quanto mais específico (tipo + serviço), maior a prioridade.
+        </p>
       </div>
 
       {/* Adicionar novo item */}

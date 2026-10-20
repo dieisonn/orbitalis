@@ -14,13 +14,18 @@ export type ChecklistItem = {
   opcoes?: string[]
 }
 
-export async function criarChecklist(nome: string, itens: ChecklistItem[]) {
-  await api.post('/modelos-checklist', { nome, itens })
+export type CasoChecklist = {
+  tipo: 'preventiva' | 'corretiva' | null
+  tipoServicoId: string | null
+}
+
+export async function criarChecklist(nome: string, itens: ChecklistItem[], caso: CasoChecklist) {
+  await api.post('/modelos-checklist', { nome, itens, tipo: caso.tipo, tipoServicoId: caso.tipoServicoId })
   redirect('/checklists')
 }
 
-export async function atualizarChecklist(id: string, nome: string, itens: ChecklistItem[]) {
-  await api.put(`/modelos-checklist/${id}`, { nome, itens })
+export async function atualizarChecklist(id: string, nome: string, itens: ChecklistItem[], caso: CasoChecklist) {
+  await api.put(`/modelos-checklist/${id}`, { nome, itens, tipo: caso.tipo, tipoServicoId: caso.tipoServicoId })
   redirect('/checklists')
 }
 
@@ -31,6 +36,11 @@ export async function deletarChecklist(id: string) {
 
 export async function importarPmocSplitHiwall() {
   await api.post('/modelos-checklist/seed-pmoc-split', {})
+  redirect('/checklists')
+}
+
+export async function importarCorretiva() {
+  await api.post('/modelos-checklist/seed-corretiva', {})
   redirect('/checklists')
 }
 

@@ -13,6 +13,7 @@ import { SincronizarOsDto } from './dto/sincronizar-os.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
+import { resolverChecklistItens } from '../../common/checklist-resolver';
 
 @Injectable()
 export class OrdensServicoService {
@@ -78,10 +79,12 @@ export class OrdensServicoService {
       equipamentosParaItens = [eq];
     }
 
-    const modeloChecklist = await this.prisma.modeloChecklist.findFirst();
-    const snapshot = modeloChecklist
-      ? JSON.parse(JSON.stringify(modeloChecklist.itens))
-      : [];
+    // Checklist próprio do caso: escolhido pelo admin ou sugerido por tipo + tipo de serviço
+    const snapshot = await resolverChecklistItens(this.prisma, {
+      modeloChecklistId: dto.modeloChecklistId,
+      tipo: dto.tipo ?? 'corretiva',
+      tipoServicoId: dto.tipoServicoId,
+    });
 
     const result = await this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.create({

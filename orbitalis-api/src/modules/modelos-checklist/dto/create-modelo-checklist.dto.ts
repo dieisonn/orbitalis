@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsEnum, IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export enum TipoItemChecklist {
   texto         = 'texto',
@@ -37,6 +37,16 @@ export class CreateModeloChecklistDto {
   @MinLength(2)
   @MaxLength(150)
   nome: string;
+
+  // Caso de uso: preventiva / corretiva (omitido = serve para qualquer tipo)
+  @IsOptional()
+  @IsIn(['preventiva', 'corretiva'])
+  tipo?: 'preventiva' | 'corretiva' | null;
+
+  // Tipo de serviço específico (omitido = serve para qualquer serviço)
+  @IsOptional()
+  @IsUUID()
+  tipoServicoId?: string | null;
 
   @IsArray()
   itens: ChecklistItemDto[];

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { resolverChecklistItens } from '../../common/checklist-resolver';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CronService } from '../cron/cron.service';
 import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
@@ -208,6 +209,12 @@ export class PlanosManutencaoService {
     });
     if (!plano) throw new NotFoundException('Plano não encontrado');
 
+    // Checklist padrão para equipamentos sem modelo próprio: preventiva + tipo de serviço do plano
+    const checklistPadrao = await resolverChecklistItens(this.prisma, {
+      tipo: 'preventiva',
+      tipoServicoId: plano.tipoServicoId,
+    });
+
     const configs = plano.equipamentosConfig.map((c) => ({
       equipamentoId: c.equipamentoId,
       equipamentoNome: c.equipamento.nome,
@@ -217,7 +224,7 @@ export class PlanosManutencaoService {
       clienteTelefone: c.equipamento.ambiente.cliente.telefone,
       snapshot: c.modeloChecklist
         ? (JSON.parse(JSON.stringify(c.modeloChecklist.itens)) as Prisma.InputJsonValue)
-        : ([] as Prisma.InputJsonValue),
+        : checklistPadrao,
     }));
 
     const datasParaGerar: Date[] = [];

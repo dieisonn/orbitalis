@@ -2,6 +2,8 @@
 
 import { useTransition, useState } from 'react'
 import { criarOs } from './actions'
+import { ChecklistSelect } from '@/components/ui/checklist-select'
+import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string }
 type Ambiente = {
@@ -19,10 +21,12 @@ export function NovaOsForm({
   ambientes,
   tecnicos,
   tiposServico,
+  modelos,
 }: {
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
   tiposServico: TipoServico[]
+  modelos: ModeloResumo[]
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError]           = useState<string | null>(null)
@@ -30,6 +34,8 @@ export function NovaOsForm({
   const [ambienteId, setAmbienteId] = useState('')
   const [equipamentoId, setEquipamentoId] = useState('')
   const [tipoServicoId, setTipoServicoId] = useState('')
+  const [tipo, setTipo]                   = useState<TipoOs>('corretiva')
+  const [modeloChecklistId, setModeloChecklistId] = useState('')
 
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -68,6 +74,8 @@ export function NovaOsForm({
           tecnicoId,
           dataAgendamento,
           observacoesGerais,
+          tipo,
+          modeloChecklistId,
           tipoServicoId,
           equipamentoId,
           horaInicio,
@@ -82,6 +90,29 @@ export function NovaOsForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+
+      {/* Tipo de manutenção */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tipo de manutenção <span className="text-destructive">*</span>
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {(Object.keys(TIPO_OS_LABEL) as TipoOs[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTipo(t)}
+              className={`px-3 py-2 rounded-lg border text-sm font-semibold transition-all ${
+                tipo === t
+                  ? 'border-primary bg-primary text-white shadow-sm'
+                  : 'border-border text-gray-600 hover:bg-surface'
+              }`}
+            >
+              {TIPO_OS_LABEL[t]}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Tipo de Serviço */}
       <div>
@@ -184,6 +215,18 @@ export function NovaOsForm({
         </div>
       )}
 
+      {/* Checklist do caso */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Checklist</label>
+        <ChecklistSelect
+          modelos={modelos}
+          tipo={tipo}
+          tipoServicoId={tipoServicoId || null}
+          value={modeloChecklistId}
+          onChange={setModeloChecklistId}
+        />
+      </div>
+
       {/* Técnico */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Técnico Responsável</label>
@@ -191,7 +234,7 @@ export function NovaOsForm({
           name="tecnicoId"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
-          <option value="">A definir na triagem…</option>
+          <option value="">A definir na triagem (O.S. fica “aberta”)…</option>
           {tecnicos.map((t) => (
             <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>
           ))}

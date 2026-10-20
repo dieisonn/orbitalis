@@ -19,6 +19,7 @@ const ORIGEM_LABEL: Record<string, string> = {
   manual_admin: 'Manual',
   preventiva_automatica: 'Preventiva',
   portal_cliente: 'Portal',
+  orcamento_aprovado: 'Orçamento aprovado',
 }
 
 function isHoje(isoDate: string): boolean {

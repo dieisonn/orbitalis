@@ -9,6 +9,7 @@ export async function criarOs(params: {
   dataAgendamento: string
   observacoesGerais: string
   tipo?: string
+  modeloChecklistId?: string
   tipoServicoId: string
   equipamentoId: string
   horaInicio: string
@@ -17,6 +18,8 @@ export async function criarOs(params: {
   await api.post('/ordens-servico', {
     ambienteId:        params.ambienteId,
     tecnicoId:         params.tecnicoId        || undefined,
+    tipo:              params.tipo             || undefined,
+    modeloChecklistId: params.modeloChecklistId || undefined,
     tipoServicoId:     params.tipoServicoId    || undefined,
     equipamentoId:     params.equipamentoId    || undefined,
     origem:            'manual_admin',

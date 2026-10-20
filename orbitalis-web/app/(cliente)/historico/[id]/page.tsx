@@ -33,6 +33,7 @@ const ORIGEM_LABEL: Record<string, string> = {
   manual_admin:          'Programada',
   preventiva_automatica: 'Preventiva automática',
   portal_cliente:        'Solicitada por você',
+  orcamento_aprovado:        'Orçamento aprovado',
 }
 
 const STATUS_ITEM_LABEL: Record<string, string> = {

@@ -45,6 +45,18 @@ const ANVISA_ITENS = [
   { id: 'anvisa-16', descricao: 'Registrar e assinar Relatório de Manutenção — RDC ANVISA 09/2003', obrigatorio: true,  tipo: 'texto' },
 ];
 
+const CORRETIVA_PADRAO_ITENS = [
+  { id: 'corr-01', descricao: 'Defeito relatado pelo cliente', obrigatorio: true,  tipo: 'texto' },
+  { id: 'corr-02', descricao: 'Diagnóstico realizado — causa identificada', obrigatorio: true,  tipo: 'texto' },
+  { id: 'corr-03', descricao: 'Equipamento liga e opera após o reparo?', obrigatorio: true,  tipo: 'escolha_unica', opcoes: ['Sim', 'Parcialmente', 'Não — aguardando peça'] },
+  { id: 'corr-04', descricao: 'Tensão elétrica (V)', obrigatorio: false, tipo: 'numero', unidade: 'V' },
+  { id: 'corr-05', descricao: 'Corrente elétrica (A)', obrigatorio: false, tipo: 'numero', unidade: 'A' },
+  { id: 'corr-06', descricao: 'Verificar vazamento de fluido refrigerante', obrigatorio: false, tipo: 'escolha_unica', opcoes: ['Sem vazamento', 'Vazamento corrigido', 'Vazamento — carga necessária'] },
+  { id: 'corr-07', descricao: 'Peças substituídas (descrever)', obrigatorio: false, tipo: 'texto' },
+  { id: 'corr-08', descricao: 'Teste final de funcionamento (temperaturas de insuflamento e retorno)', obrigatorio: true,  tipo: 'texto' },
+  { id: 'corr-09', descricao: 'Recomendações ao cliente', obrigatorio: false, tipo: 'texto' },
+];
+
 @Injectable()
 export class ModelosChecklistService {
   constructor(private readonly prisma: PrismaService) {}
@@ -52,7 +64,12 @@ export class ModelosChecklistService {
   async findAll(page = 1, perPage = 20) {
     const skip = (page - 1) * perPage;
     const [data, total] = await Promise.all([
-      this.prisma.modeloChecklist.findMany({ orderBy: { nome: 'asc' }, skip, take: perPage }),
+      this.prisma.modeloChecklist.findMany({
+        include: { tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true } } },
+        orderBy: { nome: 'asc' },
+        skip,
+        take: perPage,
+      }),
       this.prisma.modeloChecklist.count(),
     ]);
     return { data, total, page, perPage };
@@ -63,7 +80,7 @@ export class ModelosChecklistService {
     const existing = await this.prisma.modeloChecklist.findFirst({ where: { nome } });
     if (existing) return existing;
     return this.prisma.modeloChecklist.create({
-      data: { nome, itens: PMOC_SPLIT_HIWALL_ITENS as unknown as Prisma.InputJsonValue },
+      data: { nome, tipo: 'preventiva', itens: PMOC_SPLIT_HIWALL_ITENS as unknown as Prisma.InputJsonValue },
     });
   }
 
@@ -72,7 +89,16 @@ export class ModelosChecklistService {
     const existing = await this.prisma.modeloChecklist.findFirst({ where: { nome } });
     if (existing) return existing;
     return this.prisma.modeloChecklist.create({
-      data: { nome, itens: ANVISA_ITENS as unknown as Prisma.InputJsonValue },
+      data: { nome, tipo: 'preventiva', itens: ANVISA_ITENS as unknown as Prisma.InputJsonValue },
+    });
+  }
+
+  async seedCorretiva() {
+    const nome = 'Corretiva — Diagnóstico e reparo (padrão)';
+    const existing = await this.prisma.modeloChecklist.findFirst({ where: { nome } });
+    if (existing) return existing;
+    return this.prisma.modeloChecklist.create({
+      data: { nome, tipo: 'corretiva', itens: CORRETIVA_PADRAO_ITENS as unknown as Prisma.InputJsonValue },
     });
   }
 
@@ -84,7 +110,12 @@ export class ModelosChecklistService {
 
   create(dto: CreateModeloChecklistDto) {
     return this.prisma.modeloChecklist.create({
-      data: { nome: dto.nome, itens: dto.itens as unknown as Prisma.InputJsonValue },
+      data: {
+        nome: dto.nome,
+        tipo: dto.tipo ?? null,
+        tipoServicoId: dto.tipoServicoId ?? null,
+        itens: dto.itens as unknown as Prisma.InputJsonValue,
+      },
     });
   }
 
@@ -92,7 +123,12 @@ export class ModelosChecklistService {
     await this.findOne(id);
     return this.prisma.modeloChecklist.update({
       where: { id },
-      data: { nome: dto.nome, itens: dto.itens as unknown as Prisma.InputJsonValue },
+      data: {
+        nome: dto.nome,
+        tipo: dto.tipo ?? null,
+        tipoServicoId: dto.tipoServicoId ?? null,
+        itens: dto.itens as unknown as Prisma.InputJsonValue,
+      },
     });
   }
 

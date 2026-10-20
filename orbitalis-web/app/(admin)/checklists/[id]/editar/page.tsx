@@ -3,7 +3,10 @@ import { notFound } from 'next/navigation'
 import { ChecklistEditor } from '@/components/ui/checklist-editor'
 
 type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean }
-type Modelo = { id: string; nome: string; itens: ChecklistItem[] }
+type Modelo = {
+  id: string; nome: string; itens: ChecklistItem[]
+  tipo: 'preventiva' | 'corretiva' | null; tipoServicoId: string | null
+}
 
 export default async function EditarChecklistPage({
   params,
@@ -22,6 +25,10 @@ export default async function EditarChecklistPage({
   if (!modelo) notFound()
 
   const itens = Array.isArray(modelo.itens) ? modelo.itens : []
+  const tiposServico = await api
+    .get<{ id: string; sigla: string; nome: string; ativo: boolean }[]>('/tipos-servico')
+    .then((r) => r.filter((t) => t.ativo || t.id === modelo!.tipoServicoId))
+    .catch(() => [])
 
   return (
     <div className="max-w-2xl">
@@ -34,6 +41,9 @@ export default async function EditarChecklistPage({
           checklistId={id}
           initialNome={modelo.nome}
           initialItens={itens}
+          initialTipo={modelo.tipo}
+          initialTipoServicoId={modelo.tipoServicoId}
+          tiposServico={tiposServico}
         />
       </div>
     </div>

@@ -33,6 +33,7 @@ const ORIGEM_LABEL: Record<string, string> = {
   manual_admin:          'Manual',
   preventiva_automatica: 'Preventiva',
   portal_cliente:        'Portal Cliente',
+  orcamento_aprovado:        'Orçamento aprovado',
 }
 
 const STATUS_OPTIONS = [

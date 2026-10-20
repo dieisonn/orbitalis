@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AlertasService } from '../alertas/alertas.service';
 import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
+import { resolverChecklistItens } from '../../common/checklist-resolver';
 
 @Injectable()
 export class CronService {
@@ -59,6 +60,12 @@ export class CronService {
 
     for (const plano of planos) {
       try {
+        // Checklist padrão para equipamentos sem modelo próprio: preventiva + tipo de serviço do plano
+        const checklistPadrao = await resolverChecklistItens(this.prisma, {
+          tipo: 'preventiva',
+          tipoServicoId: plano.tipoServicoId,
+        });
+
         const configs = plano.equipamentosConfig.map((c) => ({
           equipamentoId: c.equipamentoId,
           equipamentoNome: c.equipamento.nome,
@@ -68,7 +75,7 @@ export class CronService {
           clienteTelefone: c.equipamento.ambiente.cliente.telefone,
           snapshot: c.modeloChecklist
             ? (JSON.parse(JSON.stringify(c.modeloChecklist.itens)) as Prisma.InputJsonValue)
-            : ([] as Prisma.InputJsonValue),
+            : checklistPadrao,
         }));
 
         const datasParaGerar: Date[] = [];
