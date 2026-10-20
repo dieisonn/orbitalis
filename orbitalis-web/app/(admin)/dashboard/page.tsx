@@ -104,7 +104,7 @@ export default async function DashboardPage({ searchParams }: Props) {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Cockpit</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Painel</h1>
         <p className="text-sm text-gray-500 mt-0.5">Situação das ordens de serviço, equipe e planos</p>
       </div>
 
