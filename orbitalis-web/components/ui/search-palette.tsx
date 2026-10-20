@@ -186,11 +186,11 @@ export function SearchButton() {
   return (
     <button
       onClick={handleClick}
-      className="flex items-center gap-2 w-full text-[13px] text-white/45 hover:text-white/80 bg-white/8 hover:bg-white/12 rounded-lg px-2.5 py-1.5 transition-colors"
+      className="flex items-center gap-2 w-full text-[13px] text-gray-500 hover:text-gray-900 bg-white border border-[var(--nav-border)] rounded-md px-2.5 py-1.5 transition-colors"
     >
       <Search size={14} className="shrink-0" />
       <span className="flex-1 text-left">Pesquisar</span>
-      <kbd className="text-[10px] font-mono text-white/30">⌘K</kbd>
+      <kbd className="text-xs text-gray-400">Ctrl K</kbd>
     </button>
   )
 }

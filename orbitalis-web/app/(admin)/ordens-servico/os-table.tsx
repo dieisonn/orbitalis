@@ -96,34 +96,26 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
   return (
     <>
       <div className="bg-white rounded-xl border border-border overflow-hidden mt-4">
-        <table className="w-full text-sm table-fixed">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-surface">
-              <th className="px-3 py-3 w-10">
+            <tr className="border-b border-border bg-gray-50 text-left">
+              <th className="pl-4 pr-2 py-2.5 w-10">
                 <input
                   type="checkbox"
                   className="rounded border-gray-300"
+                  aria-label="Selecionar todas"
                   checked={allSelected}
                   ref={(el) => { if (el) el.indeterminate = someSelected }}
                   onChange={toggleAll}
                 />
               </th>
-              {/* Nº — sempre visível */}
-              <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-[84px]">Nº</th>
-              {/* Cliente/Ambiente — sempre visível, toma espaço restante */}
-              <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente / Cliente</th>
-              {/* Status — oculto no mobile (aparece inline na célula de ambiente) */}
-              <th className="hidden sm:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              {/* Origem — oculto no mobile */}
-              <th className="hidden sm:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Origem</th>
-              {/* Técnico — oculto no mobile e tablet estreito */}
-              <th className="hidden md:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Técnico</th>
-              {/* Data — oculto no mobile */}
-              <th className="hidden sm:table-cell text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Data</th>
-              {/* Itens — oculto no mobile */}
-              <th className="hidden sm:table-cell px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide text-center">Itens</th>
-              {/* Ação — sempre visível */}
-              <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">Ação</th>
+              <th className="px-2 sm:px-3 py-2.5">Nº</th>
+              <th className="px-3 py-2.5 sm:min-w-[240px]">Cliente e ambiente</th>
+              <th className="hidden sm:table-cell px-3 py-2.5">Status</th>
+              <th className="hidden lg:table-cell px-3 py-2.5">Técnico</th>
+              <th className="hidden sm:table-cell px-3 py-2.5">Data</th>
+              <th className="hidden md:table-cell px-3 py-2.5 text-right">Itens</th>
+              <th className="pl-3 pr-4 py-2.5 w-12"><span className="sr-only">Ações</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -131,77 +123,65 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
               const cliente = os.ambiente?.cliente
               const clienteNome = cliente?.nomeFantasia ?? cliente?.razaoSocial
               const isSelected = selected.has(os.id)
+              const numero = os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 4).toUpperCase()
+              const tecnicoNome = os.tecnico ? (os.tecnico.nome ?? os.tecnico.email) : null
+              const horario = os.horaInicio ? `${os.horaInicio}${os.horaFim ? ` – ${os.horaFim}` : ''}` : null
               return (
                 <tr
                   key={os.id}
-                  className={`hover:bg-surface transition-colors align-middle${isSelected ? ' bg-blue-50' : ''}`}
+                  className={`align-top hover:bg-gray-50${isSelected ? ' bg-blue-50 hover:bg-blue-50' : ''}`}
                 >
-                  {/* Checkbox */}
-                  <td className="px-3 py-3">
+                  <td className="pl-4 pr-2 py-3">
                     <input
                       type="checkbox"
                       className="rounded border-gray-300"
+                      aria-label={`Selecionar O.S. ${numero}`}
                       checked={isSelected}
                       onChange={() => toggleOne(os.id)}
                     />
                   </td>
-                  {/* Nº */}
                   <td className="px-3 py-3 whitespace-nowrap">
-                    {os.tipoServico ? (
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-white text-xs font-bold"
-                        style={{ backgroundColor: os.tipoServico.corHex }}
-                      >
-                        {os.tipoServico.sigla}-{os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 4).toUpperCase()}
-                      </span>
-                    ) : (
-                      <span className="font-mono text-xs text-gray-500 font-semibold">
-                        OS-{os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase()}
-                      </span>
-                    )}
+                    <a href={`/ordens-servico/${os.id}`} className="inline-flex items-center gap-1.5 font-semibold text-gray-900 hover:text-action">
+                      {os.tipoServico && (
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: os.tipoServico.corHex }} aria-hidden />
+                      )}
+                      {os.tipoServico?.sigla ?? 'OS'}-{numero}
+                    </a>
+                    <div className="text-xs text-gray-500 mt-0.5">{ORIGEM_LABEL[os.origem] ?? os.origem}</div>
                   </td>
-                  {/* Ambiente / Cliente — mostra status no mobile (sm:hidden) */}
-                  <td className="px-3 py-3 min-w-0 overflow-hidden">
-                    <div className="font-medium text-gray-900 truncate">{os.ambiente?.nome ?? '—'}</div>
-                    {clienteNome && (
-                      <div className="text-xs text-gray-400 mt-0.5 truncate">{clienteNome}</div>
-                    )}
-                    {/* Status visível só no mobile */}
-                    <div className="mt-1.5 sm:hidden">
-                      <StatusBadge status={os.status} />
-                    </div>
+                  <td className="px-3 py-3">
+                    <a href={`/ordens-servico/${os.id}`} className="block font-medium text-gray-900 hover:text-action">
+                      {clienteNome ?? os.ambiente?.nome ?? '—'}
+                    </a>
+                    <div className="text-xs text-gray-500">{os.ambiente?.nome}</div>
                     {os.observacoesGerais && (
-                      <div className="hidden sm:block text-xs text-gray-400 mt-1 max-w-[220px] truncate italic" title={os.observacoesGerais}>
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2 max-w-prose wrap-anywhere" title={os.observacoesGerais}>
                         {os.observacoesGerais}
-                      </div>
+                      </p>
                     )}
+                    {/* Celular: status, técnico e data entram aqui */}
+                    <div className="sm:hidden mt-2 space-y-1">
+                      <StatusBadge status={os.status} />
+                      <div className="text-xs text-gray-500">
+                        {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}{horario ? ` · ${horario}` : ''}
+                        {tecnicoNome ? ` · ${tecnicoNome}` : ''}
+                      </div>
+                    </div>
                   </td>
-                  {/* Status — oculto no mobile */}
                   <td className="hidden sm:table-cell px-3 py-3">
                     <StatusBadge status={os.status} />
                   </td>
-                  {/* Origem — oculto no mobile */}
-                  <td className="hidden sm:table-cell px-3 py-3 text-gray-500 text-xs">
-                    {ORIGEM_LABEL[os.origem] ?? os.origem}
+                  <td className="hidden lg:table-cell px-3 py-3 text-gray-700">
+                    {tecnicoNome ?? <span className="text-gray-400">Sem técnico</span>}
                   </td>
-                  {/* Técnico — oculto no mobile/tablet */}
-                  <td className="hidden md:table-cell px-3 py-3 text-gray-500 text-xs">
-                    {os.tecnico ? (
-                      <span>{os.tecnico.nome ?? os.tecnico.email}</span>
-                    ) : (
-                      <span className="italic text-gray-400">Não atribuído</span>
-                    )}
+                  <td className="hidden sm:table-cell px-3 py-3 whitespace-nowrap text-gray-700">
+                    {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                    {horario && <div className="text-xs text-gray-500">{horario}</div>}
                   </td>
-                  {/* Data — oculto no mobile */}
-                  <td className="hidden sm:table-cell px-3 py-3 text-gray-500 text-xs whitespace-nowrap">
-                    {new Date(os.dataAgendamento).toLocaleDateString('pt-BR')}
-                  </td>
-                  {/* Itens — oculto no mobile */}
-                  <td className="hidden sm:table-cell px-3 py-3 text-center font-semibold text-gray-600">
+                  <td className="hidden md:table-cell px-3 py-3 text-right text-gray-700">
                     {os.itens?.length ?? 0}
                   </td>
-                  {/* Ação */}
-                  <td className="px-3 py-3">
+                  <td className="pl-3 pr-4 py-2.5">
                     <OsActionsMenu
                       osId={os.id}
                       status={os.status}
@@ -213,6 +193,14 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                 </tr>
               )
             })}
+            {ordens.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-14 text-center">
+                  <p className="font-medium text-gray-700">Nenhuma O.S. encontrada</p>
+                  <p className="text-sm text-gray-500 mt-1">Ajuste os filtros ou crie uma nova ordem de serviço.</p>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
         <Suspense>

@@ -119,7 +119,7 @@ export function NovaOsForm({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Tipo de Serviço <span className="text-destructive">*</span>
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {tiposServico.map((ts) => (
             <button
               key={ts.id}
@@ -138,7 +138,7 @@ export function NovaOsForm({
               >
                 {ts.sigla}
               </span>
-              <span className="truncate text-xs leading-tight">{ts.nome}</span>
+              <span className="text-xs leading-tight text-left">{ts.nome}</span>
             </button>
           ))}
         </div>

@@ -73,8 +73,8 @@ export default async function ContratosPage() {
 
                 return (
                   <tr key={c.id} className="hover:bg-surface/60">
-                    <td className="px-4 py-3 font-medium text-gray-800 overflow-hidden">
-                      <div className="truncate">{c.cliente.nomeFantasia ?? c.cliente.razaoSocial}</div>
+                    <td className="px-4 py-3 font-medium text-gray-800">
+                      <div className="line-clamp-2 break-words">{c.cliente.nomeFantasia ?? c.cliente.razaoSocial}</div>
                       <div className="sm:hidden mt-1">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           vencido ? 'bg-red-100 text-red-700' :
@@ -85,8 +85,8 @@ export default async function ContratosPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs overflow-hidden">
-                      <div className="truncate">{c.descricao}</div>
+                    <td className="px-4 py-3 text-gray-600 text-xs">
+                      <div className="line-clamp-2 break-words min-w-[140px]">{c.descricao}</div>
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">
                       <span className="text-xs">{fmtDate(c.vigenciaInicio)}</span>
@@ -127,7 +127,7 @@ export default async function ContratosPage() {
                         {vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <a href={`/contratos/${c.id}`} className="text-primary text-xs font-semibold hover:underline">Ver</a>
                         <DeleteButton action={excluirContrato.bind(null, c.id)} />

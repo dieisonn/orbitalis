@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/lib/auth'
@@ -103,28 +103,34 @@ function isActive(href: string, path: string): boolean {
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null } | null
 type UserInfo = { nome: string | null; email: string } | null
 
-const STORAGE_KEY = 'orbitalis-nav-collapsed'
+const STORAGE_KEY = 'orbitalis-nav-open'
 
 export default function Sidebar({ config, alertasCount = 0, user }: { config?: Config; alertasCount?: number; user?: UserInfo }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState<Set<string>>(
-    new Set(NAV_GROUPS.filter((g) => !g.defaultOpen).map((g) => g.label))
+
+  // O grupo da página atual fica sempre aberto; os demais lembram a escolha da pessoa.
+  const grupoAtual = useMemo(
+    () => NAV_GROUPS.find((g) => g.items.some((i) => isActive(i.href, path)))?.label,
+    [path],
+  )
+  const [abertos, setAbertos] = useState<Set<string>>(
+    new Set(NAV_GROUPS.filter((g) => g.defaultOpen).map((g) => g.label)),
   )
 
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')
-      if (Array.isArray(stored)) setCollapsed(new Set(stored))
-    } catch { /* mantém default */ }
+      if (Array.isArray(stored)) setAbertos(new Set(stored))
+    } catch { /* mantém o padrão */ }
   }, [])
 
-  function toggleGroup(label: string) {
-    setCollapsed((prev) => {
+  function alternar(label: string) {
+    setAbertos((prev) => {
       const next = new Set(prev)
       if (next.has(label)) next.delete(label)
       else next.add(label)
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...next])) } catch {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify([...next])) } catch { /* noop */ }
       return next
     })
   }
@@ -134,132 +140,131 @@ export default function Sidebar({ config, alertasCount = 0, user }: { config?: C
 
   return (
     <>
-      {/* Hamburger — mobile */}
-      <button
-        className="fixed top-4 left-4 z-50 md:hidden p-2 bg-primary text-white rounded-lg shadow"
-        onClick={() => setOpen(true)}
-        aria-label="Abrir menu"
-      >
-        <Menu size={18} />
-      </button>
+      {/* Barra superior — celular */}
+      <header className="fixed top-0 inset-x-0 z-40 h-12 md:hidden flex items-center gap-3 px-3 bg-[var(--nav-bg)] border-b border-[var(--nav-border)] print:hidden">
+        <button
+          className="p-2 -ml-1 text-gray-700 rounded-md hover:bg-white/70"
+          onClick={() => setOpen(true)}
+          aria-label="Abrir menu"
+        >
+          <Menu size={20} />
+        </button>
+        <img src={logoSrc} alt={nomeExibido} className="h-6 w-auto object-contain" />
+        {alertasCount > 0 && (
+          <Link href="/alertas" className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-destructive">
+            <Bell size={14} /> {alertasCount > 99 ? '99+' : alertasCount}
+          </Link>
+        )}
+      </header>
 
-      {/* Overlay — mobile */}
-      {open && (
-        <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />
-      )}
+      {open && <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />}
 
-      {/* Sidebar */}
       <aside
         className={[
-          'flex flex-col bg-primary text-white shrink-0 print:hidden',
-          'fixed inset-y-0 left-0 z-50 w-56 md:w-48',
-          'md:static md:translate-x-0',
+          'flex flex-col shrink-0 print:hidden h-full',
+          'bg-[var(--nav-bg)] border-r border-[var(--nav-border)] text-gray-800',
+          'fixed inset-y-0 left-0 z-50 w-64 md:static md:w-60 md:translate-x-0',
           'transition-transform duration-200',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
       >
-        {/* Logo */}
-        <div className="h-14 px-3.5 flex items-center justify-between shrink-0 border-b border-white/8">
-          <div className="bg-white rounded-md px-2 py-1 flex items-center">
+        <div className="h-16 px-4 flex items-center justify-between shrink-0">
+          <div className="bg-white rounded-md px-2 py-1 flex items-center border border-[var(--nav-border)]">
             <img src={logoSrc} alt={nomeExibido} className="h-7 w-auto object-contain" />
           </div>
           <button
-            className="md:hidden p-1 text-white/40 hover:text-white transition-colors"
+            className="md:hidden p-1.5 text-gray-500 hover:text-gray-900 rounded-md"
             onClick={() => setOpen(false)}
             aria-label="Fechar menu"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Busca */}
-        <div className="px-2.5 py-2.5 border-b border-white/8">
+        <div className="px-3 pb-3 shrink-0">
           <SearchButton />
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-2 py-2 overflow-y-auto">
+        {/* A navegação rola sozinha; o rodapé nunca some */}
+        <nav className="flex-1 min-h-0 px-3 pb-3 overflow-y-auto" aria-label="Principal">
           {NAV_GROUPS.map((group, gi) => {
-            const isCollapsed = collapsed.has(group.label)
+            const aberto = abertos.has(group.label) || group.label === grupoAtual
             return (
-              <div key={group.label} className={gi > 0 ? 'mt-1' : ''}>
-                {/* Cabeçalho do grupo — clicável */}
+              <div key={group.label} className={gi > 0 ? 'mt-3' : ''}>
                 <button
-                  onClick={() => toggleGroup(group.label)}
-                  className="flex items-center gap-1.5 w-full px-2 py-1.5 rounded-md text-[11px] font-semibold text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors select-none"
+                  onClick={() => alternar(group.label)}
+                  aria-expanded={aberto}
+                  className="flex items-center justify-between w-full px-2 py-1 text-xs font-semibold text-gray-500 hover:text-gray-900 select-none"
                 >
-                  <ChevronDown
-                    size={11}
-                    className={['shrink-0 transition-transform duration-200', isCollapsed ? '-rotate-90' : ''].join(' ')}
-                  />
                   {group.label}
+                  <ChevronDown size={12} className={['transition-transform duration-150', aberto ? '' : '-rotate-90'].join(' ')} />
                 </button>
 
-                {/* Itens com animação de altura */}
-                <div
-                  className={[
-                    'overflow-hidden transition-all duration-200 ease-in-out space-y-0.5',
-                    isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[500px] opacity-100',
-                  ].join(' ')}
-                >
-                  {group.items.map(({ href, label, icon: Icon }) => {
-                    const active = isActive(href, path)
-                    const isAlertas = href === '/alertas'
-                    return (
-                      <Link
-                        key={href}
-                        href={href}
-                        onClick={() => setOpen(false)}
-                        className={[
-                          'flex items-center gap-2.5 px-2.5 py-[6px] rounded-md text-[13px] font-medium transition-colors',
-                          active
-                            ? 'bg-white/15 text-white'
-                            : 'text-white/55 hover:bg-white/8 hover:text-white/90',
-                        ].join(' ')}
-                      >
-                        <Icon size={14} className="shrink-0" />
-                        <span className="flex-1 truncate">{label}</span>
-                        {isAlertas && alertasCount > 0 && (
-                          <span className="min-w-[17px] h-[17px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1">
-                            {alertasCount > 99 ? '99+' : alertasCount}
-                          </span>
-                        )}
-                      </Link>
-                    )
-                  })}
-                </div>
+                {aberto && (
+                  <ul className="mt-0.5 space-y-px">
+                    {group.items.map(({ href, label, icon: Icon }) => {
+                      const ativo = isActive(href, path)
+                      const ehAlertas = href === '/alertas'
+                      return (
+                        <li key={href}>
+                          <Link
+                            href={href}
+                            onClick={() => setOpen(false)}
+                            aria-current={ativo ? 'page' : undefined}
+                            className={[
+                              'relative flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-md text-[13.5px] transition-colors',
+                              ativo
+                                ? 'bg-white text-primary font-semibold shadow-[0_0_0_1px_var(--nav-border)]'
+                                : 'text-gray-700 hover:bg-white/60 hover:text-gray-900',
+                            ].join(' ')}
+                          >
+                            {ativo && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-action" />}
+                            <Icon size={15} className="shrink-0" />
+                            <span className="flex-1 truncate">{label}</span>
+                            {ehAlertas && alertasCount > 0 && (
+                              <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-destructive text-white text-xs font-semibold px-1.5">
+                                {alertasCount > 99 ? '99+' : alertasCount}
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
               </div>
             )
           })}
         </nav>
 
-        {/* Rodapé: usuário + tema + logout */}
-        <div className="px-2 py-2 border-t border-white/8 shrink-0 space-y-0.5">
+        <div className="px-3 py-3 border-t border-[var(--nav-border)] shrink-0">
           {user && (
             <Link
               href="/perfil"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-white/8 transition-colors mb-1 group"
+              className="flex items-center gap-2.5 px-2 py-1.5 rounded-md hover:bg-white/70 transition-colors"
             >
-              <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center text-xs font-black text-white shrink-0 group-hover:bg-white/20 transition-colors">
+              <span className="w-8 h-8 rounded-md bg-primary text-white flex items-center justify-center text-sm font-semibold shrink-0">
                 {(user.nome ?? user.email).charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white/80 truncate leading-tight">{user.nome ?? '—'}</p>
-                <p className="text-[10px] text-white/35 truncate leading-tight">{user.email}</p>
-              </div>
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[13px] font-semibold text-gray-900 truncate leading-tight">{user.nome ?? user.email}</span>
+                {user.nome && <span className="block text-xs text-gray-500 truncate leading-tight">{user.email}</span>}
+              </span>
             </Link>
           )}
-          <ThemeToggle />
-          <form action={logout}>
-            <button
-              type="submit"
-              className="flex items-center gap-2.5 w-full px-2.5 py-[6px] text-[13px] text-white/45 hover:text-white/80 transition-colors rounded-md hover:bg-white/8"
-            >
-              <LogOut size={14} />
-              Sair
-            </button>
-          </form>
+          <div className="mt-1 grid grid-cols-2 gap-1">
+            <ThemeToggle />
+            <form action={logout}>
+              <button
+                type="submit"
+                className="flex items-center gap-2.5 w-full px-2.5 py-1.5 text-[13px] text-gray-600 hover:text-gray-900 hover:bg-white/70 transition-colors rounded-md"
+              >
+                <LogOut size={14} />
+                Sair
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
     </>
