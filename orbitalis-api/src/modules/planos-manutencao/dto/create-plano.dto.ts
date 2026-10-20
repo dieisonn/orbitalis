@@ -31,6 +31,11 @@ export class CreatePlanoManutencaoDto {
   @IsUUID()
   tipoServicoId?: string;
 
+  // Contrato atendido por este plano (precisa ser do mesmo cliente)
+  @IsOptional()
+  @IsUUID()
+  contratoId?: string;
+
   @IsInt()
   @Min(1)
   frequenciaDias: number;

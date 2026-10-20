@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import { EditarPlanoForm } from './form'
 import { notFound } from 'next/navigation'
+import type { ContratoOpcao } from '@/components/ui/contrato-select'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -36,6 +37,7 @@ type Plano = {
   proximaGeracao: string
   dataFim: string | null
   tipoServicoId: string | null
+  contratoId: string | null
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
   tecnico: { id: string; email: string; nome: string | null } | null
   equipamentosConfig: EquipConfig[]
@@ -53,6 +55,7 @@ export default async function EditarPlanoPage({ params }: Props) {
   let checklists: Checklist[] = []
   let ambientes: Ambiente[]   = []
   let tiposServico: TipoServico[] = []
+  let contratos: ContratoOpcao[] = []
 
   try {
     const [planoData, tecnicosRes, checklistsRes, tiposRes] = await Promise.all([
@@ -69,6 +72,8 @@ export default async function EditarPlanoPage({ params }: Props) {
     // Carrega todos os ambientes do cliente para permitir adicionar/remover equipamentos
     const ambRes = await api.get<{ data: Ambiente[] }>(`/ambientes?clienteId=${plano.cliente.id}&perPage=1000`)
     ambientes = ambRes.data
+    const ctRes = await api.get<ContratoOpcao[]>(`/contratos?clienteId=${plano.cliente.id}`).catch(() => [] as ContratoOpcao[])
+    contratos = Array.isArray(ctRes) ? ctRes : []
   } catch {
     notFound()
   }
@@ -99,6 +104,9 @@ export default async function EditarPlanoPage({ params }: Props) {
         tecnicos={tecnicos}
         checklists={checklists}
         tiposServico={tiposServico}
+        contratos={contratos}
+        clienteId={plano.cliente.id}
+        contratoId={plano.contratoId ?? null}
       />
     </div>
   )

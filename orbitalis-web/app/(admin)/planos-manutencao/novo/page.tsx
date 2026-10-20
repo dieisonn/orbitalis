@@ -1,5 +1,6 @@
-﻿import { api } from '@/lib/api'
+import { api } from '@/lib/api'
 import { NovoPlanoForm } from './form'
+import type { ContratoOpcao } from '@/components/ui/contrato-select'
 
 type Equipamento = {
   id: string
@@ -24,17 +25,19 @@ type Checklist   = { id: string; nome: string }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
 export default async function NovoPlanoPage() {
-  const [ambientesRes, tecnicosRes, checklistsRes, tiposRes] = await Promise.all([
+  const [ambientesRes, tecnicosRes, checklistsRes, tiposRes, contratosRes] = await Promise.all([
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
     api.get<{ data: Checklist[] }>('/modelos-checklist?perPage=1000').catch(() => ({ data: [] as Checklist[] })),
     api.get<TipoServico[]>('/tipos-servico').catch(() => [] as TipoServico[]),
+    api.get<ContratoOpcao[]>('/contratos').catch(() => [] as ContratoOpcao[]),
   ])
 
   const ambientes    = ambientesRes.data
   const tecnicos     = tecnicosRes.data
   const checklists   = checklistsRes.data
   const tiposServico = Array.isArray(tiposRes) ? tiposRes : []
+  const contratos    = Array.isArray(contratosRes) ? contratosRes : []
 
   const temCliente = ambientes.some((a) => a.cliente)
 
@@ -58,7 +61,7 @@ export default async function NovoPlanoPage() {
           </p>
         </div>
       ) : (
-        <NovoPlanoForm ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} tiposServico={tiposServico} />
+        <NovoPlanoForm ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} tiposServico={tiposServico} contratos={contratos} />
       )}
     </div>
   )

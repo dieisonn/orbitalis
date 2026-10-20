@@ -243,14 +243,18 @@ model PlanoManutencao {
   empresaId      String?   @map("empresa_id") @db.Uuid
 
   tipoServicoId  String?   @map("tipo_servico_id") @db.Uuid
+  // Contrato que este plano atende (opcional): permite acompanhar o consumo de O.S. do contrato
+  contratoId     String?   @map("contrato_id") @db.Uuid
 
   cliente            Cliente                  @relation(fields: [clienteId], references: [id])
+  contrato           Contrato?                @relation(fields: [contratoId], references: [id], onDelete: SetNull)
   tecnico            Usuario?                 @relation("TecnicoPlanos", fields: [tecnicoId], references: [id])
   tipoServico        TipoServico?             @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
   equipamentosConfig PlanoEquipamentoConfig[]
   ordensServico      OrdemServico[]
 
   @@index([proximaGeracao, ativo])
+  @@index([contratoId])
   @@map("planos_manutencao")
 }
 
@@ -277,7 +281,7 @@ model PlanoEquipamentoConfig {
 // ─────────────────────────────────────────
 model OrdemServico {
   id                String    @id @default(uuid()) @db.Uuid
-  numero            Int       @default(autoincrement()) @unique
+  numero            Int       @default(autoincrement())
   ambienteId        String    @map("ambiente_id") @db.Uuid
   planoId           String?   @map("plano_id") @db.Uuid
   tecnicoId         String?   @map("tecnico_id") @db.Uuid
@@ -311,6 +315,8 @@ model OrdemServico {
 
   @@index([status])
   @@index([empresaId])
+  // Numeração sequencial por empresa (contadores_empresa); o default é só um respaldo
+  @@unique([empresaId, numero])
   @@map("ordens_servico")
 }
 
@@ -406,7 +412,8 @@ model Contrato {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   empresaId      String?   @map("empresa_id") @db.Uuid
 
-  cliente Cliente @relation(fields: [clienteId], references: [id])
+  cliente Cliente           @relation(fields: [clienteId], references: [id])
+  planos  PlanoManutencao[]
 
   @@index([clienteId, vigenciaFim])
   @@map("contratos")
@@ -461,7 +468,7 @@ model AuditoriaConflitoSincronizacao {
 // ─────────────────────────────────────────
 model Orcamento {
   id           String          @id @default(uuid()) @db.Uuid
-  numero       Int             @unique @default(autoincrement())
+  numero       Int             @default(autoincrement())
   status       OrcamentoStatus @default(rascunho)
   titulo       String          @db.VarChar(255)
   validadeDias Int             @default(30) @map("validade_dias")
@@ -497,6 +504,8 @@ model Orcamento {
 
   @@index([clienteId])
   @@index([status])
+  // Numeração sequencial por empresa (contadores_empresa); o default é só um respaldo
+  @@unique([empresaId, numero])
   @@map("orcamentos")
 }
 
@@ -535,4 +544,17 @@ model DiagnosticoLgmv {
 
   @@index([equipamentoId])
   @@map("diagnosticos_lgmv")
+}
+
+
+// ─────────────────────────────────────────
+// contadores_empresa  (numeração sequencial por empresa: O.S., orçamentos)
+// ─────────────────────────────────────────
+model ContadorEmpresa {
+  empresaId String @map("empresa_id") @db.Uuid
+  nome      String @db.VarChar(40)
+  valor     Int    @default(0)
+
+  @@id([empresaId, nome])
+  @@map("contadores_empresa")
 }

@@ -1,9 +1,15 @@
-﻿import { api } from '@/lib/api'
+import { api } from '@/lib/api'
 import { FileText, Plus, AlertTriangle } from 'lucide-react'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { excluirContrato } from './actions'
 
+type Consumo = {
+  planos: number; osGeradas: number; osConcluidas: number; osEmAberto: number; osNoMes: number
+  osIncluidasMes: number | null; saldoMes: number | null; excedeuMes: boolean
+  meses: number; osIncluidasPeriodo: number | null; excedeuPeriodo: boolean
+}
 type Contrato = {
+  consumo?: Consumo
   id: string; descricao: string; valorMensal: number | null
   vigenciaInicio: string; vigenciaFim: string; numOsIncluidas: number | null
   ativo: boolean
@@ -50,6 +56,7 @@ export default async function ContratosPage() {
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
                 <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor Total</th>
                 <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="Ordens de Serviço incluídas mensalmente no contrato">O.S./mês</th>
+                <th className="hidden lg:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="O.S. dos planos preventivos vinculados: concluídas / geradas">Consumo</th>
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -98,6 +105,19 @@ export default async function ContratosPage() {
                       )}
                     </td>
                     <td className="hidden md:table-cell px-4 py-3 text-gray-500 text-xs">{c.numOsIncluidas ?? '—'}</td>
+                    <td className="hidden lg:table-cell px-4 py-3 text-xs whitespace-nowrap">
+                      {c.consumo && c.consumo.planos > 0 ? (
+                        <>
+                          <span className="font-semibold text-gray-700">{c.consumo.osConcluidas}/{c.consumo.osGeradas}</span>
+                          <span className="text-gray-400"> O.S.</span>
+                          {(c.consumo.excedeuMes || c.consumo.excedeuPeriodo) && (
+                            <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">acima do incluso</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-gray-300" title="Vincule um plano preventivo a este contrato">sem plano</span>
+                      )}
+                    </td>
                     <td className="hidden sm:table-cell px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                         vencido ? 'bg-red-100 text-red-700' :

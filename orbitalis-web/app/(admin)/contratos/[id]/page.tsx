@@ -3,7 +3,14 @@ import { notFound } from 'next/navigation'
 import { FileText, AlertTriangle, CheckCircle } from 'lucide-react'
 import { ContratoActions } from './contrato-actions'
 
+type Consumo = {
+  planos: number; osGeradas: number; osConcluidas: number; osEmAberto: number; osNoMes: number
+  osIncluidasMes: number | null; saldoMes: number | null; excedeuMes: boolean
+  meses: number; osIncluidasPeriodo: number | null; excedeuPeriodo: boolean
+}
 type Contrato = {
+  consumo: Consumo
+  planos: { id: string; ativo: boolean; frequenciaDias: number; proximaGeracao: string; dataFim: string | null }[]
   id: string; descricao: string; valorMensal: number | null
   vigenciaInicio: string; vigenciaFim: string; numOsIncluidas: number | null
   ativo: boolean; observacoes: string | null; criadoEm: string
@@ -85,6 +92,44 @@ export default async function ContratoPage({ params }: Props) {
               <p className="font-semibold text-gray-800">{value}</p>
             </div>
           ))}
+        </div>
+
+        {/* Consumo de O.S. dos planos preventivos vinculados */}
+        <div className="mt-5 pt-5 border-t border-border">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-gray-700">Consumo de O.S.</p>
+            <a href="/planos-manutencao/novo" className="text-xs text-primary font-semibold hover:underline">+ Plano preventivo</a>
+          </div>
+          {contrato.consumo.planos === 0 ? (
+            <p className="text-sm text-gray-400">
+              Nenhum plano preventivo vinculado. Ao criar ou editar um plano deste cliente, escolha este contrato em
+              “Contrato atendido” para acompanhar o consumo aqui.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Geradas', value: contrato.consumo.osGeradas },
+                  { label: 'Concluídas', value: contrato.consumo.osConcluidas },
+                  { label: 'Em aberto', value: contrato.consumo.osEmAberto },
+                ].map(({ label, value }) => (
+                  <div key={label} className="bg-surface rounded-xl p-3">
+                    <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                    <p className="font-semibold text-gray-800">{value}</p>
+                  </div>
+                ))}
+              </div>
+              {contrato.consumo.osIncluidasMes != null && (
+                <p className={`text-xs mt-3 ${contrato.consumo.excedeuMes || contrato.consumo.excedeuPeriodo ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                  Este mês: {contrato.consumo.osNoMes} de {contrato.consumo.osIncluidasMes} O.S. incluídas
+                  {' · '}Vigência ({contrato.consumo.meses} meses): {contrato.consumo.osGeradas} de {contrato.consumo.osIncluidasPeriodo}
+                </p>
+              )}
+              <p className="text-[11px] text-gray-400 mt-1">
+                {contrato.consumo.planos} plano(s) preventivo(s) vinculado(s) · canceladas não contam
+              </p>
+            </>
+          )}
         </div>
 
         {contrato.observacoes && (

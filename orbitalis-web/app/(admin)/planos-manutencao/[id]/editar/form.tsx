@@ -1,15 +1,16 @@
 'use client'
 
 import { useTransition, useState, useMemo } from 'react'
+import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { editarPlano } from './actions'
 import { Building2 } from 'lucide-react'
 
 const FREQUENCIAS = [
-  { label: 'Mensal (30 dias)',      value: 30 },
-  { label: 'Bimestral (60 dias)',   value: 60 },
-  { label: 'Trimestral (90 dias)',  value: 90 },
-  { label: 'Semestral (180 dias)',  value: 180 },
-  { label: 'Anual (365 dias)',      value: 365 },
+  { label: 'Mensal',      value: 30 },
+  { label: 'Bimestral',   value: 60 },
+  { label: 'Trimestral',  value: 90 },
+  { label: 'Semestral',  value: 180 },
+  { label: 'Anual',      value: 365 },
 ]
 
 type Equipamento = {
@@ -54,6 +55,9 @@ type Props = {
   tecnicos: Tecnico[]
   checklists: Checklist[]
   tiposServico: TipoServico[]
+  contratos: ContratoOpcao[]
+  clienteId: string
+  contratoId: string | null
 }
 
 export function EditarPlanoForm({
@@ -70,11 +74,15 @@ export function EditarPlanoForm({
   tecnicos,
   checklists,
   tiposServico,
+  contratos,
+  clienteId,
+  contratoId: contratoIdInicial,
 }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [isAtivo, setIsAtivo] = useState(ativo)
   const [tipoServicoId, setTipoServicoId] = useState(tipoServicoIdInicial ?? '')
+  const [contratoId, setContratoId] = useState(contratoIdInicial ?? '')
 
   // Inicializa com a config atual: { equipamentoId: checklistId | '' }
   const configInicial = useMemo(() => {
@@ -127,6 +135,7 @@ export function EditarPlanoForm({
         await editarPlano(id, {
           tecnicoId:         fd.get('tecnicoId') as string,
           tipoServicoId,
+          contratoId,
           frequenciaDias:    fd.get('frequenciaDias') as string,
           proximaGeracao:    fd.get('proximaGeracao') as string,
           dataFim:           fd.get('dataFim') as string,
@@ -145,6 +154,8 @@ export function EditarPlanoForm({
       {/* ── Configurações ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-border p-6 space-y-5">
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Configurações — {clienteLabel}</h2>
+
+        <ContratoSelect contratos={contratos} clienteId={clienteId} value={contratoId} onChange={setContratoId} />
 
         {tiposServico.length > 0 && (
           <div>

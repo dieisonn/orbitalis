@@ -43,6 +43,7 @@ export class PlanosManutencaoController {
     @Param('id') id: string,
     @Body() body: {
       tecnicoId?: string | null;
+      contratoId?: string | null;
       frequenciaDias?: number;
       proximaGeracao?: string;
       dataFim?: string | null;

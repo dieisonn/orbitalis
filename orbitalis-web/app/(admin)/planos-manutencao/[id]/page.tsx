@@ -39,6 +39,7 @@ type Plano = {
   dataFim: string | null
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
   tecnico: { id: string; email: string; nome: string | null } | null
+  contrato?: { id: string; descricao: string } | null
   equipamentosConfig: EquipConfig[]
   ordensServico: OsResumo[]
 }
@@ -139,6 +140,14 @@ export default async function DetalhePlanoPage({ params }: Props) {
             <p className="text-sm font-semibold text-gray-800">
               {plano.tecnico ? (plano.tecnico.nome ?? plano.tecnico.email)
                 : <span className="text-gray-400 font-normal italic">Não atribuído</span>}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 mb-0.5">Contrato</p>
+            <p className="text-sm font-semibold text-gray-800">
+              {plano.contrato
+                ? <a href={`/contratos/${plano.contrato.id}`} className="text-primary hover:underline">{plano.contrato.descricao}</a>
+                : <span className="text-gray-400 font-normal italic">Sem contrato</span>}
             </p>
           </div>
           <div>

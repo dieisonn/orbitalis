@@ -1,6 +1,7 @@
-﻿'use client'
+'use client'
 
 import { useTransition, useState, useMemo } from 'react'
+import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { criarPlano } from './actions'
 import { Building2, Cpu } from 'lucide-react'
 
@@ -27,11 +28,11 @@ type Checklist   = { id: string; nome: string }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
 const FREQUENCIAS = [
-  { label: 'Mensal (30 dias)',      value: 30 },
-  { label: 'Bimestral (60 dias)',   value: 60 },
-  { label: 'Trimestral (90 dias)',  value: 90 },
-  { label: 'Semestral (180 dias)',  value: 180 },
-  { label: 'Anual (365 dias)',      value: 365 },
+  { label: 'Mensal',      value: 30 },
+  { label: 'Bimestral',   value: 60 },
+  { label: 'Trimestral',  value: 90 },
+  { label: 'Semestral',  value: 180 },
+  { label: 'Anual',      value: 365 },
 ]
 
 export function NovoPlanoForm({
@@ -39,16 +40,19 @@ export function NovoPlanoForm({
   tecnicos,
   checklists,
   tiposServico,
+  contratos,
 }: {
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
   checklists: Checklist[]
   tiposServico: TipoServico[]
+  contratos: ContratoOpcao[]
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [clienteId, setClienteId] = useState('')
   const [tipoServicoId, setTipoServicoId] = useState('')
+  const [contratoId, setContratoId] = useState('')
   // { equipamentoId: modeloChecklistId | '' }
   const [checklistPorEquip, setChecklistPorEquip] = useState<Record<string, string>>({})
 
@@ -77,6 +81,7 @@ export function NovoPlanoForm({
 
   function handleClienteChange(id: string) {
     setClienteId(id)
+    setContratoId('')
     // Pre-seleciona "" (sem checklist) para todos os equipamentos do cliente
     const configs: Record<string, string> = {}
     const ambs = ambientes.filter((a) => a.clienteId === id)
@@ -113,6 +118,7 @@ export function NovoPlanoForm({
           clienteId,
           tecnicoId: fd.get('tecnicoId') as string,
           tipoServicoId,
+          contratoId: contratoId || undefined,
           frequenciaDias: Number(fd.get('frequenciaDias')),
           proximaGeracao: fd.get('proximaGeracao') as string,
           dataFim: fd.get('dataFim') as string,
@@ -151,6 +157,8 @@ export function NovoPlanoForm({
             ))}
           </select>
         </div>
+
+        <ContratoSelect contratos={contratos} clienteId={clienteId} value={contratoId} onChange={setContratoId} />
 
         {/* Tipo de Serviço */}
         {tiposServico.length > 0 && (

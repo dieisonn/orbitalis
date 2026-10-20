@@ -9,6 +9,7 @@ export async function criarPlano(data: {
   clienteId: string
   tecnicoId: string
   tipoServicoId?: string
+  contratoId?: string
   frequenciaDias: number
   proximaGeracao: string
   dataFim?: string
@@ -18,6 +19,7 @@ export async function criarPlano(data: {
     clienteId: data.clienteId,
     tecnicoId: data.tecnicoId || undefined,
     tipoServicoId: data.tipoServicoId || undefined,
+    contratoId: data.contratoId || undefined,
     frequenciaDias: data.frequenciaDias,
     proximaGeracao: data.proximaGeracao,
     dataFim: data.dataFim || undefined,
