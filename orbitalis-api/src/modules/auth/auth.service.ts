@@ -40,6 +40,15 @@ export class AuthService {
     const senhaValida = await bcrypt.compare(dto.senha, usuario.senhaHash);
     if (!senhaValida) throw new UnauthorizedException('Credenciais inválidas');
 
+    // Cliente excluído (soft delete) perde o acesso ao portal
+    if (usuario.tipo === UsuarioTipo.cliente) {
+      const ativo = await this.prisma.cliente.findFirst({
+        where: { usuarioId: usuario.id, deletedAt: null },
+        select: { id: true },
+      });
+      if (!ativo) throw new UnauthorizedException('Acesso desativado. Fale com a empresa de manutenção.');
+    }
+
     const payload = {
       sub: usuario.id,
       email: usuario.email,

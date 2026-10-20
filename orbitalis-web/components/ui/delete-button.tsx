@@ -20,7 +20,12 @@ export function DeleteButton({
     setError(null)
     startTransition(async () => {
       try {
-        await action()
+        const res = await action()
+        // Ações podem devolver { error } com o motivo (ex.: cliente com O.S. em aberto)
+        if (res && typeof res === 'object' && 'error' in res && typeof (res as { error: unknown }).error === 'string') {
+          setError((res as { error: string }).error)
+          return
+        }
         router.refresh()
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -43,7 +48,7 @@ export function DeleteButton({
         {isPending ? '…' : label}
       </button>
       {error && (
-        <p className="text-[10px] text-destructive mt-0.5 max-w-[120px] text-right">{error}</p>
+        <p className="text-[10px] text-destructive mt-0.5 max-w-[220px] text-right">{error}</p>
       )}
     </div>
   )

@@ -11,7 +11,7 @@ export class ClientesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateClienteDto) {
-    const existe = await this.prisma.cliente.findUnique({
+    const existe = await this.prisma.cliente.findFirst({
       where: { documento: dto.documento },
     });
     if (existe) throw new ConflictException('Documento já cadastrado');
@@ -148,6 +148,26 @@ export class ClientesService {
 
   async remove(id: string) {
     await this.findOne(id);
+
+    // Não deixa O.S. em aberto nem plano ativo "órfãos" na agenda dos técnicos
+    const [osAbertas, planosAtivos] = await Promise.all([
+      this.prisma.ordemServico.count({
+        where: {
+          status: { in: ['aberta', 'agendada', 'em_andamento'] },
+          ambiente: { clienteId: id },
+        },
+      }),
+      this.prisma.planoManutencao.count({ where: { clienteId: id, ativo: true } }),
+    ]);
+    if (osAbertas > 0 || planosAtivos > 0) {
+      const partes = [
+        osAbertas > 0 ? `${osAbertas} O.S. em aberto` : null,
+        planosAtivos > 0 ? `${planosAtivos} plano(s) preventivo(s) ativo(s)` : null,
+      ].filter(Boolean);
+      throw new ConflictException(
+        `Este cliente tem ${partes.join(' e ')}. Conclua ou cancele as O.S. e desative os planos antes de excluir.`,
+      );
+    }
     // Soft delete (§6.5) — UPDATE deleted_at em vez de DELETE
     return this.prisma.cliente.update({
       where: { id },

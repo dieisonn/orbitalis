@@ -20,6 +20,16 @@ const INCLUDE_FULL = {
   ordemServico: { select: { id: true, numero: true, status: true } },
 } as const;
 
+// O link público mostra a proposta; ids e vínculos internos ficam de fora
+function paraPublico<T extends Record<string, any>>(orc: T) {
+  const {
+    empresaId, criadoPorId, clienteId, ambienteId, tipoServicoId, modeloChecklistId, ordemServicoId, ...visivel
+  } = orc;
+  void empresaId; void criadoPorId; void clienteId; void ambienteId;
+  void tipoServicoId; void modeloChecklistId; void ordemServicoId;
+  return visivel;
+}
+
 @Injectable()
 export class OrcamentosService {
   private readonly logger = new Logger(OrcamentosService.name);
@@ -56,7 +66,7 @@ export class OrcamentosService {
       include: INCLUDE_PUBLICO,
     });
     if (!orc) throw new NotFoundException('Orçamento não encontrado');
-    return orc;
+    return paraPublico(orc);
   }
 
   async criar(dto: CreateOrcamentoDto, criadoPorId: string) {
@@ -158,7 +168,8 @@ export class OrcamentosService {
       this.logger.warn(`Orçamento ${orc.id} aprovado, mas a O.S. não foi gerada: ${err?.message ?? err}`);
     });
 
-    return this.prisma.orcamento.findUnique({ where: { id: orc.id }, include: INCLUDE_PUBLICO });
+    const atualizado = await this.prisma.orcamento.findUnique({ where: { id: orc.id }, include: INCLUDE_PUBLICO });
+    return atualizado ? paraPublico(atualizado) : atualizado;
   }
 
   /**
@@ -274,7 +285,7 @@ export class OrcamentosService {
       where: { id: orc.id },
       data: { status: OrcamentoStatus.rejeitado, rejeitadoEm: new Date() },
       include: INCLUDE_PUBLICO,
-    });
+    }).then(paraPublico);
   }
 
   async listarDoCliente(usuarioId: string | undefined) {

@@ -2,8 +2,12 @@
 import { api } from '@/lib/api'
 import { revalidatePath } from 'next/cache'
 
-export async function deletarCliente(id: string) {
-  await api.delete(`/clientes/${id}`)
+export async function deletarCliente(id: string): Promise<{ error: string } | void> {
+  try {
+    await api.delete(`/clientes/${id}`)
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Erro ao excluir cliente' }
+  }
 }
 
 export type ClienteExportRow = {
