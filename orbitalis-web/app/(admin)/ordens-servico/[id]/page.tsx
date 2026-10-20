@@ -137,7 +137,7 @@ export default async function OsDetailPage({ params }: Props) {
   const totalCusto      = totalMaoObra + totalPecas
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-5xl">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <a href="/ordens-servico" className="text-gray-500 hover:text-primary transition-colors">

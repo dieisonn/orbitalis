@@ -173,7 +173,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
   }).reverse()
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       {/* Banner reincidente */}
       {isReincidente && (
         <div className="flex items-center gap-3 mb-5 bg-red-50 border border-red-200 rounded-xl px-5 py-3.5">
@@ -340,7 +340,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
             <p className="text-sm text-gray-500">Nenhuma O.S. registrada para este equipamento.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
+          <div className="bg-white rounded-lg border border-border overflow-hidden">
             {/* Linha de aquisição */}
             {eq.valorAquisicao !== null && (
               <div className="flex items-center gap-4 px-5 py-3.5 border-b border-border bg-surface">
@@ -363,7 +363,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
               <thead>
                 <tr className="border-b border-border bg-surface">
                   {['Data', 'O.S.', 'Tipo', 'Status', 'Origem', 'M.O.', 'Peças', 'Total O.S.', 'Acumulado'].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
+                    <th key={h} className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
                       {h}
                     </th>
                   ))}
@@ -375,10 +375,10 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
                   const st = STATUS[os.status] ?? { label: os.status, cls: 'bg-gray-100 text-gray-600' }
                   return (
                     <tr key={item.id} className="hover:bg-surface transition-colors">
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                      <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {fmtDate(os.dataAgendamento)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <a
                           href={`/ordens-servico/${os.id}/pdf`}
                           className="font-mono text-xs text-primary hover:underline"
@@ -391,7 +391,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
                           </p>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           os.tipo === 'corretiva'
                             ? 'bg-orange-100 text-orange-700'
@@ -400,24 +400,24 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
                           {os.tipo === 'corretiva' ? 'Corretiva' : 'Preventiva'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>
                           {st.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">
+                      <td className="px-3 py-3 text-gray-400 text-xs">
                         {ORIGEM[os.origem] ?? os.origem}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">
+                      <td className="px-3 py-3 text-gray-600 text-xs">
                         {fmtBRL(os.valorMaoObra) ?? <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 text-xs">
+                      <td className="px-3 py-3 text-gray-600 text-xs">
                         {fmtBRL(os.valorPecas) ?? <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 text-xs font-medium">
+                      <td className="px-3 py-3 text-gray-700 text-xs font-medium">
                         {os.status === 'concluida' && item.custo > 0 ? fmtBRL(item.custo) : <span className="text-gray-300">—</span>}
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-3 py-3 text-right">
                         <span className="text-xs font-bold text-primary">
                           {os.status === 'concluida' ? fmtBRL(item.acumulado) : <span className="text-gray-300">—</span>}
                         </span>

@@ -3,7 +3,7 @@ import { api } from '@/lib/api'
 import { getRole, getEmpresaId } from '@/lib/auth'
 import {
   CalendarClock, User, Wrench,
-  ClipboardList, Clock, AlertTriangle, CheckCircle, XCircle,
+  AlertTriangle,
   UserX, Cpu,
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
@@ -41,11 +41,11 @@ type Historico = {
 
 
 const STATUS = [
-  { key: 'aberta',       label: 'Abertas',      icon: ClipboardList, bg: 'bg-blue-600',   text: 'text-white' },
-  { key: 'agendada',     label: 'Agendadas',    icon: Clock,         bg: 'bg-orange-100', text: 'text-orange-700' },
-  { key: 'em_andamento', label: 'Em andamento', icon: AlertTriangle, bg: 'bg-yellow-100', text: 'text-yellow-700' },
-  { key: 'concluida',    label: 'Concluídas',   icon: CheckCircle,   bg: 'bg-green-600',  text: 'text-white' },
-  { key: 'cancelada',    label: 'Canceladas',   icon: XCircle,       bg: 'bg-red-600',    text: 'text-white' },
+  { key: 'aberta',       label: 'Abertas',      dot: 'bg-sky-500' },
+  { key: 'agendada',     label: 'Agendadas',    dot: 'bg-gray-400' },
+  { key: 'em_andamento', label: 'Em andamento', dot: 'bg-amber-500' },
+  { key: 'concluida',    label: 'Concluídas',   dot: 'bg-emerald-500' },
+  { key: 'cancelada',    label: 'Canceladas',   dot: 'bg-red-400' },
 ]
 
 function fmtData(iso: string | null) {
@@ -105,7 +105,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Cockpit</h1>
-        <p className="text-sm text-gray-400 mt-0.5">Visão em tempo real das Ordens de Serviço</p>
+        <p className="text-sm text-gray-500 mt-0.5">Situação das ordens de serviço, equipe e planos</p>
       </div>
 
       {/* Onboarding — só para admin, desaparece quando concluído ou dispensado */}
@@ -113,90 +113,89 @@ export default async function DashboardPage({ searchParams }: Props) {
         <OnboardingCard etapas={onboarding.etapas} empresaId={empresaId} />
       )}
 
-      {/* Status — cards coloridos */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-        {STATUS.map(({ key, label, icon: Icon, bg, text }) => (
-          <a key={key} href={`/ordens-servico?status=${key}`}
-            className={`rounded-xl p-5 flex flex-col gap-2 ${bg} hover:opacity-90 transition-opacity`}>
-            <Icon size={20} className={text} />
-            <p className={`text-3xl font-bold tabular-nums ${text}`}>{porStatus[key] ?? 0}</p>
-            <p className={`text-xs font-medium uppercase tracking-wide ${text} opacity-80`}>{label}</p>
-          </a>
-        ))}
-      </div>
-
-      {/* Métricas principais */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <a href="/ordens-servico"
-          className="bg-white border border-border rounded-xl p-4 hover:bg-surface transition-colors">
-          <p className="text-xs text-gray-400 mb-1.5">Total de O.S.</p>
-          <p className="text-2xl font-bold tabular-nums text-gray-900">{total}</p>
-        </a>
-
-        <a href="/ordens-servico?atrasadas=1"
-          className={`border rounded-xl p-4 transition-colors ${
-            atrasadas > 0 ? 'bg-red-50 border-red-200 hover:bg-red-100/60' : 'bg-white border-border hover:bg-surface'
-          }`}>
-          <p className={`text-xs mb-1.5 ${atrasadas > 0 ? 'text-red-400' : 'text-gray-400'}`}>Atrasadas</p>
-          <p className={`text-2xl font-bold tabular-nums ${atrasadas > 0 ? 'text-red-600' : 'text-gray-300'}`}>
-            {atrasadas}
-          </p>
-        </a>
-
-        <div className="bg-white border border-border rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1.5">Taxa de conclusão (mês)</p>
-          <p className="text-2xl font-bold tabular-nums text-gray-900">{taxaConclusao.percentual}%</p>
-          <div className="mt-2.5 h-1 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${
-                taxaConclusao.percentual >= 80 ? 'bg-emerald-500' :
-                taxaConclusao.percentual >= 50 ? 'bg-amber-400' : 'bg-red-400'
-              }`}
-              style={{ width: `${taxaConclusao.percentual}%` }}
-            />
-          </div>
-          <p className="text-[11px] text-gray-400 mt-1.5">
-            {taxaConclusao.concluidas}/{taxaConclusao.total} concluídas
-          </p>
-        </div>
-
-        <div className="bg-white border border-border rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1.5">Custo do mês</p>
-          <p className="text-2xl font-bold tabular-nums text-gray-900">{fmtBRL(custoTotalMes)}</p>
-        </div>
-      </div>
-
-      {/* KPIs secundários */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white border border-border rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1.5">Taxa de corretivas (mês)</p>
-          <p className="text-2xl font-bold tabular-nums text-gray-900">{taxaCorretivas}%</p>
-          <div className="mt-2.5 h-1 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full ${taxaCorretivas >= 60 ? 'bg-red-400' : taxaCorretivas >= 40 ? 'bg-amber-400' : 'bg-emerald-500'}`}
-              style={{ width: `${taxaCorretivas}%` }}
-            />
-          </div>
-        </div>
-        <div className="bg-white border border-border rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1.5">Tempo médio de atend. (mês)</p>
-          <p className="text-2xl font-bold tabular-nums text-gray-900">
-            {tempoMedioAtendimento != null ? `${tempoMedioAtendimento} d` : '—'}
-          </p>
-          {tempoMedioAtendimento != null && (
-            <p className="text-[11px] text-gray-400 mt-1">agendamento → conclusão</p>
+      {/* Pendências que pedem ação */}
+      {(atrasadas > 0 || osSemTecnico.length > 0) && (
+        <div className="flex flex-wrap gap-2">
+          {atrasadas > 0 && (
+            <a href="/ordens-servico?atrasadas=1"
+              className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100/70">
+              <AlertTriangle size={15} />
+              <span><b className="tabular-nums">{atrasadas}</b> O.S. {atrasadas === 1 ? 'atrasada' : 'atrasadas'}</span>
+              <span className="text-red-500">Ver →</span>
+            </a>
+          )}
+          {osSemTecnico.length > 0 && (
+            <a href="#sem-tecnico"
+              className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 hover:bg-amber-100/70">
+              <UserX size={15} />
+              <span><b className="tabular-nums">{osSemTecnico.length}</b> sem técnico</span>
+              <span className="text-amber-600">Ver →</span>
+            </a>
           )}
         </div>
-        <div className="bg-white border border-border rounded-xl p-4">
-          <p className="text-xs text-gray-400 mb-1.5">Concluídas (últimos 30 dias)</p>
-          <p className="text-2xl font-bold tabular-nums text-gray-900">{painel.totalConcluidasRecente}</p>
+      )}
+
+      {/* Situação das O.S. */}
+      <div className="bg-white border border-border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-border">
+          <a href="/ordens-servico" className="bg-white px-4 py-3.5 hover:bg-surface transition-colors">
+            <p className="text-sm text-gray-500">Total</p>
+            <p className="text-2xl font-semibold tabular-nums text-gray-900 mt-0.5">{total}</p>
+          </a>
+          {STATUS.map(({ key, label, dot }) => (
+            <a key={key} href={`/ordens-servico?status=${key}`}
+              className="bg-white px-4 py-3.5 hover:bg-surface transition-colors">
+              <p className="text-sm text-gray-500 flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${dot}`} />{label}
+              </p>
+              <p className="text-2xl font-semibold tabular-nums text-gray-900 mt-0.5">{porStatus[key] ?? 0}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {/* Indicadores */}
+      <div className="bg-white border border-border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border">
+          <div className="bg-white px-4 py-3.5">
+            <p className="text-sm text-gray-500">Conclusão no mês</p>
+            <p className="text-2xl font-semibold tabular-nums text-gray-900 mt-0.5">{taxaConclusao.percentual}%</p>
+            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${
+                taxaConclusao.percentual >= 80 ? 'bg-emerald-500' :
+                taxaConclusao.percentual >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                style={{ width: `${taxaConclusao.percentual}%` }} />
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5">{taxaConclusao.concluidas} de {taxaConclusao.total} concluídas</p>
+          </div>
+          <div className="bg-white px-4 py-3.5">
+            <p className="text-sm text-gray-500">Corretivas no mês</p>
+            <p className="text-2xl font-semibold tabular-nums text-gray-900 mt-0.5">{taxaCorretivas}%</p>
+            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${taxaCorretivas >= 60 ? 'bg-red-400' : taxaCorretivas >= 40 ? 'bg-amber-400' : 'bg-emerald-500'}`}
+                style={{ width: `${taxaCorretivas}%` }} />
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5">do total de O.S. do mês</p>
+          </div>
+          <div className="bg-white px-4 py-3.5">
+            <p className="text-sm text-gray-500">Tempo médio de atendimento</p>
+            <p className="text-2xl font-semibold tabular-nums text-gray-900 mt-0.5">
+              {tempoMedioAtendimento != null ? `${tempoMedioAtendimento} d` : '—'}
+            </p>
+            <p className="text-xs text-gray-500 mt-1.5">do agendamento à conclusão</p>
+          </div>
+          <div className="bg-white px-4 py-3.5">
+            <p className="text-sm text-gray-500">Custo do mês</p>
+            <p className="text-2xl font-semibold tabular-nums text-gray-900 mt-0.5">{fmtBRL(custoTotalMes)}</p>
+            <p className="text-xs text-gray-500 mt-1.5">{painel.totalConcluidasRecente} concluídas nos últimos 30 dias</p>
+          </div>
         </div>
       </div>
 
       {/* Gráfico + técnicos */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
 
-        <div className="xl:col-span-2 bg-white rounded-xl border border-border p-5">
+        <div className="xl:col-span-2 bg-white rounded-lg border border-border p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-700">O.S. por mês</h2>
             <Suspense>
@@ -206,7 +205,7 @@ export default async function DashboardPage({ searchParams }: Props) {
           <OsChart data={historico} ano={ano} />
         </div>
 
-        <div className="bg-white rounded-xl border border-border p-5">
+        <div className="bg-white rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <User size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">Carga por técnico</h2>
@@ -255,7 +254,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
         {/* Planos */}
-        <div className="bg-white rounded-xl border border-border p-5">
+        <div className="bg-white rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <CalendarClock size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">Planos preventivos vencendo</h2>
@@ -289,7 +288,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
 
         {/* Tipos de equipamento */}
-        <div className="bg-white rounded-xl border border-border p-5">
+        <div className="bg-white rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <Wrench size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">O.S. por tipo de equipamento</h2>
@@ -322,7 +321,7 @@ export default async function DashboardPage({ searchParams }: Props) {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
 
         {/* Top 5 equipamentos com mais corretivas (90 dias) */}
-        <div className="bg-white rounded-xl border border-border p-5">
+        <div className="bg-white rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <Cpu size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">Top equipamentos problemáticos</h2>
@@ -355,7 +354,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         </div>
 
         {/* O.S. sem técnico atribuído */}
-        <div className="bg-white rounded-xl border border-border p-5">
+        <div id="sem-tecnico" className="scroll-mt-20 bg-white rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <UserX size={14} className="text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">O.S. sem técnico</h2>

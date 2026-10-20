@@ -209,24 +209,26 @@ export default async function ClienteDetalhePage({ params }: Props) {
       </div>
 
       {/* Status das O.S. */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
-        {[
-          { key: 'aberta', label: 'Abertas', color: 'text-blue-600 bg-blue-50' },
-          { key: 'agendada', label: 'Agendadas', color: 'text-orange-600 bg-orange-50' },
-          { key: 'em_andamento', label: 'Andamento', color: 'text-purple-600 bg-purple-50' },
-          { key: 'concluida', label: 'Concluídas', color: 'text-green-600 bg-green-50' },
-          { key: 'cancelada', label: 'Canceladas', color: 'text-red-600 bg-red-50' },
-        ].map(({ key, label, color }) => (
-          <div key={key} className={`rounded-xl p-3 text-center border border-transparent ${color.split(' ')[1]} border-${color.split(' ')[0].replace('text-', '')}/20`}>
-            <p className={`text-xl font-bold ${color.split(' ')[0]}`}>{dash.porStatus[key] ?? 0}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wide">{label}</p>
-          </div>
-        ))}
+      <div className="bg-white border border-border rounded-lg overflow-hidden mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-border">
+          {[
+            { key: 'aberta', label: 'Abertas', dot: 'bg-sky-500' },
+            { key: 'agendada', label: 'Agendadas', dot: 'bg-gray-400' },
+            { key: 'em_andamento', label: 'Em andamento', dot: 'bg-amber-500' },
+            { key: 'concluida', label: 'Concluídas', dot: 'bg-emerald-500' },
+            { key: 'cancelada', label: 'Canceladas', dot: 'bg-red-400' },
+          ].map(({ key, label, dot }) => (
+            <a key={key} href={`/ordens-servico?clienteId=${id}&status=${key}`} className="bg-white px-4 py-3 hover:bg-surface transition-colors">
+              <p className="text-sm text-gray-500 flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${dot}`} />{label}</p>
+              <p className="text-xl font-semibold tabular-nums text-gray-900 mt-0.5">{dash.porStatus[key] ?? 0}</p>
+            </a>
+          ))}
+        </div>
       </div>
 
       {/* ── Confiabilidade da frota ── */}
       {nEquip > 0 && (
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 mb-4">
+        <div className="bg-white rounded-lg border border-border p-5 mb-4">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
               <ShieldCheck size={15} className="text-primary" /> Confiabilidade da Frota

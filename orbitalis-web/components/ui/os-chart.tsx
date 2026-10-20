@@ -23,11 +23,11 @@ const LABEL: Record<string, string> = {
 }
 
 const COR: Record<string, string> = {
-  aberta: '#2563eb',
-  agendada: '#FF997E',
-  em_andamento: '#EDD82A',
-  concluida: '#16a34a',
-  cancelada: '#B71247',
+  aberta: '#4f6fb5',
+  agendada: '#c9a98f',
+  em_andamento: '#d9a441',
+  concluida: '#3d9970',
+  cancelada: '#b3564f',
 }
 
 function mesAtual() {
@@ -56,7 +56,7 @@ function CustomTick({ x, y, payload, atualLabel }: {
         transform="rotate(-40)"
         fontSize={isAtual ? 11 : 10}
         fontWeight={isAtual ? 700 : 400}
-        fill={isAtual ? '#0505ad' : '#6b7280'}
+        fill={isAtual ? '#16226b' : '#6b7280'}
       >
         {payload.value}
       </text>
@@ -82,7 +82,7 @@ export function OsChart({ data, ano }: { data: Ponto[]; ano: number }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={formatted} margin={{ top: 4, right: 16, left: -16, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#dde3f5" />
+        <CartesianGrid strokeDasharray="2 4" stroke="#d9ddd7" />
         <XAxis
           dataKey="mes"
           tick={(props) => <CustomTick {...props} atualLabel={mostrarLinha ? atualLabel : ''} />}
@@ -93,7 +93,7 @@ export function OsChart({ data, ano }: { data: Ponto[]; ano: number }) {
         <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
         <Tooltip
           formatter={(value, name) => [value, LABEL[String(name)] ?? String(name)]}
-          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #dde3f5' }}
+          contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #d9ddd7' }}
         />
         <Legend formatter={(name) => LABEL[name] ?? name} wrapperStyle={{ fontSize: 12 }} />
         {mostrarLinha && (
