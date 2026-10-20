@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { OsOrigem, OsStatus } from '@prisma/client';
+import { OsOrigem, OsStatus, Prisma } from '@prisma/client';
 import { getTenantId } from '../../common/tenant.context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
@@ -353,7 +353,8 @@ export class OrdensServicoService {
     const tempoMedioAtendimento = tempoMedioRaw.length > 0
       ? Math.round(
           tempoMedioRaw.reduce((s, o) => {
-            const dias = (o.dataConclusao!.getTime() - o.dataAgendamento.getTime()) / 86_400_000;
+            // Concluir antes da data agendada não gera tempo negativo
+            const dias = Math.max(0, (o.dataConclusao!.getTime() - o.dataAgendamento.getTime()) / 86_400_000);
             return s + dias;
           }, 0) / tempoMedioRaw.length,
         )
@@ -440,10 +441,17 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id/sincronizar (§6.3 + §6.4)
-  async sincronizar(id: string, dto: SincronizarOsDto) {
+  async sincronizar(id: string, dto: SincronizarOsDto, user?: { id: string; role: string }) {
     return this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.findUnique({ where: { id } });
       if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+      // Técnico só executa as O.S. atribuídas a ele
+      if (user?.role === 'tecnico' && os.tecnicoId !== user.id) {
+        throw new NotFoundException('Ordem de Serviço não encontrada');
+      }
+      if (os.status === 'concluida') {
+        throw new BadRequestException('Esta O.S. já foi concluída');
+      }
 
       // Conflito de concorrência: Admin cancelou enquanto técnico trabalhava offline (§6.4)
       if (os.status === 'cancelada') {
@@ -475,7 +483,7 @@ export class OrdensServicoService {
           data: {
             statusItem: item.statusItem,
             observacoesTecnicas: item.observacoesTecnicas,
-            checklistSnapshot: item.checklist as object,
+            ...(item.checklist ? { checklistSnapshot: item.checklist as unknown as Prisma.InputJsonValue } : {}),
           },
         });
       }
@@ -680,6 +688,9 @@ export class OrdensServicoService {
 
     // Cliente só enxerga O.S. dos próprios ambientes. Responde "não encontrada"
     // (e não "proibido") para não revelar que o id existe.
+    if (user?.role === 'tecnico' && os.tecnicoId !== user.id) {
+      throw new NotFoundException('Ordem de Serviço não encontrada');
+    }
     if (user?.role === 'cliente' && os.ambiente.cliente.usuarioId !== user.id) {
       throw new NotFoundException('Ordem de Serviço não encontrada');
     }
@@ -750,9 +761,18 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id/status — Admin altera status manualmente
-  async alterarStatus(id: string, status: OsStatus) {
+  async alterarStatus(id: string, status: OsStatus, user?: { id: string; role: string }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+
+    // Admin muda o status livremente. O técnico só INICIA o atendimento das próprias O.S.;
+    // encerrar passa por /sincronizar (checklist + assinatura) ou pelo admin.
+    if (user?.role === 'tecnico') {
+      if (os.tecnicoId !== user.id) throw new NotFoundException('Ordem de Serviço não encontrada');
+      if (status !== 'em_andamento' || !['aberta', 'agendada', 'em_andamento'].includes(os.status)) {
+        throw new BadRequestException('O técnico só pode iniciar o atendimento; para encerrar, registre a execução e a assinatura.');
+      }
+    }
     const agora = new Date();
     return this.prisma.ordemServico.update({
       where: { id },

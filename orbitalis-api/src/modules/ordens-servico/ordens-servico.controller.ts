@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  NotFoundException,
   Get,
   Param,
   Patch,
@@ -84,7 +85,9 @@ export class OrdensServicoController {
   // GET /api/v1/ordens-servico/tecnico/:tecnicoId — Técnico
   @Get('tecnico/:tecnicoId')
   @Roles(UsuarioTipo.tecnico)
-  findByTecnico(@Param('tecnicoId') tecnicoId: string) {
+  findByTecnico(@Param('tecnicoId') tecnicoId: string, @CurrentUser() user: AuthUser) {
+    // Técnico só lista as próprias O.S.
+    if (tecnicoId !== user.id) throw new NotFoundException('Técnico não encontrado');
     return this.ordensServicoService.findByTecnico(tecnicoId);
   }
 
@@ -136,8 +139,8 @@ export class OrdensServicoController {
   // PATCH /api/v1/ordens-servico/:id/status — Admin ou Técnico altera status
   @Patch(':id/status')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
-  alterarStatus(@Param('id') id: string, @Body('status') status: OsStatus) {
-    return this.ordensServicoService.alterarStatus(id, status);
+  alterarStatus(@Param('id') id: string, @Body('status') status: OsStatus, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.alterarStatus(id, status, user);
   }
 
   // PATCH /api/v1/ordens-servico/:id/financeiro — Admin registra valores
@@ -171,8 +174,8 @@ export class OrdensServicoController {
   // PATCH /api/v1/ordens-servico/:id/sincronizar — Técnico (§6.3 §6.4)
   @Patch(':id/sincronizar')
   @Roles(UsuarioTipo.tecnico)
-  sincronizar(@Param('id') id: string, @Body() dto: SincronizarOsDto) {
-    return this.ordensServicoService.sincronizar(id, dto);
+  sincronizar(@Param('id') id: string, @Body() dto: SincronizarOsDto, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.sincronizar(id, dto, user);
   }
 
   // DELETE /api/v1/ordens-servico/:id — Admin, exclusão definitiva com senha

@@ -4,7 +4,8 @@ import { useTransition, useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { abrirChamado } from './actions'
 
-type Ambiente = { id: string; nome: string; localizacaoInterna: string }
+type Equipamento = { id: string; nome: string; marca?: string | null; tipoEquipamento?: string | null }
+type Ambiente = { id: string; nome: string; localizacaoInterna: string; equipamentos?: Equipamento[] }
 
 export function AbrirChamadoForm({
   ambientes,
@@ -15,17 +16,19 @@ export function AbrirChamadoForm({
 }) {
   const [isPending, startTransition] = useTransition()
   const [localError, setLocalError] = useState<string | null>(null)
+  const [ambienteId, setAmbienteId] = useState('')
+  const equipamentos = ambientes.find((a) => a.id === ambienteId)?.equipamentos ?? []
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    const ambienteId  = fd.get('ambienteId') as string
+    const equipamentoId = (fd.get('equipamentoId') as string) || undefined
     const observacoes = fd.get('observacoesGerais') as string
 
     setLocalError(null)
     startTransition(async () => {
       try {
-        await abrirChamado(ambienteId, observacoes)
+        await abrirChamado(ambienteId, observacoes, equipamentoId)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Erro ao abrir chamado'
         if (!msg.includes('NEXT_REDIRECT')) setLocalError(msg)
@@ -50,7 +53,8 @@ export function AbrirChamadoForm({
           Ambiente com problema <span className="text-destructive">*</span>
         </label>
         <select
-          name="ambienteId" required
+          name="ambienteId" required value={ambienteId}
+          onChange={(e) => setAmbienteId(e.target.value)}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
           <option value="">Selecione o ambiente…</option>
@@ -61,6 +65,25 @@ export function AbrirChamadoForm({
           ))}
         </select>
       </div>
+
+      {equipamentos.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Qual equipamento está com problema?
+          </label>
+          <select
+            name="equipamentoId" defaultValue=""
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
+          >
+            <option value="">Não sei / vários equipamentos</option>
+            {equipamentos.map((eq) => (
+              <option key={eq.id} value={eq.id}>
+                {eq.nome}{eq.marca ? ` — ${eq.marca}` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">

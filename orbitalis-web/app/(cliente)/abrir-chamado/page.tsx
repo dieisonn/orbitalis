@@ -1,7 +1,8 @@
 import { api } from '@/lib/api'
 import { AbrirChamadoForm } from './form'
 
-type Ambiente = { id: string; nome: string; localizacaoInterna: string }
+type Equipamento = { id: string; nome: string; marca?: string | null; tipoEquipamento?: string | null }
+type Ambiente = { id: string; nome: string; localizacaoInterna: string; equipamentos?: Equipamento[] }
 type Perfil   = { ambientes: Ambiente[] }
 
 // searchParams é um Server Component prop — sem useSearchParams, sem Suspense

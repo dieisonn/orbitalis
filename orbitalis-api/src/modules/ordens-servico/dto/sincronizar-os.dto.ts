@@ -20,7 +20,10 @@ export class ItemSincronizadoDto {
   @IsString()
   observacoesTecnicas?: string;
 
-  checklist: Record<string, unknown>;
+  // Checklist do item com o que foi marcado em campo (lista de itens do snapshot)
+  @IsOptional()
+  @IsArray()
+  checklist?: Record<string, unknown>[];
 }
 
 export class SincronizarOsDto {
