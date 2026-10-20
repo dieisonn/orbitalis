@@ -32,8 +32,9 @@ function atalhos() {
 
 export default async function RelatorioAgendaPage({ searchParams }: Props) {
   const f = await searchParams
+  let motivo = ''
   const [relatorio, tecnicosRes, clientesRes] = await Promise.all([
-    buscarRelatorio(f).catch(() => null),
+    buscarRelatorio(f).catch((e: unknown) => { motivo = e instanceof Error ? e.message : ''; return null }),
     api.get<{ data: Opcao[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Opcao[] })),
     api.get<{ data: Opcao[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as Opcao[] })),
   ])
@@ -45,6 +46,7 @@ export default async function RelatorioAgendaPage({ searchParams }: Props) {
         <h1 className="text-xl font-semibold text-gray-900">Relatório de atendimentos</h1>
         <p className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2 max-w-xl">
           Não foi possível gerar o relatório. Confira as datas e tente de novo.
+          {motivo && <span className="block text-xs text-red-600 mt-1">Detalhe: {motivo}</span>}
         </p>
       </div>
     )
