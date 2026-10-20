@@ -19,7 +19,7 @@ export class TiposServicoService {
     valorPadrao?: number | null;
   }) {
     const sigla = dto.sigla.toUpperCase().trim();
-    const existe = await this.prisma.tipoServico.findUnique({ where: { sigla } });
+    const existe = await this.prisma.tipoServico.findFirst({ where: { sigla } });
     if (existe) throw new BadRequestException(`Sigla "${sigla}" já cadastrada`);
 
     return this.prisma.tipoServico.create({

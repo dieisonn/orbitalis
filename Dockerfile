@@ -28,4 +28,4 @@ COPY orbitalis-api/prisma ./prisma/
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]
+CMD ["sh", "-c", "sh prisma/migrate-start.sh && node dist/src/main"]

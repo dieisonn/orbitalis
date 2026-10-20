@@ -148,6 +148,7 @@ model Cliente {
   contratos        Contrato[]
   orcamentos       Orcamento[]
 
+  @@index([empresaId])
   @@map("clientes")
 }
 
@@ -169,6 +170,7 @@ model Ambiente {
   ordensServico OrdemServico[]
   orcamentos    Orcamento[]
 
+  @@index([empresaId])
   @@map("ambientes")
 }
 
@@ -198,6 +200,7 @@ model Equipamento {
   diagnosticosLgmv DiagnosticoLgmv[]
 
   @@index([codigoQr])
+  @@index([empresaId])
   @@map("equipamentos")
 }
 
@@ -306,6 +309,7 @@ model OrdemServico {
   orcamento        Orcamento?
 
   @@index([status])
+  @@index([empresaId])
   @@map("ordens_servico")
 }
 
@@ -331,7 +335,7 @@ model OrdemServicoItem {
 // ─────────────────────────────────────────
 model TipoServico {
   id              String   @id @default(uuid()) @db.Uuid
-  sigla           String   @unique @db.VarChar(5)
+  sigla           String   @db.VarChar(5)
   nome            String   @db.VarChar(100)
   corHex          String   @map("cor_hex") @db.VarChar(7)
   calendarColorId String   @default("7") @map("calendar_color_id") @db.VarChar(5)
@@ -345,6 +349,7 @@ model TipoServico {
   modelosChecklist ModeloChecklist[]
   orcamentos       Orcamento[]
 
+  @@unique([empresaId, sigla])
   @@map("tipos_servico")
 }
 

@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { OsOrigem, OsStatus } from '@prisma/client';
+import { getTenantId } from '../../common/tenant.context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
@@ -675,9 +676,11 @@ export class OrdensServicoService {
       },
     });
 
+    if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+
     // Cliente só enxerga O.S. dos próprios ambientes. Responde "não encontrada"
     // (e não "proibido") para não revelar que o id existe.
-    if (os && user?.role === 'cliente' && os.ambiente.cliente.usuarioId !== user.id) {
+    if (user?.role === 'cliente' && os.ambiente.cliente.usuarioId !== user.id) {
       throw new NotFoundException('Ordem de Serviço não encontrada');
     }
 
@@ -863,6 +866,8 @@ export class OrdensServicoService {
     const anoAlvo = ano && ano > 2000 && ano < 2100 ? ano : new Date().getFullYear();
     const dataInicio = `${anoAlvo}-01-01`;
     const dataFim    = `${anoAlvo}-12-31`;
+    // SQL cru não passa pelo filtro automático de tenant
+    const empresaId  = getTenantId() ?? null;
 
     const rows = await this.prisma.$queryRaw<
       { mes: string; status: string; total: bigint }[]
@@ -874,6 +879,7 @@ export class OrdensServicoService {
       FROM ordens_servico
       WHERE "data_agendamento" >= ${dataInicio}::date
         AND "data_agendamento" <= ${dataFim}::date
+        AND (${empresaId}::uuid IS NULL OR "empresa_id" = ${empresaId}::uuid)
       GROUP BY mes, status
       ORDER BY mes ASC
     `;

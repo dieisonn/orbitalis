@@ -271,6 +271,7 @@ export class PlanosManutencaoService {
               tipo: 'preventiva',
               origem: 'preventiva_automatica',
               dataAgendamento: dataGeracao,
+              empresaId: plano.empresaId ?? undefined,
             },
             select: { id: true },
           });

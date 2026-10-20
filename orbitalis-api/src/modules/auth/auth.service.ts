@@ -8,6 +8,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsuarioTipo } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { runWithTenant } from '../../common/tenant.context';
+import { TIPOS_SERVICO_PADRAO } from '../../common/tipos-servico-padrao';
+import { ModelosChecklistService } from '../modelos-checklist/modelos-checklist.service';
 import { LoginDto } from './dto/login.dto';
 import { RegistrarDto } from './dto/registrar.dto';
 
@@ -16,6 +19,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly checklists: ModelosChecklistService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -83,6 +87,9 @@ export class AuthService {
       },
     });
 
+    // Catálogo inicial da empresa: tipos de serviço e checklists padrão (PMOC, ANVISA e corretiva)
+    await this.semearPadroes(empresa.id);
+
     const payload = {
       sub: usuario.id,
       email: usuario.email,
@@ -95,5 +102,22 @@ export class AuthService {
       role: usuario.tipo,
       empresa: { id: empresa.id, slug: empresa.slug, nomeEmpresa: empresa.nomeEmpresa },
     };
+  }
+
+  private async semearPadroes(empresaId: string) {
+    try {
+      await this.prisma.tipoServico.createMany({
+        data: TIPOS_SERVICO_PADRAO.map((t) => ({ ...t, sistema: true, empresaId })),
+        skipDuplicates: true,
+      });
+      await runWithTenant(empresaId, async () => {
+        await this.checklists.seedPmocSplitHiwall();
+        await this.checklists.seedAnvisa();
+        await this.checklists.seedCorretiva();
+      });
+    } catch (e) {
+      // Não bloqueia o cadastro; o admin pode importar os padrões depois
+      console.error('Falha ao semear padrões da empresa', empresaId, e);
+    }
   }
 }

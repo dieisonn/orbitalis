@@ -5,5 +5,6 @@ import { ModelosChecklistService } from './modelos-checklist.service';
 @Module({
   controllers: [ModelosChecklistController],
   providers: [ModelosChecklistService],
+  exports: [ModelosChecklistService],
 })
 export class ModelosChecklistModule {}
