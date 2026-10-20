@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { getTenantId } from '../common/tenant.context';
 
 // Models que recebem filtro automático por empresaId (nome do delegate: camelCase)
@@ -35,7 +35,7 @@ const REFERENCIAS: Record<string, Record<string, string>> = {
   convite:                { clienteId: 'cliente' },
   configuracaoEmpresa:    { responsavelTecnicoId: 'usuario' },
   modeloChecklist:        { tipoServicoId: 'tipoServico' },
-  planoManutencao:        { clienteId: 'cliente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico' },
+  planoManutencao:        { clienteId: 'cliente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico', contratoId: 'contrato' },
   planoEquipamentoConfig: { planoId: 'planoManutencao', equipamentoId: 'equipamento', modeloChecklistId: 'modeloChecklist' },
   ordemServico:           { ambienteId: 'ambiente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico', planoId: 'planoManutencao' },
   ordemServicoItem:       { ordemServicoId: 'ordemServico', equipamentoId: 'equipamento' },
@@ -46,6 +46,30 @@ const REFERENCIAS: Record<string, Record<string, string>> = {
 };
 
 const WRITE_OPS = new Set(['create', 'createMany', 'createManyAndReturn', 'update', 'updateMany', 'upsert']);
+
+// Modelos com numeração sequencial por empresa → nome do contador
+const NUMERADOS: Record<string, string> = { ordemServico: 'ordem_servico', orcamento: 'orcamento' };
+
+type ProximoNumero = (empresaId: string, nome: string) => Promise<number>;
+
+/** Próximo número da empresa. Atômico: o UPDATE do contador serializa criações concorrentes. */
+const sequenciaDe = (client: { $queryRaw: (q: Prisma.Sql) => Promise<unknown> }): ProximoNumero =>
+  async (empresaId, nome) => {
+    const rows = (await client.$queryRaw(Prisma.sql`
+      INSERT INTO contadores_empresa (empresa_id, nome, valor)
+      VALUES (${empresaId}::uuid, ${nome}, 1)
+      ON CONFLICT (empresa_id, nome) DO UPDATE SET valor = contadores_empresa.valor + 1
+      RETURNING valor`)) as { valor: number }[];
+    return rows[0].valor;
+  };
+
+async function atribuirNumero(delegate: string, operation: string, args: any, proximo: ProximoNumero) {
+  const nome = NUMERADOS[delegate];
+  if (!nome || operation !== 'create' || !args?.data || args.data.numero !== undefined) return;
+  const empresaId = args.data.empresaId ?? getTenantId();
+  if (!empresaId) return; // sem empresa: fica o respaldo do banco
+  args.data = { ...args.data, numero: await proximo(empresaId, nome) };
+}
 
 type Finder = (alvo: string, id: string) => Promise<unknown>;
 
@@ -110,6 +134,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   private _installTenantFilter() {
     let tenantedRef: any;
+    const proximoNumero = sequenciaDe(this as any);
     const tenanted = this.$extends({
       query: {
         $allModels: {
@@ -125,6 +150,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
                 tenantedRef[alvo].findFirst({ where: { id }, select: { id: true } }),
               );
             }
+            await atribuirNumero(delegate, operation, args, proximoNumero);
             return query(args);
           },
         },
@@ -171,8 +197,13 @@ function wrapTx(tx: any) {
           if (typeof fn !== 'function') return fn;
           return async (args?: any) => {
             const empresaId = getTenantId();
-            if (!empresaId) return fn.call(delegate, args);
+            if (!empresaId) {
+              // Jobs (cron) sem contexto de tenant: a empresa vem explícita no data
+              await atribuirNumero(prop, String(op), args, sequenciaDe(target));
+              return fn.call(delegate, args);
+            }
             if (tenantModel) args = scopeArgs(String(op), args, empresaId);
+            await atribuirNumero(prop, String(op), args, sequenciaDe(target));
             await verificarReferencias(prop, String(op), args, (alvo, id) =>
               target[alvo].findFirst(scopeArgs('findFirst', { where: { id }, select: { id: true } }, empresaId)),
             );
