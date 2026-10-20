@@ -233,7 +233,12 @@ function Chip({ e, onAbrir, onArrastar }: { e: EventoAgenda; onAbrir: (e: Evento
 
 // ─── Semana / Dia: grade de horas ────────────────────────────────────────────
 
-type Posicionado = { e: EventoAgenda; topo: number; altura: number; coluna: number; colunas: number }
+type Posicionado = {
+  e: EventoAgenda; topo: number; altura: number; coluna: number; colunas: number
+  grupo?: EventoAgenda[]   // vários eventos no mesmo horário viram um bloco só
+}
+
+const MAX_COLUNAS = 3
 
 function posicionar(lista: EventoAgenda[], dia: Dia): Posicionado[] {
   const base = instante(dia.y, dia.m, dia.d)
@@ -258,6 +263,18 @@ function posicionar(lista: EventoAgenda[], dia: Dia): Posicionado[] {
       if (c === -1) { c = cols.length; cols.push(it.fim) } else cols[c] = it.fim
       return { it, c }
     })
+    if (cols.length > MAX_COLUNAS) {
+      // Muitos eventos ao mesmo tempo: um bloco "N eventos" em vez de colunas ilegíveis
+      const ini = Math.min(...cluster.map((i) => i.ini)), fim = Math.max(...cluster.map((i) => i.fim))
+      out.push({
+        e: cluster[0].e,
+        topo: ((ini - HORA_INI * 60) / 60) * PX_HORA,
+        altura: Math.max(((fim - ini) / 60) * PX_HORA, 18),
+        coluna: 0, colunas: 1, grupo: cluster.map((i) => i.e),
+      })
+      cluster = []
+      return
+    }
     for (const { it, c } of alocados) {
       out.push({
         e: it.e,
@@ -282,14 +299,21 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
   onAbrir: (e: EventoAgenda) => void; onNovo: (iso: string) => void
 }) {
   const horas = Array.from({ length: HORA_FIM - HORA_INI }, (_, i) => HORA_INI + i)
+  const [lista, setLista] = useState<EventoAgenda[] | null>(null)
+  const rolagem = useRef<HTMLDivElement>(null)
   const hojeDia = hoje()
   const agora = relogio(new Date())
-  const col = `grid-cols-[3.5rem_repeat(${dias.length},minmax(0,1fr))]`
+  useEffect(() => {
+    // abre mostrando o expediente (07:00 em diante); à noite, desce um pouco
+    const hora = agora.hh >= 18 ? 10 : 7
+    if (rolagem.current) rolagem.current.scrollTop = (hora - HORA_INI) * PX_HORA
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="bg-white rounded-xl border border-border overflow-hidden">
       {/* cabeçalho + dia inteiro */}
-      <div className={`grid ${col} border-b border-border bg-surface`} style={{ gridTemplateColumns: `3.5rem repeat(${dias.length}, minmax(0, 1fr))` }}>
+      <div className="grid border-b border-border bg-surface" style={{ gridTemplateColumns: `3.5rem repeat(${dias.length}, minmax(0, 1fr))` }}>
         <div />
         {dias.map((d) => {
           const k = chaveDia(d)
@@ -309,12 +333,14 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
         })}
       </div>
 
-      <div className="overflow-y-auto max-h-[70vh]">
+      <div ref={rolagem} className="overflow-y-auto max-h-[70vh]">
         <div className="grid relative" style={{ gridTemplateColumns: `3.5rem repeat(${dias.length}, minmax(0, 1fr))` }}>
           <div>
             {horas.map((h) => (
-              <div key={h} style={{ height: PX_HORA }} className="text-[11px] text-gray-400 text-right pr-2 -mt-2 pt-0">
-                {String(h).padStart(2, '0')}:00
+              <div key={h} style={{ height: PX_HORA }} className="relative">
+                <span className="absolute -top-2 right-2 text-[11px] text-gray-400 bg-white px-0.5">
+                  {String(h).padStart(2, '0')}:00
+                </span>
               </div>
             ))}
           </div>
@@ -334,7 +360,15 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
                   <div className="absolute inset-x-0 border-t-2 border-red-500 pointer-events-none z-10"
                     style={{ top: ((agora.hh * 60 + agora.mm - HORA_INI * 60) / 60) * PX_HORA }} />
                 )}
-                {pos.map(({ e, topo, altura, coluna, colunas }) => (
+                {pos.map(({ e, topo, altura, coluna, colunas, grupo }) => grupo ? (
+                  <button key={`g-${e.id}`}
+                    onClick={(ev) => { ev.stopPropagation(); setLista(grupo) }}
+                    style={{ top: topo, height: altura, left: 0, width: '100%' }}
+                    className="absolute text-left text-white rounded px-2 py-1 overflow-hidden border border-white/60 bg-slate-600 hover:bg-slate-700 text-[12px] font-semibold">
+                    {grupo.length} eventos · {hhmm(grupo[0].inicio)}
+                    <span className="block text-[11px] font-normal opacity-90">clique para ver a lista</span>
+                  </button>
+                ) : (
                   <button key={e.id}
                     onClick={(ev) => { ev.stopPropagation(); onAbrir(e) }}
                     style={{
@@ -353,6 +387,33 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
           })}
         </div>
       </div>
+
+      {lista && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => setLista(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h3 className="font-semibold text-gray-900">{lista.length} eventos neste horário</h3>
+              <button onClick={() => setLista(null)} className="text-gray-400 hover:text-gray-700 text-lg leading-none">×</button>
+            </div>
+            <ul className="divide-y divide-border">
+              {lista.map((e) => (
+                <li key={e.id}>
+                  <button onClick={() => { setLista(null); onAbrir(e) }}
+                    className="w-full text-left px-5 py-3 hover:bg-surface flex items-start gap-3">
+                    <span className="mt-1.5 w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: e.corHex }} />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-gray-900 truncate">{e.titulo}</span>
+                      <span className="block text-xs text-gray-500">
+                        {hhmm(e.inicio)} – {hhmm(e.fim)}{e.tecnico ? ` · ${e.tecnico.nome}` : ''}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
