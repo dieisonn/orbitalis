@@ -1,6 +1,6 @@
 ﻿import { api } from '@/lib/api'
 import { ExportOsBtn } from './export-os-btn'
-import { FileSpreadsheet } from 'lucide-react'
+import { BarChart3, FileSpreadsheet } from 'lucide-react'
 
 type Tecnico = { id: string; nome: string | null; email: string }
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
@@ -17,6 +17,16 @@ export default async function RelatoriosPage() {
         <h1 className="text-xl font-semibold text-gray-900">Relatórios</h1>
         <p className="text-gray-500 text-sm mt-1">Exporte dados para análise externa</p>
       </div>
+
+      <a href="/agenda/relatorio" className="flex items-center gap-3 bg-white rounded-lg border border-border p-5 mb-4 hover:bg-surface transition-colors">
+        <div className="w-10 h-10 rounded-md bg-surface flex items-center justify-center">
+          <BarChart3 size={20} className="text-primary" />
+        </div>
+        <div>
+          <h2 className="font-semibold text-gray-800">Atendimentos por tipo</h2>
+          <p className="text-sm text-gray-500">Quantas visitas, preventivas, PMOC e retrabalhos, por técnico e por mês</p>
+        </div>
+      </a>
 
       <div className="bg-white rounded-xl border border-border p-6">
         <div className="flex items-center gap-3 mb-6">

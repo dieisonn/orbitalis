@@ -1,5 +1,6 @@
 import { api } from '@/lib/api'
-import { CalendarDays } from 'lucide-react'
+import Link from 'next/link'
+import { BarChart3, CalendarDays } from 'lucide-react'
 import { AgendaClient } from './agenda-client'
 import type { ClienteOpcao, TecnicoOpcao, TipoOpcao } from './evento-modal'
 
@@ -13,10 +14,15 @@ export default async function AgendaPage() {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <CalendarDays size={22} />
-          Agenda
-        </h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <CalendarDays size={22} />
+            Agenda
+          </h1>
+          <Link href="/agenda/relatorio" className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary bg-white border border-border rounded-md hover:bg-surface">
+            <BarChart3 size={14} /> Relatório de atendimentos
+          </Link>
+        </div>
         <p className="text-gray-500 text-sm mt-1">
           Toda O.S. agendada aparece aqui com título, endereço e descrição. Clique num dia para criar um evento.
         </p>

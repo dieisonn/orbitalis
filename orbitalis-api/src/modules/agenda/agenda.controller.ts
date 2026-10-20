@@ -25,6 +25,18 @@ export class AgendaController {
     return this.agenda.listar(user, { inicio, fim, tecnicoId, clienteId });
   }
 
+  // Contagem de atendimentos por tipo (VT, MP, PM, RT...), técnico e mês — antes de ':id'
+  @Get('relatorio')
+  @Roles(UsuarioTipo.admin)
+  relatorio(
+    @Query('inicio') inicio?: string,
+    @Query('fim') fim?: string,
+    @Query('tecnicoId') tecnicoId?: string,
+    @Query('clienteId') clienteId?: string,
+  ) {
+    return this.agenda.relatorio({ inicio, fim, tecnicoId, clienteId });
+  }
+
   @Get(':id')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   buscar(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {

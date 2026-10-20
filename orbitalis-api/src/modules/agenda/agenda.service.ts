@@ -190,6 +190,114 @@ export class AgendaService implements OnApplicationBootstrap {
     return eventos.map((e) => this.paraResposta(e));
   }
 
+  /**
+   * Relatório de atendimentos: quantos de cada tipo (visita, preventiva, PMOC, retrabalho...),
+   * por técnico e por mês. Conta eventos que começam no período (datas AAAA-MM-DD, horário de São Paulo).
+   */
+  async relatorio(q: { inicio?: string; fim?: string; tecnicoId?: string; clienteId?: string }) {
+    const dia = (v: string | undefined, padrao: Date) => {
+      if (!v) return padrao;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new BadRequestException('Data inválida (use AAAA-MM-DD)');
+      const [y, m, d] = v.split('-').map(Number);
+      const data = new Date(Date.UTC(y, m - 1, d));
+      if (data.getUTCMonth() !== m - 1 || data.getUTCDate() !== d) throw new BadRequestException('Data inválida');
+      return data;
+    };
+    const hoje = relogioLocal(new Date()).dia;
+    const primeiroDoMes = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth(), 1));
+    const de = dia(q.inicio, primeiroDoMes);
+    const ate = dia(q.fim, hoje);
+    if (ate < de) throw new BadRequestException('A data final deve ser depois da inicial');
+    if ((ate.getTime() - de.getTime()) / 86_400_000 > 730) throw new BadRequestException('Período máximo: 2 anos');
+    // meia-noite de São Paulo = 03:00 UTC; o dia final entra inteiro
+    const desde = new Date(de.getTime() + 3 * 3_600_000);
+    const ateExcl = new Date(ate.getTime() + 86_400_000 + 3 * 3_600_000);
+
+    const eventos = await this.prisma.eventoAgenda.findMany({
+      where: {
+        inicio: { gte: desde, lt: ateExcl },
+        ...(q.tecnicoId ? { tecnicoId: q.tecnicoId } : {}),
+        ...(q.clienteId ? { clienteId: q.clienteId } : {}),
+      },
+      select: {
+        inicio: true, fim: true, diaInteiro: true,
+        tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true } },
+        tecnico: { select: { id: true, nome: true, email: true } },
+        ordemServico: { select: { status: true } },
+      },
+      orderBy: { inicio: 'asc' },
+      take: 20_000,
+    });
+
+    type Linha = {
+      chave: string; sigla: string; nome: string; corHex: string;
+      total: number; concluidos: number; emAndamento: number; agendados: number; cancelados: number; minutos: number;
+    };
+    const porTipo = new Map<string, Linha>();
+    const porTecnico = new Map<string, { id: string | null; nome: string; total: number; porTipo: Record<string, number> }>();
+    const porMes = new Map<string, { mes: string; total: number; porTipo: Record<string, number> }>();
+    let minutosTotal = 0;
+
+    for (const e of eventos) {
+      const t = e.tipoServico;
+      const chave = t?.id ?? 'sem-tipo';
+      const sigla = t?.sigla ?? '—';
+      const linha = porTipo.get(chave) ?? {
+        chave, sigla, nome: t?.nome ?? 'Sem tipo', corHex: t?.corHex ?? '#9ca3af',
+        total: 0, concluidos: 0, emAndamento: 0, agendados: 0, cancelados: 0, minutos: 0,
+      };
+      const min = e.diaInteiro ? 0 : Math.max(0, Math.round((e.fim.getTime() - e.inicio.getTime()) / 60_000));
+      linha.total++;
+      linha.minutos += min;
+      minutosTotal += min;
+      const st = e.ordemServico?.status;
+      if (st === 'concluida') linha.concluidos++;
+      else if (st === 'em_andamento') linha.emAndamento++;
+      else if (st === 'cancelada') linha.cancelados++;
+      else linha.agendados++;
+      porTipo.set(chave, linha);
+
+      const tecId = e.tecnico?.id ?? 'sem-tecnico';
+      const tec = porTecnico.get(tecId) ?? {
+        id: e.tecnico?.id ?? null, nome: e.tecnico ? (e.tecnico.nome ?? e.tecnico.email) : 'Sem técnico', total: 0, porTipo: {},
+      };
+      tec.total++;
+      tec.porTipo[chave] = (tec.porTipo[chave] ?? 0) + 1;
+      porTecnico.set(tecId, tec);
+
+      const l = relogioLocal(e.inicio).dia;
+      const mes = `${l.getUTCFullYear()}-${String(l.getUTCMonth() + 1).padStart(2, '0')}`;
+      const m = porMes.get(mes) ?? { mes, total: 0, porTipo: {} };
+      m.total++;
+      m.porTipo[chave] = (m.porTipo[chave] ?? 0) + 1;
+      porMes.set(mes, m);
+    }
+
+    const total = eventos.length;
+    const tipos = [...porTipo.values()]
+      .sort((a, b) => b.total - a.total)
+      .map((l) => ({ ...l, percentual: total ? +((l.total / total) * 100).toFixed(1) : 0 }));
+    const cont = (...siglas: string[]) => tipos.filter((t) => siglas.includes(t.sigla)).reduce((s, t) => s + t.total, 0);
+    const retrabalho = cont('RT');
+
+    return {
+      periodo: { inicio: de.toISOString().slice(0, 10), fim: ate.toISOString().slice(0, 10) },
+      truncado: total >= 20_000,
+      total,
+      horas: +(minutosTotal / 60).toFixed(1),
+      retrabalho: { total: retrabalho, percentual: total ? +((retrabalho / total) * 100).toFixed(1) : 0 },
+      resumo: {
+        preventivas: cont('MP', 'PM'),
+        corretivas: cont('MC'),
+        visitas: cont('VT'),
+        retrabalho,
+      },
+      tipos,
+      tecnicos: [...porTecnico.values()].sort((a, b) => b.total - a.total),
+      meses: [...porMes.values()].sort((a, b) => a.mes.localeCompare(b.mes)),
+    };
+  }
+
   private async carregar(id: string, user?: AuthUser) {
     const e = await this.prisma.eventoAgenda.findFirst({ where: { id }, include: INCLUDE_EVENTO });
     if (!e || (user?.role === 'tecnico' && e.tecnicoId !== user.id)) {
