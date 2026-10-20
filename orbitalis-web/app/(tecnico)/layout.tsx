@@ -12,11 +12,9 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   return (
     <div className="min-h-screen bg-surface">
       {/* Header fixo no topo */}
-      <header className="sticky top-0 z-40 bg-primary text-white px-4 py-3 flex items-center gap-3 shadow-sm">
-        <div className="bg-white rounded-md px-2 py-1 flex items-center">
-          <img src="/logo.png" alt="Orbitalis" className="h-6 w-auto object-contain" />
-        </div>
-        <span className="text-sm font-semibold text-white/75 tracking-wide">Portal do Técnico</span>
+      <header className="sticky top-0 z-40 bg-[var(--nav-bg)] border-b border-[var(--nav-border)] px-4 py-2.5 flex items-center gap-3">
+        <img src="/logo.png" alt="Orbitalis" className="h-8 w-auto object-contain" />
+        <span className="text-sm text-gray-600">Portal do Técnico</span>
       </header>
 
       <OfflineBanner />
@@ -25,12 +23,12 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       <main className="px-4 py-4 pb-20 max-w-xl mx-auto">{children}</main>
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-50 bg-primary border-t border-white/10 flex safe-pb">
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-border flex safe-pb">
         <Link
           href="/minhas-os"
           className={[
-            'flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold tracking-wide transition-colors',
-            path.startsWith('/minhas-os') ? 'text-white' : 'text-white/45 hover:text-white/80',
+            'flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-xs font-medium transition-colors',
+            path.startsWith('/minhas-os') ? 'text-action' : 'text-gray-500 hover:text-gray-800',
           ].join(' ')}
         >
           <ClipboardList size={22} />
@@ -39,8 +37,8 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         <Link
           href="/minha-agenda"
           className={[
-            'flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold tracking-wide transition-colors',
-            path.startsWith('/minha-agenda') ? 'text-white' : 'text-white/45 hover:text-white/80',
+            'flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-xs font-medium transition-colors',
+            path.startsWith('/minha-agenda') ? 'text-action' : 'text-gray-500 hover:text-gray-800',
           ].join(' ')}
         >
           <CalendarDays size={22} />
@@ -49,7 +47,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         <form action={logout} className="flex-1">
           <button
             type="submit"
-            className="w-full h-full flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold tracking-wide text-white/45 hover:text-white/80 transition-colors"
+            className="w-full h-full flex flex-col items-center justify-center py-3 gap-0.5 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
           >
             <LogOut size={22} />
             Sair

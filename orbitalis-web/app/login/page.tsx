@@ -36,30 +36,21 @@ export default function LoginPage() {
     <div className="min-h-screen flex">
       {/* ── Painel esquerdo — branding (desktop only) ──────────────── */}
       <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-primary flex-col justify-between p-12">
-        {/* Círculos decorativos */}
-        <div className="pointer-events-none">
-          <div className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full border border-white/10" />
-          <div className="absolute -top-32 -right-32 w-[300px] h-[300px] rounded-full bg-white/5" />
-          <div className="absolute top-1/2 -left-24  w-72  h-72  rounded-full bg-white/5" />
-          <div className="absolute -bottom-24 right-16 w-80  h-80  rounded-full border border-white/10" />
-          <div className="absolute -bottom-24 right-16 w-52  h-52  rounded-full bg-white/5" />
-        </div>
-
         {/* Logo */}
         <div className="relative z-10">
-          <div className="bg-white rounded-3xl p-5 shadow-xl inline-flex">
+          <div className="bg-white rounded-md px-6 py-4 inline-flex">
             <img src="/logo.png" alt="Orbitalis" className="h-24 w-auto object-contain" />
           </div>
-          <p className="text-white font-black text-2xl tracking-tight mt-3">Orbitalis</p>
+          <p className="text-white font-semibold text-xl mt-3">Orbitalis</p>
         </div>
 
         {/* Hero */}
         <div className="relative z-10 space-y-8">
           <div>
-            <h1 className="text-4xl font-black text-white leading-snug">
+            <h1 className="text-3xl font-semibold text-white leading-snug">
               Dados em órbita.<br />Manutenção em dia.
             </h1>
-            <p className="text-white/55 mt-3 text-base leading-relaxed">
+            <p className="text-white/70 mt-3 text-base leading-relaxed">
               Plataforma completa para gestão de ativos,<br />ordens de serviço e planos preventivos PMOC.
             </p>
           </div>
@@ -67,17 +58,17 @@ export default function LoginPage() {
           <div className="space-y-3">
             {FEATURES.map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-md bg-white/10 flex items-center justify-center shrink-0">
                   <Icon size={16} className="text-white/80" />
                 </div>
-                <span className="text-white/75 text-sm">{text}</span>
+                <span className="text-white/85 text-sm">{text}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Rodapé */}
-        <p className="relative z-10 text-white/25 text-xs">
+        <p className="relative z-10 text-white/55 text-xs">
           © {new Date().getFullYear()} Orbitalis · Todos os direitos reservados
         </p>
       </div>
@@ -87,16 +78,15 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo (mobile) */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center bg-primary rounded-3xl p-4 mb-3 shadow-lg">
-              <img src="/logo.png" alt="Orbitalis" className="h-14 w-auto object-contain" />
+            <div className="inline-flex items-center justify-center mb-3">
+              <img src="/logo.png" alt="Orbitalis" className="h-16 w-auto object-contain" />
             </div>
-            <p className="text-primary font-black text-xl tracking-tight">Orbitalis</p>
           </div>
 
           {/* Cabeçalho do formulário */}
           <div className="mb-8">
-            <h2 className="text-2xl font-black text-gray-900">Bem-vindo de volta</h2>
-            <p className="text-gray-400 text-sm mt-1">Entre com suas credenciais para continuar</p>
+            <h2 className="text-2xl font-semibold text-gray-900">Bem-vindo de volta</h2>
+            <p className="text-gray-500 text-sm mt-1">Entre com suas credenciais para continuar</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -109,7 +99,7 @@ export default function LoginPage() {
                 <input
                   id="email" name="email" type="email" autoComplete="email" required
                   placeholder="seu@email.com"
-                  className="w-full pl-10 pr-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
               </div>
             </div>
@@ -123,13 +113,13 @@ export default function LoginPage() {
                 <input
                   id="password" name="password" type="password" autoComplete="current-password" required
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
               </div>
             </div>
 
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2.5 rounded-xl">
+              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2.5 rounded-md">
                 {error}
               </p>
             )}
@@ -137,7 +127,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white font-bold rounded-xl text-sm hover:bg-primary/90 disabled:opacity-60 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white font-semibold rounded-md text-sm hover:bg-primary/90 disabled:opacity-60 transition-colors"
             >
               {isPending ? 'Entrando…' : <><span>Entrar</span><ArrowRight size={15} /></>}
             </button>

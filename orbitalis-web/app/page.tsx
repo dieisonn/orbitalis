@@ -28,7 +28,7 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
-    title: 'Cockpit Analítico',
+    title: 'Painel analítico',
     desc: 'MTTR, MTBF, taxa de corretivas, carga por técnico, planos vencendo. Dados que viram decisão.',
   },
   {
@@ -54,7 +54,7 @@ const STEPS = [
   {
     n: '03',
     title: 'Opere com total controle',
-    desc: 'Crie OS, execute checklists, assine no celular e acompanhe tudo no cockpit em tempo real.',
+    desc: 'Crie OS, execute checklists, assine no celular e acompanhe tudo no painel em tempo real.',
     icon: Shield,
   },
 ]
@@ -114,36 +114,36 @@ const PLANOS = [
 // ─── Componente de hero "mockup" ──────────────────────────────────
 function HeroMockup() {
   const cards = [
-    { label: 'Abertas',      n: '12', color: 'bg-blue-500' },
-    { label: 'Agendadas',    n: '8',  color: 'bg-orange-400' },
+    { label: 'Abertas',      n: '12', color: 'bg-sky-400' },
+    { label: 'Agendadas',    n: '8',  color: 'bg-white/40' },
     { label: 'Em andamento', n: '5',  color: 'bg-amber-400' },
-    { label: 'Concluídas',   n: '43', color: 'bg-emerald-500' },
+    { label: 'Concluídas',   n: '43', color: 'bg-emerald-400' },
   ]
   return (
     <div className="relative w-full max-w-lg mx-auto select-none pointer-events-none">
       {/* Janela do painel */}
-      <div className="rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-white/5 backdrop-blur-sm">
+      <div className="rounded-lg overflow-hidden border border-white/10 bg-white/5 ">
         {/* Barra de título */}
         <div className="flex items-center gap-1.5 px-4 py-3 bg-white/10 border-b border-white/10">
-          <span className="w-3 h-3 rounded-full bg-red-400/80" />
-          <span className="w-3 h-3 rounded-full bg-yellow-400/80" />
-          <span className="w-3 h-3 rounded-full bg-green-400/80" />
-          <span className="ml-3 text-xs text-white/40 font-mono">orbitalis.app/dashboard</span>
+          <span className="w-3 h-3 rounded-full bg-white/30" />
+          <span className="w-3 h-3 rounded-full bg-white/30" />
+          <span className="w-3 h-3 rounded-full bg-white/30" />
+          <span className="ml-3 text-xs text-white/40 font-mono">orbitalis.com.br/dashboard</span>
         </div>
         {/* Conteúdo */}
         <div className="p-5 space-y-4">
-          <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">Cockpit</p>
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">Painel</p>
           {/* KPI cards */}
           <div className="grid grid-cols-4 gap-2">
             {cards.map((c) => (
-              <div key={c.label} className={`${c.color} rounded-xl p-3`}>
-                <p className="text-xl font-black text-white tabular-nums">{c.n}</p>
-                <p className="text-[10px] font-medium text-white/70 mt-0.5 leading-tight">{c.label}</p>
+              <div key={c.label} className="bg-white/10 rounded-md p-3">
+                <p className="text-xl font-semibold text-white tabular-nums">{c.n}</p>
+                <p className="text-xs text-white/70 mt-0.5 leading-tight flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.color}`} />{c.label}</p>
               </div>
             ))}
           </div>
           {/* Fake chart bars */}
-          <div className="bg-white/5 rounded-xl p-4">
+          <div className="bg-white/5 rounded-md p-4">
             <p className="text-[11px] text-white/40 mb-3">O.S. por mês</p>
             <div className="flex items-end gap-1.5 h-16">
               {[30, 55, 45, 70, 40, 65, 80, 60, 75, 50, 85, 68].map((h, i) => (
@@ -167,7 +167,6 @@ function HeroMockup() {
         </div>
       </div>
       {/* Glow effect */}
-      <div className="absolute -inset-8 bg-blue-500/10 rounded-full blur-3xl -z-10" />
     </div>
   )
 }
@@ -181,10 +180,10 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center gap-4">
           <div className="flex items-center gap-2.5 flex-1">
-            <div className="bg-primary rounded-xl p-1.5 shadow-sm">
+            <div className="bg-primary rounded-md p-1.5">
               <img src="/logo.png" alt="Orbitalis" className="h-7 w-auto object-contain" />
             </div>
-            <span className="font-black text-gray-900 text-lg tracking-tight">Orbitalis</span>
+            <span className="font-semibold text-gray-900 text-lg tracking-tight">Orbitalis</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-500">
             <a href="#features"      className="hover:text-gray-900 transition-colors">Funcionalidades</a>
@@ -197,7 +196,7 @@ export default function LandingPage() {
               Entrar
             </Link>
             <Link href="/registro"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-sm">
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-bold rounded-md hover:bg-primary/90 transition-colors">
               Começar grátis <ArrowRight size={14} />
             </Link>
           </div>
@@ -206,20 +205,13 @@ export default function LandingPage() {
 
       {/* ── HERO ──────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-primary py-24 md:py-32">
-        {/* Decoração */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-white/4" />
-          <div className="absolute top-1/2 -left-32 w-96 h-96 rounded-full bg-white/4" />
-          <div className="absolute -bottom-32 right-1/4 w-80 h-80 rounded-full border border-white/8" />
-        </div>
-
         <div className="relative max-w-6xl mx-auto px-5 grid md:grid-cols-2 gap-16 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-white/10 text-white/80 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
               <Clock size={12} />
               CMMS para climatização e refrigeração
             </div>
-            <h1 className="text-4xl md:text-5xl font-black text-white leading-tight">
+            <h1 className="text-4xl md:text-5xl font-semibold text-white leading-tight">
               Dados em Órbita.<br />Manutenção<br />
               <span className="text-white/70">em Dia.</span>
             </h1>
@@ -228,11 +220,11 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link href="/registro"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-primary font-black rounded-xl hover:bg-white/90 transition-colors text-base shadow-lg">
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-primary font-semibold rounded-md hover:bg-white/90 transition-colors text-base">
                 Criar conta grátis <ArrowRight size={16} />
               </Link>
               <Link href="/login"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/15 transition-colors text-base">
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/10 text-white font-semibold rounded-md hover:bg-white/15 transition-colors text-base">
                 Já tenho conta
               </Link>
             </div>
@@ -255,7 +247,7 @@ export default function LandingPage() {
             { n: '∞',    label: 'Equipamentos por tenant'   },
           ].map(({ n, label }) => (
             <div key={label} className="text-center">
-              <p className="text-3xl font-black text-primary">{n}</p>
+              <p className="text-3xl font-semibold text-primary">{n}</p>
               <p className="text-sm text-gray-500 mt-1">{label}</p>
             </div>
           ))}
@@ -266,7 +258,7 @@ export default function LandingPage() {
       <section id="features" className="py-24 max-w-6xl mx-auto px-5">
         <div className="text-center mb-14">
           <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Funcionalidades</p>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900">Tudo que sua operação precisa</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Tudo que sua operação precisa</h2>
           <p className="text-gray-500 mt-3 max-w-xl mx-auto">
             Do checklist no campo ao relatório no escritório. Uma plataforma integrada para toda a jornada.
           </p>
@@ -274,8 +266,8 @@ export default function LandingPage() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="group bg-white border border-gray-100 rounded-2xl p-6 hover:border-primary/20 hover:shadow-lg transition-all">
-              <div className="w-11 h-11 rounded-xl bg-primary/8 flex items-center justify-center mb-4 group-hover:bg-primary/12 transition-colors">
+            <div key={title} className="group bg-white border border-gray-100 rounded-lg p-6 hover:border-primary/20 hover:border-primary/40 transition-all">
+              <div className="w-11 h-11 rounded-md bg-primary/8 flex items-center justify-center mb-4 group-hover:bg-primary/12 transition-colors">
                 <Icon size={20} className="text-primary" />
               </div>
               <h3 className="font-bold text-gray-900 mb-1.5">{title}</h3>
@@ -290,7 +282,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-14">
             <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Como funciona</p>
-            <h2 className="text-3xl md:text-4xl font-black text-gray-900">Operando em menos de 5 minutos</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Operando em menos de 5 minutos</h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 relative">
@@ -299,9 +291,9 @@ export default function LandingPage() {
 
             {STEPS.map(({ n, title, desc, icon: Icon }) => (
               <div key={n} className="text-center relative">
-                <div className="w-24 h-24 mx-auto rounded-2xl bg-white border-2 border-primary/15 flex items-center justify-center mb-5 shadow-sm">
+                <div className="w-24 h-24 mx-auto rounded-lg bg-white border-2 border-primary/15 flex items-center justify-center mb-5">
                   <div className="text-center">
-                    <p className="text-xs font-black text-primary/40">{n}</p>
+                    <p className="text-xs font-semibold text-primary/40">{n}</p>
                     <Icon size={28} className="text-primary mx-auto mt-0.5" />
                   </div>
                 </div>
@@ -317,7 +309,7 @@ export default function LandingPage() {
       <section id="precos" className="py-24 max-w-6xl mx-auto px-5">
         <div className="text-center mb-14">
           <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Preços</p>
-          <h2 className="text-3xl md:text-4xl font-black text-gray-900">Simples e transparente</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Simples e transparente</h2>
           <p className="text-gray-500 mt-3">Comece grátis. Escale quando precisar.</p>
         </div>
 
@@ -326,20 +318,20 @@ export default function LandingPage() {
             <div
               key={nome}
               className={[
-                'rounded-2xl p-7 relative',
+                'rounded-lg p-7 relative',
                 destaque
-                  ? 'bg-primary text-white shadow-2xl ring-4 ring-primary/20 scale-105'
+                  ? 'bg-primary text-white ring-4 ring-primary/20 scale-105'
                   : 'bg-white border border-gray-200',
               ].join(' ')}
             >
               {destaque && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-wide">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[11px] font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
                   Mais popular
                 </div>
               )}
               <p className={`text-sm font-bold mb-1 ${destaque ? 'text-white/70' : 'text-gray-500'}`}>{nome}</p>
               <div className="flex items-baseline gap-1 mb-1">
-                <span className={`text-4xl font-black ${destaque ? 'text-white' : 'text-gray-900'}`}>{preco}</span>
+                <span className={`text-4xl font-semibold ${destaque ? 'text-white' : 'text-gray-900'}`}>{preco}</span>
                 <span className={`text-sm ${destaque ? 'text-white/50' : 'text-gray-400'}`}>{periodo}</span>
               </div>
               <p className={`text-sm mb-6 ${destaque ? 'text-white/60' : 'text-gray-500'}`}>{desc}</p>
@@ -347,7 +339,7 @@ export default function LandingPage() {
               <Link
                 href="/registro"
                 className={[
-                  'block text-center py-3 rounded-xl font-bold text-sm transition-colors mb-6',
+                  'block text-center py-3 rounded-md font-bold text-sm transition-colors mb-6',
                   destaque
                     ? 'bg-white text-primary hover:bg-white/90'
                     : 'bg-primary text-white hover:bg-primary/90',
@@ -372,7 +364,7 @@ export default function LandingPage() {
       {/* ── CTA FINAL ─────────────────────────────────────────── */}
       <section className="bg-primary py-20">
         <div className="max-w-3xl mx-auto px-5 text-center">
-          <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-semibold text-white mb-4">
             Pronto para colocar sua operação em órbita?
           </h2>
           <p className="text-white/60 text-lg mb-8">
@@ -380,7 +372,7 @@ export default function LandingPage() {
           </p>
           <Link
             href="/registro"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary font-black rounded-xl text-base hover:bg-white/90 transition-colors shadow-xl"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary font-semibold rounded-md text-base hover:bg-white/90 transition-colors"
           >
             Criar conta grátis <ArrowRight size={18} />
           </Link>
@@ -393,10 +385,10 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <div className="bg-primary rounded-xl p-1.5">
+              <div className="bg-primary rounded-md p-1.5">
                 <img src="/logo.png" alt="Orbitalis" className="h-7 w-auto object-contain" />
               </div>
-              <span className="font-black text-white text-base">Orbitalis</span>
+              <span className="font-semibold text-white text-base">Orbitalis</span>
             </div>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <a href="#features"      className="hover:text-white transition-colors">Funcionalidades</a>

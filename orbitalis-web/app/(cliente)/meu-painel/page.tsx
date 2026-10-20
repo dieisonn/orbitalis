@@ -40,38 +40,32 @@ export default async function MeuPainelPage() {
 
       {/* Cabeçalho */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-xl font-semibold text-gray-900">
           {perfil ? (perfil.nomeFantasia ?? perfil.razaoSocial) : 'Painel do Cliente'}
         </h1>
-        <p className="text-sm text-gray-400 mt-0.5">Resumo de manutenções e serviços</p>
+        <p className="text-sm text-gray-500 mt-0.5">Resumo de manutenções e serviços</p>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white border border-border rounded-xl p-4">
-          <Building2 size={18} className="text-primary mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{perfil?.ambientes.length ?? 0}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Ambientes</p>
-        </div>
-        <div className="bg-white border border-border rounded-xl p-4">
-          <Cpu size={18} className="text-primary mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{totalEquip}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Equipamentos</p>
-        </div>
-        <div className="bg-white border border-border rounded-xl p-4">
-          <ClipboardList size={18} className="text-amber-500 mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{ativas.length}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Em andamento</p>
-        </div>
-        <div className="bg-white border border-border rounded-xl p-4">
-          <CheckCircle2 size={18} className="text-green-500 mb-2" />
-          <p className="text-2xl font-bold text-gray-900">{concluidas.length}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Concluídas</p>
+      <div className="bg-white border border-border rounded-lg overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
+          {[
+            ['Ambientes', perfil?.ambientes.length ?? 0],
+            ['Equipamentos', totalEquip],
+            ['Em andamento', ativas.length],
+            ['Concluídas', concluidas.length],
+          ].map(([label, n]) => (
+            <div key={label as string} className="bg-white px-4 py-3.5">
+              <p className="text-sm text-gray-500">{label}</p>
+              <p className="text-2xl font-semibold tabular-nums text-gray-900 mt-0.5">{n}</p>
+            </div>
+          ))}
         </div>
       </div>
 
+
       {/* OS recentes */}
-      <div className="bg-white border border-border rounded-xl overflow-hidden">
+      <div className="bg-white border border-border rounded-lg overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-sm font-semibold text-gray-700">Ordens de Serviço recentes</h2>
           <Link
