@@ -36,7 +36,7 @@ export function OrcamentoActions({ orc }: Props) {
       {orc.status === 'enviado' && (
         <button
           onClick={copiarLink}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border text-foreground rounded-lg hover:bg-muted/50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border text-gray-900 rounded-lg hover:bg-muted/50 transition-colors"
         >
           {copied ? <><Check size={12} className="text-green-500" /> Copiado</> : <><Copy size={12} /> Copiar link</>}
         </button>
@@ -44,7 +44,7 @@ export function OrcamentoActions({ orc }: Props) {
       {orc.status === 'rascunho' && (
         <button
           onClick={enviar} disabled={loading === 'enviar'}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-action text-white rounded-lg hover:bg-action/90 disabled:opacity-50 transition-colors"
         >
           {loading === 'enviar' ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
           Enviar ao cliente
@@ -99,14 +99,14 @@ export function GerarOsPanel({ orcamentoId, ambienteId, ambientes }: GerarOsProp
     <div className="flex flex-col sm:flex-row sm:items-center gap-3">
       <select
         value={ambiente} onChange={(e) => setAmbiente(e.target.value)}
-        className="px-3 py-1.5 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className="px-3 py-1.5 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
       >
         <option value="">Escolha o ambiente…</option>
         {ambientes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
       </select>
       <button
         onClick={gerar} disabled={loading || !ambiente}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-action text-white rounded-lg hover:bg-action/90 disabled:opacity-50 transition-colors"
       >
         {loading ? <Loader2 size={12} className="animate-spin" /> : <ClipboardList size={12} />}
         Gerar O.S.

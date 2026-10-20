@@ -17,8 +17,8 @@ export default async function NovoOrcamentoPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Novo Orçamento</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Crie uma proposta comercial para enviar ao cliente</p>
+        <h1 className="text-xl font-semibold text-gray-900">Novo Orçamento</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Crie uma proposta comercial para enviar ao cliente</p>
       </div>
       <NovoOrcamentoForm
         clientes={clientesRes.data}

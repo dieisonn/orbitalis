@@ -37,54 +37,54 @@ export default async function OrcamentosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Orçamentos</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{orcamentos.length} proposta{orcamentos.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-xl font-semibold text-gray-900">Orçamentos</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{orcamentos.length} proposta{orcamentos.length !== 1 ? 's' : ''}</p>
         </div>
         <Link
           href="/orcamentos/novo"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-medium rounded-lg hover:bg-action/90 transition-colors"
         >
-          <Plus size={16} />
+          <Plus size={15} />
           Novo Orçamento
         </Link>
       </div>
 
       {orcamentos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <FileText size={40} className="text-muted-foreground/40 mb-3" />
-          <p className="text-sm font-medium text-muted-foreground">Nenhum orçamento criado</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Crie o primeiro para enviar ao cliente</p>
+          <FileText size={40} className="text-gray-400 mb-3" />
+          <p className="text-sm font-medium text-gray-500">Nenhum orçamento criado</p>
+          <p className="text-xs text-gray-400 mt-1">Crie o primeiro para enviar ao cliente</p>
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-white border border-border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">N°</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Título / Cliente</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Itens</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">N°</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Título / Cliente</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Itens</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Data</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {orcamentos.map((orc) => (
                 <tr key={orc.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
                     #{String(orc.numero).padStart(4, '0')}
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/orcamentos/${orc.id}`} className="font-medium text-foreground hover:text-primary transition-colors">
+                    <Link href={`/orcamentos/${orc.id}`} className="font-medium text-gray-900 hover:text-primary transition-colors">
                       {orc.titulo}
                     </Link>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       {orc.cliente.nomeFantasia ?? orc.cliente.razaoSocial}
                     </p>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
                     {orc._count.itens} {orc._count.itens === 1 ? 'item' : 'itens'}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
                     {new Date(orc.criadoEm).toLocaleDateString('pt-BR')}
                   </td>
                   <td className="px-4 py-3">

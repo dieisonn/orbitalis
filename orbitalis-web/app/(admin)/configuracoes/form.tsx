@@ -40,24 +40,20 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Preview */}
-      <div className="rounded-xl overflow-hidden border border-border shadow-sm">
-        <div className="flex items-center gap-4 p-4" style={{ backgroundColor: cor }}>
+      {/* Prévia do topo do menu */}
+      <div className="rounded-lg border border-border bg-[var(--nav-bg)] p-3 max-w-xs">
+        <p className="text-xs text-gray-500 mb-2">Assim aparece no topo do menu</p>
+        <div className="bg-white rounded-md h-14 px-3 flex items-center justify-center border border-[var(--nav-border)]">
           {logoPreview ? (
-            <div className="bg-white rounded-xl p-2 shrink-0 max-w-[45%]">
-              <img src={logoPreview} alt="Logo" className="h-10 w-auto max-w-full object-contain"
-                onError={() => setLogoPreview('')} />
-            </div>
+            <img src={logoPreview} alt="Logo" className="max-h-10 w-auto max-w-full object-contain"
+              onError={() => setLogoPreview('')} />
           ) : (
-            <div className="bg-white/20 rounded-xl px-4 py-2 shrink-0">
-              <span className="text-white font-black text-lg">LOGO</span>
-            </div>
+            <span className="text-gray-400 font-semibold">Sua logo</span>
           )}
-          <div className="text-white min-w-0 flex-1">
-            <p className="font-bold text-base leading-tight">Preview do sidebar</p>
-            <p className="text-white/60 text-xs mt-0.5">Assim aparecerá para os usuários</p>
-          </div>
         </div>
+        <button type="button" tabIndex={-1} className="mt-3 px-3 py-1.5 rounded-md text-white text-sm font-semibold" style={{ backgroundColor: cor }}>
+          Botão de exemplo
+        </button>
       </div>
 
       {/* Identidade */}
@@ -117,7 +113,7 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
               <input name="corPrimaria" type="color" defaultValue={config.corPrimaria ?? '#0505ad'}
                 onChange={(e) => setCor(e.target.value)}
                 className="h-10 w-16 cursor-pointer rounded-lg border border-border p-1" />
-              <span className="text-xs text-gray-400">Cor do sidebar, botões, cabeçalho da O.S.</span>
+              <span className="text-xs text-gray-400">Usada nos botões principais e no cabeçalho da O.S.</span>
             </div>
           </div>
         </div>
