@@ -1,6 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+/** Duração prevista em minutos: inteiro entre 5 min e 24 h. */
+function validarDuracao(v?: number): number | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (!Number.isInteger(v) || v < 5 || v > 1440) {
+    throw new BadRequestException('A duração deve ser um número inteiro de minutos entre 5 e 1440');
+  }
+  return v;
+}
+
 @Injectable()
 export class TiposServicoService {
   constructor(private readonly prisma: PrismaService) {}
@@ -15,7 +24,7 @@ export class TiposServicoService {
     sigla: string;
     nome: string;
     corHex: string;
-    calendarColorId?: string;
+    duracaoMinutos?: number;
     valorPadrao?: number | null;
   }) {
     const sigla = dto.sigla.toUpperCase().trim();
@@ -27,7 +36,7 @@ export class TiposServicoService {
         sigla,
         nome:            dto.nome.trim(),
         corHex:          dto.corHex,
-        calendarColorId: dto.calendarColorId ?? '7',
+        duracaoMinutos:  validarDuracao(dto.duracaoMinutos) ?? 60,
         valorPadrao:     dto.valorPadrao ?? null,
       },
     });
@@ -38,7 +47,7 @@ export class TiposServicoService {
     dto: {
       nome?: string;
       corHex?: string;
-      calendarColorId?: string;
+      duracaoMinutos?: number;
       valorPadrao?: number | null;
       ativo?: boolean;
     },
@@ -51,7 +60,7 @@ export class TiposServicoService {
       data: {
         ...(dto.nome !== undefined ? { nome: dto.nome.trim() } : {}),
         ...(dto.corHex !== undefined ? { corHex: dto.corHex } : {}),
-        ...(dto.calendarColorId !== undefined ? { calendarColorId: dto.calendarColorId } : {}),
+        ...(dto.duracaoMinutos !== undefined ? { duracaoMinutos: validarDuracao(dto.duracaoMinutos) } : {}),
         ...(dto.valorPadrao !== undefined ? { valorPadrao: dto.valorPadrao } : {}),
         ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
       },

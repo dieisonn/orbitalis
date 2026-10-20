@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AlertasService } from '../alertas/alertas.service';
-import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
+import { AgendaService } from '../agenda/agenda.service';
 import { gerarOsDoPlano, INCLUDE_GERACAO } from './geracao-preventiva';
 
 @Injectable()
@@ -15,7 +15,7 @@ export class CronService {
     private readonly prisma: PrismaService,
     private readonly notificacoes: NotificacoesService,
     private readonly alertas: AlertasService,
-    private readonly googleCalendar: GoogleCalendarService,
+    private readonly agenda: AgendaService,
   ) {}
 
   // Executa diariamente às 00:00:01 (§US05)
@@ -39,7 +39,7 @@ export class CronService {
     let geradas = 0;
     for (const plano of planos) {
       try {
-        const r = await gerarOsDoPlano(this.prisma, this.googleCalendar, this.logger, plano);
+        const r = await gerarOsDoPlano(this.prisma, this.agenda, this.logger, plano);
         geradas += r.geradas;
       } catch (err) {
         this.logger.error(`Falha ao gerar O.S. para plano ${plano.id}:`, err);
@@ -54,7 +54,7 @@ export class CronService {
   async gerarOsPlano(id: string) {
     const plano = await this.prisma.planoManutencao.findUnique({ where: { id }, include: INCLUDE_GERACAO });
     if (!plano) throw new NotFoundException('Plano não encontrado');
-    const r = await gerarOsDoPlano(this.prisma, this.googleCalendar, this.logger, plano);
+    const r = await gerarOsDoPlano(this.prisma, this.agenda, this.logger, plano);
     if (r.semCiclos) return { geradas: 0, mensagem: 'Nenhuma data restante para gerar.' };
     return { geradas: r.geradas, esgotado: r.esgotado };
   }

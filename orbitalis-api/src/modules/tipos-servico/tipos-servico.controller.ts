@@ -19,7 +19,7 @@ export class TiposServicoController {
   @Post()
   @Roles(UsuarioTipo.admin)
   create(
-    @Body() body: { sigla: string; nome: string; corHex: string; calendarColorId?: string; valorPadrao?: number | null },
+    @Body() body: { sigla: string; nome: string; corHex: string; duracaoMinutos?: number; valorPadrao?: number | null },
   ) {
     return this.service.create(body);
   }
@@ -28,7 +28,7 @@ export class TiposServicoController {
   @Roles(UsuarioTipo.admin)
   update(
     @Param('id') id: string,
-    @Body() body: { nome?: string; corHex?: string; calendarColorId?: string; valorPadrao?: number | null; ativo?: boolean },
+    @Body() body: { nome?: string; corHex?: string; duracaoMinutos?: number; valorPadrao?: number | null; ativo?: boolean },
   ) {
     return this.service.update(id, body);
   }

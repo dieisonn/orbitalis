@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CronService } from '../cron/cron.service';
-import { GoogleCalendarService } from '../google-calendar/google-calendar.service';
 import { CreatePlanoManutencaoDto } from './dto/create-plano.dto';
 
 type EquipConfigInput = { equipamentoId: string; modeloChecklistId?: string | null };
@@ -11,7 +10,7 @@ const INCLUDE_FULL = {
     select: { id: true, razaoSocial: true, nomeFantasia: true, documento: true, endereco: true, telefone: true },
   },
   tecnico: { select: { id: true, email: true, nome: true, crea: true } },
-  tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true, calendarColorId: true } },
+  tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true } },
   contrato: { select: { id: true, descricao: true, vigenciaInicio: true, vigenciaFim: true } },
   equipamentosConfig: {
     include: {
@@ -33,7 +32,6 @@ export class PlanosManutencaoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cronService: CronService,
-    private readonly googleCalendar: GoogleCalendarService,
   ) {}
 
   // Todos os equipamentos do plano precisam estar em ambientes do cliente do plano

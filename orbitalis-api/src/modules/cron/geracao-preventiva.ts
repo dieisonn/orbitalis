@@ -2,11 +2,11 @@ import { Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CalendarEventPayload, GoogleCalendarService } from '../google-calendar/google-calendar.service';
+import { AgendaService } from '../agenda/agenda.service';
 
 // Planos elegíveis para geração, com tudo que a geração precisa (ignora excluídos — soft delete)
 export const INCLUDE_GERACAO = {
-  tipoServico: { select: { id: true, sigla: true, calendarColorId: true } },
+  tipoServico: { select: { id: true, sigla: true } },
   tecnico: { select: { id: true, nome: true } },
   equipamentosConfig: {
     where: { equipamento: { deletedAt: null, ambiente: { deletedAt: null, cliente: { deletedAt: null } } } },
@@ -79,7 +79,7 @@ export type ResultadoPlano = { geradas: number; ciclos: number; semCiclos: boole
  */
 export async function gerarOsDoPlano(
   prisma: PrismaService,
-  googleCalendar: GoogleCalendarService,
+  agenda: AgendaService,
   logger: Logger,
   plano: PlanoParaGerar,
 ): Promise<ResultadoPlano> {
@@ -132,7 +132,7 @@ export async function gerarOsDoPlano(
       }
       if (pendentes.length === 0) continue;
 
-      await prisma.$transaction(async (tx) => {
+      const osId = await prisma.$transaction(async (tx) => {
         const created = await tx.ordemServico.create({
           data: {
             ambienteId,
@@ -156,33 +156,14 @@ export async function gerarOsDoPlano(
             checklistSnapshot: c.snapshot,
           })),
         });
+        return created.id;
       });
+
+      // Evento na agenda do Orbitalis: título, endereço e duração vêm do tipo de serviço
+      await agenda.sincronizarOs(osId);
 
       geradas++;
       novasNaData++;
-    }
-
-    // UM evento por visita — todos os equipamentos do cliente agrupados
-    if (configs.length > 0 && novasNaData > 0) {
-      const d = dataGeracao;
-      const dateLabel = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
-      const payload: CalendarEventPayload = {
-        osNumero: dateLabel,
-        ambienteNome: configs[0].clienteNome,
-        clienteNome: configs[0].clienteNome,
-        clienteTelefone: configs[0].clienteTelefone ?? null,
-        tecnicoNome: plano.tecnico?.nome ?? null,
-        tipo: 'preventiva',
-        dataAgendamento: dataGeracao,
-        equipamentos: configs.map((c) => c.equipamentoNome),
-        observacoesGerais: null,
-        status: 'agendada',
-        tipoServicoSigla: plano.tipoServico?.sigla ?? null,
-        tipoServicoColorId: plano.tipoServico?.calendarColorId ?? null,
-        horaInicio: null,
-        horaFim: null,
-      };
-      googleCalendar.criarEvento(payload).catch(() => null);
     }
   }
 

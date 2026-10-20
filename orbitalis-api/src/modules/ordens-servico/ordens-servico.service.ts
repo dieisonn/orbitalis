@@ -13,7 +13,7 @@ import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
-import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
+import { AgendaService } from '../agenda/agenda.service';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 
 @Injectable()
@@ -21,32 +21,13 @@ export class OrdensServicoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificacoes: NotificacoesService,
-    private readonly googleCalendar: GoogleCalendarService,
+    private readonly agenda: AgendaService,
   ) {}
 
   private osNumeroFormatado(os: any): string {
     const sigla = os.tipoServico?.sigla ?? 'OS';
     const num = os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase();
     return `${sigla}-${num}`;
-  }
-
-  private buildCalendarPayload(os: any): CalendarEventPayload {
-    return {
-      osNumero:           this.osNumeroFormatado(os),
-      ambienteNome:       os.ambiente?.nome ?? '',
-      clienteNome:        os.ambiente?.cliente?.razaoSocial ?? '',
-      clienteTelefone:    os.ambiente?.cliente?.telefone ?? null,
-      tecnicoNome:        os.tecnico?.nome ?? null,
-      tipo:               os.tipo ?? 'corretiva',
-      dataAgendamento:    new Date(os.dataAgendamento),
-      equipamentos:       (os.itens ?? []).map((i: any) => i.equipamento?.nome ?? '').filter(Boolean),
-      observacoesGerais:  os.observacoesGerais ?? null,
-      status:             os.status,
-      tipoServicoSigla:   os.tipoServico?.sigla ?? null,
-      tipoServicoColorId: os.tipoServico?.calendarColorId ?? null,
-      horaInicio:         os.horaInicio ?? null,
-      horaFim:            os.horaFim ?? null,
-    };
   }
 
   // POST /ordens-servico (§6.1 + §6.2)
@@ -120,7 +101,7 @@ export class OrdensServicoService {
           itens:       { include: { equipamento: { select: { nome: true } } } },
           ambiente:    { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
           tecnico:     { select: { nome: true } },
-          tipoServico: { select: { sigla: true, calendarColorId: true } },
+          tipoServico: { select: { sigla: true } },
         },
       });
     });
@@ -146,19 +127,8 @@ export class OrdensServicoService {
         .catch(() => null);
     }
 
-    // Cria evento no Google Calendar em background (sem bloquear resposta)
-    if (result) {
-      this.googleCalendar.criarEvento(this.buildCalendarPayload(result))
-        .then((eventId) => {
-          if (eventId) {
-            return this.prisma.ordemServico.update({
-              where: { id: result.id },
-              data: { googleCalendarEventId: eventId },
-            });
-          }
-        })
-        .catch(() => null);
-    }
+    // Evento na agenda do Orbitalis (título, endereço, descrição e duração vêm da O.S.)
+    if (result) await this.agenda.sincronizarOs(result.id);
 
     return result;
   }
@@ -442,7 +412,7 @@ export class OrdensServicoService {
 
   // PATCH /ordens-servico/:id/sincronizar (§6.3 + §6.4)
   async sincronizar(id: string, dto: SincronizarOsDto, user?: { id: string; role: string }) {
-    return this.prisma.$transaction(async (tx) => {
+    const resultado = await this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.findUnique({ where: { id } });
       if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
       // Técnico só executa as O.S. atribuídas a ele
@@ -505,6 +475,8 @@ export class OrdensServicoService {
         include: { itens: true },
       });
     });
+    await this.agenda.sincronizarOs(id); // descrição do evento acompanha as observações
+    return resultado;
   }
 
   // PATCH /ordens-servico/:id/concluir — Admin conclui com assinatura e dados de gás
@@ -547,10 +519,6 @@ export class OrdensServicoService {
         tecnicoNome: updated.tecnico?.nome ?? null,
         dataConclusao: updated.dataConclusao?.toISOString() ?? new Date().toISOString(),
       }).catch(() => null);
-    }
-
-    if (os.googleCalendarEventId) {
-      this.googleCalendar.atualizarEvento(os.googleCalendarEventId, this.buildCalendarPayload({ ...updated, status: 'concluida' })).catch(() => null);
     }
 
     return updated;
@@ -729,6 +697,8 @@ export class OrdensServicoService {
       },
     });
 
+    await this.agenda.sincronizarOs(id);
+
     const osNumero = updated.numero != null ? `OS-${String(updated.numero).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`;
     this.notificacoes.notificarOsAgendada({
       tecnicoEmail: tecnico.email,
@@ -748,10 +718,6 @@ export class OrdensServicoService {
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
     if (os.status === 'concluida') {
       throw new BadRequestException('Não é possível cancelar uma O.S. já concluída');
-    }
-
-    if (os.googleCalendarEventId) {
-      this.googleCalendar.excluirEvento(os.googleCalendarEventId).catch(() => null);
     }
 
     return this.prisma.ordemServico.update({
@@ -825,10 +791,6 @@ export class OrdensServicoService {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
 
-    if (os.googleCalendarEventId) {
-      this.googleCalendar.excluirEvento(os.googleCalendarEventId).catch(() => null);
-    }
-
     // conflitos não têm cascade, precisam ser deletados antes
     await this.prisma.auditoriaConflitoSincronizacao.deleteMany({ where: { ordemServicoId: id } });
     // itens têm onDelete: Cascade, mas deleta explicitamente para segurança
@@ -868,13 +830,11 @@ export class OrdensServicoService {
         itens:       { include: { equipamento: { select: { nome: true } } } },
         ambiente:    { include: { cliente: { select: { razaoSocial: true, telefone: true } } } },
         tecnico:     { select: { nome: true } },
-        tipoServico: { select: { sigla: true, calendarColorId: true } },
+        tipoServico: { select: { sigla: true } },
       },
     });
 
-    if (os.googleCalendarEventId) {
-      this.googleCalendar.atualizarEvento(os.googleCalendarEventId, this.buildCalendarPayload(updated)).catch(() => null);
-    }
+    await this.agenda.sincronizarOs(id);
 
     return updated;
   }

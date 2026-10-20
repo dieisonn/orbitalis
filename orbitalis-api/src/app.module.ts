@@ -16,7 +16,7 @@ import { ConfiguracaoEmpresaModule } from './modules/configuracao-empresa/config
 import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { ContratosModule } from './modules/contratos/contratos.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
-import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
+import { AgendaModule } from './modules/agenda/agenda.module';
 import { TiposServicoModule } from './modules/tipos-servico/tipos-servico.module';
 import { DiagnosticosLgmvModule } from './modules/diagnosticos-lgmv/diagnosticos-lgmv.module';
 import { BuscaModule } from './modules/busca/busca.module';
@@ -47,7 +47,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     NotificacoesModule,
     ContratosModule,
     AlertasModule,
-    GoogleCalendarModule,
+    AgendaModule,
     TiposServicoModule,
     DiagnosticosLgmvModule,
     BuscaModule,

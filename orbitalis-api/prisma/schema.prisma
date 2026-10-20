@@ -124,6 +124,7 @@ model Usuario {
   planosComoTecnico              PlanoManutencao[] @relation("TecnicoPlanos")
   configuracaoEmpresaResponsavel ConfiguracaoEmpresa?
   orcamentosCriados              Orcamento[]       @relation("OrcamentoCriadoPor")
+  eventosComoTecnico             EventoAgenda[]    @relation("EventoTecnico")
 
   @@map("usuarios")
 }
@@ -147,6 +148,7 @@ model Cliente {
   planosManutencao PlanoManutencao[]
   contratos        Contrato[]
   orcamentos       Orcamento[]
+  eventos          EventoAgenda[]
 
   @@unique([empresaId, documento])
   @@index([empresaId])
@@ -297,7 +299,6 @@ model OrdemServico {
   dataConclusao     DateTime? @map("data_conclusao")
   valorMaoObra          Decimal? @map("valor_mao_obra") @db.Decimal(10, 2)
   valorPecas            Decimal? @map("valor_pecas") @db.Decimal(10, 2)
-  googleCalendarEventId String?  @map("google_calendar_event_id") @db.VarChar(255)
   tipoServicoId         String?  @map("tipo_servico_id") @db.Uuid
   horaInicio            String?  @map("hora_inicio") @db.VarChar(5)
   horaFim               String?  @map("hora_fim") @db.VarChar(5)
@@ -312,6 +313,7 @@ model OrdemServico {
   conflitos        AuditoriaConflitoSincronizacao[]
   diagnosticosLgmv DiagnosticoLgmv[]
   orcamento        Orcamento?
+  evento           EventoAgenda?
 
   @@index([status])
   @@index([empresaId])
@@ -345,7 +347,7 @@ model TipoServico {
   sigla           String   @db.VarChar(5)
   nome            String   @db.VarChar(100)
   corHex          String   @map("cor_hex") @db.VarChar(7)
-  calendarColorId String   @default("7") @map("calendar_color_id") @db.VarChar(5)
+  duracaoMinutos  Int      @default(60) @map("duracao_minutos")
   valorPadrao     Decimal? @map("valor_padrao") @db.Decimal(10, 2)
   ativo           Boolean  @default(true)
   sistema         Boolean  @default(false)
@@ -355,6 +357,7 @@ model TipoServico {
   planos           PlanoManutencao[]
   modelosChecklist ModeloChecklist[]
   orcamentos       Orcamento[]
+  eventos          EventoAgenda[]
 
   @@unique([empresaId, sigla])
   @@map("tipos_servico")
@@ -374,13 +377,6 @@ model ConfiguracaoEmpresa {
   endereco     String?  @db.VarChar(255)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
-  // Google Calendar OAuth2
-  googleConectado          Boolean   @default(false) @map("google_conectado")
-  googleEmail              String?   @map("google_email") @db.VarChar(255)
-  googleCalendarId         String?   @map("google_calendar_id") @db.VarChar(255)
-  googleAccessToken        String?   @map("google_access_token") @db.Text
-  googleRefreshToken       String?   @map("google_refresh_token") @db.Text
-  googleTokenExpiry        DateTime? @map("google_token_expiry")
 
   // Responsável técnico para relatórios PMOC
   responsavelTecnicoId     String?   @unique @map("responsavel_tecnico_id") @db.Uuid
@@ -557,4 +553,39 @@ model ContadorEmpresa {
 
   @@id([empresaId, nome])
   @@map("contadores_empresa")
+}
+
+// ─────────────────────────────────────────
+// eventos_agenda  (agenda própria do Orbitalis)
+// Toda O.S. com data tem um evento (1:1, sincronizado); eventos avulsos
+// (reunião, treinamento, lembrete) não têm ordemServicoId.
+// inicio/fim são instantes (UTC); a exibição usa America/Sao_Paulo.
+// ─────────────────────────────────────────
+model EventoAgenda {
+  id             String   @id @default(uuid()) @db.Uuid
+  empresaId      String?  @map("empresa_id") @db.Uuid
+  titulo         String   @db.VarChar(200)
+  descricao      String?  @db.Text
+  local          String?  @db.Text
+  inicio         DateTime
+  fim            DateTime
+  diaInteiro     Boolean  @default(false) @map("dia_inteiro")
+  cor            String?  @db.VarChar(7)
+  // true quando alguém editou título/descrição/local à mão: a O.S. deixa de sobrescrevê-los
+  personalizado  Boolean  @default(false)
+  ordemServicoId String?  @unique @map("ordem_servico_id") @db.Uuid
+  tipoServicoId  String?  @map("tipo_servico_id") @db.Uuid
+  tecnicoId      String?  @map("tecnico_id") @db.Uuid
+  clienteId      String?  @map("cliente_id") @db.Uuid
+  criadoEm       DateTime @default(now()) @map("criado_em")
+  atualizadoEm   DateTime @updatedAt @map("atualizado_em")
+
+  ordemServico OrdemServico? @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  tipoServico  TipoServico?  @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
+  tecnico      Usuario?      @relation("EventoTecnico", fields: [tecnicoId], references: [id], onDelete: SetNull)
+  cliente      Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId, inicio])
+  @@index([tecnicoId])
+  @@map("eventos_agenda")
 }

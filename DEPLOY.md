@@ -28,7 +28,6 @@
    FRONTEND_URL=https://www.orbitalis.com.br
    ```
    Opcionais (a funcionalidade fica desativada se faltarem): `SMTP_*` e `ADMIN_EMAIL` (e-mails),
-   `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` (Google Agenda),
    `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` / `EVOLUTION_INSTANCE` (WhatsApp) e `S3_*` (evidências).
 
 4. **Deploy**

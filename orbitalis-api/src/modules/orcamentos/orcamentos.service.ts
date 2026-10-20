@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import { OrcamentoStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
+import { AgendaService } from '../agenda/agenda.service';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 
 // Dados que o cliente pode ver pelo link público (sem informações internas da operação)
@@ -34,7 +35,10 @@ function paraPublico<T extends Record<string, any>>(orc: T) {
 export class OrcamentosService {
   private readonly logger = new Logger(OrcamentosService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly agenda: AgendaService,
+  ) {}
 
   async listar(clienteId?: string, status?: OrcamentoStatus) {
     return this.prisma.orcamento.findMany({
@@ -228,7 +232,7 @@ export class OrcamentosService {
     provisoria.setDate(provisoria.getDate() + 1);
     provisoria.setHours(12, 0, 0, 0);
 
-    return this.prisma.$transaction(async (tx) => {
+    const osCriada = await this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.create({
         data: {
           ambienteId: ambiente.id,
@@ -264,6 +268,8 @@ export class OrcamentosService {
 
       return os;
     });
+    await this.agenda.sincronizarOs(osCriada.id);
+    return osCriada;
   }
 
   private async validarAmbienteDoCliente(ambienteId: string | null | undefined, clienteId: string) {

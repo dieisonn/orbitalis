@@ -7,7 +7,7 @@ const TENANT_MODELS = new Set([
   'usuario', 'cliente', 'ambiente', 'equipamento', 'contrato',
   'orcamento', 'planoManutencao', 'ordemServico', 'tipoServico',
   'configuracaoEmpresa', 'alertaConfig', 'alertaOcorrencia', 'modeloChecklist',
-  'convite',
+  'convite', 'eventoAgenda',
 ]);
 
 // Operações em lote que aceitam where livre
@@ -36,6 +36,7 @@ const REFERENCIAS: Record<string, Record<string, string>> = {
   configuracaoEmpresa:    { responsavelTecnicoId: 'usuario' },
   modeloChecklist:        { tipoServicoId: 'tipoServico' },
   planoManutencao:        { clienteId: 'cliente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico', contratoId: 'contrato' },
+  eventoAgenda:           { ordemServicoId: 'ordemServico', tipoServicoId: 'tipoServico', tecnicoId: 'usuario', clienteId: 'cliente' },
   planoEquipamentoConfig: { planoId: 'planoManutencao', equipamentoId: 'equipamento', modeloChecklistId: 'modeloChecklist' },
   ordemServico:           { ambienteId: 'ambiente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico', planoId: 'planoManutencao' },
   ordemServicoItem:       { ordemServicoId: 'ordemServico', equipamentoId: 'equipamento' },
