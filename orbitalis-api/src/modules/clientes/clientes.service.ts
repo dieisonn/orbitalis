@@ -3,8 +3,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 
@@ -18,31 +16,19 @@ export class ClientesService {
     });
     if (existe) throw new ConflictException('Documento já cadastrado');
 
-    const senhaTemporaria = randomBytes(9).toString('base64url').slice(0, 10);
-    const senhaHash = await bcrypt.hash(senhaTemporaria, 10);
-
-    return this.prisma.$transaction(async (tx) => {
-      const usuario = await tx.usuario.create({
-        data: {
-          email: `${dto.documento}@portal.orbitalis`,
-          senhaHash,
-          tipo: 'cliente',
-        },
-      });
-
-      const cliente = await tx.cliente.create({
-        data: {
-          documento: dto.documento,
-          razaoSocial: dto.razaoSocial,
-          nomeFantasia: dto.nomeFantasia,
-          endereco: dto.endereco,
-          telefone: dto.telefone,
-          usuarioId: usuario.id,
-        },
-      });
-
-      return { cliente, senhaTemporaria };
+    // O cadastro do cliente (empresa) é separado do acesso ao portal: não cria login nem
+    // senha. O acesso é concedido por convite (o próprio cliente define e-mail e senha).
+    const cliente = await this.prisma.cliente.create({
+      data: {
+        documento: dto.documento,
+        razaoSocial: dto.razaoSocial,
+        nomeFantasia: dto.nomeFantasia,
+        endereco: dto.endereco,
+        telefone: dto.telefone,
+      },
     });
+
+    return { cliente };
   }
 
   async consultarCnpj(cnpj: string) {

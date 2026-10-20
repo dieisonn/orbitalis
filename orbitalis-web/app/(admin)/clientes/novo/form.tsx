@@ -1,7 +1,8 @@
 'use client'
 
 import { useTransition, useState, useRef } from 'react'
-import { Search, CheckCircle, Copy } from 'lucide-react'
+import { Search, CheckCircle } from 'lucide-react'
+import { ConvidarBtn } from '@/components/ui/convidar-btn'
 import { consultarCnpj, criarCliente, type CriarClienteResult } from './actions'
 
 type Prefill = { razaoSocial: string; nomeFantasia: string; endereco: string }
@@ -63,35 +64,18 @@ export function NovoClienteForm() {
         <div>
           <p className="text-lg font-semibold text-gray-900">Cliente criado com sucesso!</p>
           <p className="text-sm text-gray-500 mt-1">
-            Um usuário foi criado automaticamente para acesso ao portal.
+            O cadastro está pronto. Para o cliente acessar o portal, envie um convite: ele mesmo escolhe e-mail e senha.
           </p>
         </div>
         <div className="bg-surface rounded-xl p-4 text-left space-y-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Credenciais do Portal Cliente
+            Acesso ao Portal do Cliente (opcional)
           </p>
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs text-gray-500">E-mail</p>
-              <p className="text-sm font-mono font-medium text-gray-800">{success.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs text-gray-500">Senha temporária</p>
-              <p className="text-sm font-mono font-bold text-primary">{success.senhaTemporaria}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigator.clipboard.writeText(success.senhaTemporaria)}
-              className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors"
-              title="Copiar senha"
-            >
-              <Copy size={14} />
-            </button>
-          </div>
+          <ConvidarBtn tipo="cliente" clienteId={success.clienteId} label="Gerar link de convite" />
+          <p className="text-xs text-gray-400">
+            O link vale por 7 dias e só pode ser usado uma vez. Você também pode gerar depois, na lista de clientes.
+          </p>
         </div>
-        <p className="text-xs text-gray-400">Guarde essas credenciais — a senha não poderá ser recuperada aqui.</p>
         <a
           href="/clientes"
           className="inline-flex items-center justify-center w-full py-2.5 bg-action text-white font-semibold rounded-lg text-sm hover:bg-action/90 transition-colors"

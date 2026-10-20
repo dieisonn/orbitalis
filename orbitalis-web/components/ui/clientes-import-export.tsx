@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useRef, useState, useTransition } from 'react'
 import { Upload, Download, X, CheckCircle2, XCircle, FileDown, Loader2 } from 'lucide-react'
@@ -160,9 +160,9 @@ export function ImportarClientesButton() {
   }
 
   function handleDownloadResults() {
-    const header = 'razao_social;documento;status;email;senha_temporaria;mensagem'
+    const header = 'razao_social;documento;status;mensagem'
     const lines = results.map((r) =>
-      [r.razaoSocial, r.documento, r.status, r.email ?? '', r.senhaTemporaria ?? '', r.mensagem ?? '']
+      [r.razaoSocial, r.documento, r.status, r.mensagem ?? '']
         .map(escapeCsvField)
         .join(';'),
     )
@@ -304,7 +304,7 @@ export function ImportarClientesButton() {
                                 : <span className="text-destructive font-semibold">Erro</span>}
                             </td>
                             <td className="px-3 py-2 text-gray-500 max-w-[200px] truncate">
-                              {r.status === 'ok' ? r.email : r.mensagem}
+                              {r.status === 'ok' ? 'Cadastrado' : r.mensagem}
                             </td>
                           </tr>
                         ))}
@@ -314,7 +314,7 @@ export function ImportarClientesButton() {
 
                   {okCount > 0 && (
                     <p className="text-xs text-gray-500">
-                      As senhas temporárias dos clientes importados estão no arquivo de resultado abaixo.
+                      Os clientes foram cadastrados sem acesso ao portal. Para liberar o acesso, use “Convidar” na lista de clientes.
                     </p>
                   )}
                 </div>
@@ -331,7 +331,7 @@ export function ImportarClientesButton() {
                     className="inline-flex items-center gap-1.5 text-sm text-primary font-semibold hover:underline"
                   >
                     <FileDown size={14} />
-                    Baixar resultado com senhas
+                    Baixar resultado
                   </button>
                   <button
                     type="button"

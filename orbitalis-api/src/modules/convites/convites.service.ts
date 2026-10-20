@@ -19,6 +19,17 @@ export class ConvitesService {
   ) {}
 
   async gerar(dto: CriarConviteDto) {
+    if (dto.tipo === 'cliente') {
+      if (!dto.clienteId) throw new BadRequestException('Informe o cliente que receberá o convite');
+      const cliente = await this.prisma.cliente.findFirst({
+        where: { id: dto.clienteId, deletedAt: null },
+        select: { id: true, usuarioId: true },
+      });
+      if (!cliente) throw new NotFoundException('Cliente não encontrado');
+      if (cliente.usuarioId)
+        throw new ConflictException('Este cliente já possui acesso ao portal');
+    }
+
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -86,26 +97,45 @@ export class ConvitesService {
     const tipo =
       convite.tipo === 'tecnico' ? UsuarioTipo.tecnico : UsuarioTipo.cliente;
 
-    const usuario = await this.prisma.usuario.create({
-      data: {
-        email,
-        senhaHash,
-        tipo,
-        nome: dto.nome,
-        empresaId: convite.empresaId,
-      },
-    });
-
-    if (convite.tipo === 'cliente' && convite.clienteId) {
-      await this.prisma.cliente.update({
-        where: { id: convite.clienteId },
-        data: { usuarioId: usuario.id },
+    // Tudo ou nada: usuário, vínculo com o cliente e baixa do convite
+    const usuario = await this.prisma.$transaction(async (tx) => {
+      // Consome o convite de forma atômica (dois cliques simultâneos não criam dois usuários)
+      const { count } = await tx.convite.updateMany({
+        where: { id: convite.id, usadoEm: null },
+        data: { usadoEm: new Date() },
       });
-    }
+      if (count === 0) throw new BadRequestException('Convite já utilizado');
 
-    await this.prisma.convite.update({
-      where: { id: convite.id },
-      data: { usadoEm: new Date() },
+      if (convite.tipo === 'cliente') {
+        if (!convite.clienteId)
+          throw new BadRequestException('Convite de cliente sem cliente vinculado');
+        const cliente = await tx.cliente.findFirst({
+          where: { id: convite.clienteId, deletedAt: null },
+          select: { usuarioId: true },
+        });
+        if (!cliente) throw new NotFoundException('Cliente não encontrado');
+        if (cliente.usuarioId)
+          throw new ConflictException('Este cliente já possui acesso ao portal');
+      }
+
+      const novo = await tx.usuario.create({
+        data: {
+          email,
+          senhaHash,
+          tipo,
+          nome: dto.nome,
+          empresaId: convite.empresaId,
+        },
+      });
+
+      if (convite.tipo === 'cliente' && convite.clienteId) {
+        await tx.cliente.update({
+          where: { id: convite.clienteId },
+          data: { usuarioId: novo.id },
+        });
+      }
+
+      return novo;
     });
 
     const payload = {

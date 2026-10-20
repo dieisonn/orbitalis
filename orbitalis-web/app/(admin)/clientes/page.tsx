@@ -1,4 +1,4 @@
-﻿import { Suspense } from 'react'
+import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
@@ -14,6 +14,7 @@ type Cliente = {
   documento: string
   endereco: string
   telefone: string | null
+  usuarioId: string | null
   ambientes: { id: string }[]
 }
 
@@ -89,7 +90,9 @@ export default async function ClientesPage({ searchParams }: Props) {
                     <div className="flex items-center justify-end gap-2">
                       <a href={`/clientes/${c.id}`} className="text-xs font-semibold text-primary hover:underline">Ver</a>
                       <a href={`/clientes/${c.id}/editar`} className="hidden sm:inline text-xs font-semibold text-gray-500 hover:underline">Editar</a>
-                      <ConvidarBtn tipo="cliente" clienteId={c.id} label="Convidar" variant="link" />
+                      {c.usuarioId
+                        ? <span className="hidden sm:inline text-[11px] font-semibold text-emerald-600" title="Este cliente já acessa o portal">Acesso ativo</span>
+                        : <ConvidarBtn tipo="cliente" clienteId={c.id} label="Convidar" variant="link" />}
                       <DeleteButton action={deletarCliente.bind(null, c.id)} />
                     </div>
                   </td>

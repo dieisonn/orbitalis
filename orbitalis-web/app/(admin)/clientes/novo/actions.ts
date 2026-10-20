@@ -42,10 +42,10 @@ export async function consultarCnpj(cnpj: string): Promise<CnpjPrefill> {
 }
 
 export type CriarClienteResult = {
-  senhaTemporaria: string
-  email: string
+  clienteId: string
 }
 
+// O cliente é criado sem login. O acesso ao portal é dado depois, por convite.
 export async function criarCliente(
   documento: string,
   razaoSocial: string,
@@ -53,7 +53,7 @@ export async function criarCliente(
   endereco: string,
   telefone?: string,
 ): Promise<CriarClienteResult> {
-  const result = await api.post<{ cliente: { documento: string }; senhaTemporaria: string }>(
+  const result = await api.post<{ cliente: { id: string } }>(
     '/clientes',
     {
       documento: documento.replace(/\D/g, ''),
@@ -63,8 +63,5 @@ export async function criarCliente(
       telefone: telefone || undefined,
     },
   )
-  return {
-    senhaTemporaria: result.senhaTemporaria,
-    email: `${documento.replace(/\D/g, '')}@portal.orbitalis`,
-  }
+  return { clienteId: result.cliente.id }
 }

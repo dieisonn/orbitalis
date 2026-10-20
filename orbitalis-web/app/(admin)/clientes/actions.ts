@@ -31,8 +31,6 @@ export type ImportResult = {
   razaoSocial: string
   documento: string
   status: 'ok' | 'erro'
-  email?: string
-  senhaTemporaria?: string
   mensagem?: string
 }
 
@@ -40,7 +38,7 @@ export async function importarClientes(rows: ImportRow[]): Promise<ImportResult[
   const results: ImportResult[] = []
   for (const row of rows) {
     try {
-      const result = await api.post<{ senhaTemporaria: string }>(
+      await api.post(
         '/clientes',
         {
           documento: row.documento.replace(/\D/g, ''),
@@ -54,8 +52,6 @@ export async function importarClientes(rows: ImportRow[]): Promise<ImportResult[
         razaoSocial: row.razaoSocial,
         documento: row.documento,
         status: 'ok',
-        email: `${row.documento.replace(/\D/g, '')}@portal.orbitalis`,
-        senhaTemporaria: result.senhaTemporaria,
       })
     } catch (e) {
       results.push({
