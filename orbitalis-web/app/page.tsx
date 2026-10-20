@@ -88,7 +88,7 @@ const PLANOS = [
       'Clientes ilimitados',
       'O.S. ilimitadas',
       'Relatórios PDF / PMOC',
-      'Google Agenda integrado',
+      'Agenda própria integrada às O.S.',
       'Dashboards avançados',
       'Suporte prioritário',
     ],

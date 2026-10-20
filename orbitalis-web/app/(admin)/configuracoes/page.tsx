@@ -1,6 +1,5 @@
 import { api } from '@/lib/api'
 import { ConfiguracaoForm } from './form'
-import { GoogleCalendarCard } from './google-calendar-card'
 import { ResponsavelTecnicoCard } from './responsavel-tecnico-card'
 import { LgmvRecomputeCard } from './lgmv-recompute-card'
 import { ConfiabilidadeCard } from './confiabilidade-card'
@@ -13,8 +12,6 @@ type Config = {
   cnpj: string | null
   telefone: string | null
   endereco: string | null
-  googleConectado?: boolean
-  googleEmail?: string | null
   responsavelTecnicoId?: string | null
   responsavelTecnico?: { id: string; nome: string | null; email: string; crea: string | null } | null
   mttrLimiteHoras?: number | null
@@ -25,12 +22,9 @@ type Config = {
 type Tecnico = { id: string; email: string; nome: string | null; crea: string | null }
 
 export default async function ConfiguracoesPage({
-  searchParams,
 }: {
   searchParams: Promise<Record<string, string>>
 }) {
-  const params = await searchParams
-  const googleStatus = params.google // 'sucesso' | 'erro' | undefined
 
   let config: Config = {
     nomeEmpresa: 'Orbitalis', nomeFantasia: null, logoUrl: null,
@@ -50,29 +44,13 @@ export default async function ConfiguracoesPage({
       <div className="mb-2">
         <h1 className="text-xl font-semibold text-gray-900">Configurações</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Personalize a identidade visual da plataforma e as integrações.
+          Personalize a identidade visual da plataforma.
         </p>
       </div>
-
-      {googleStatus === 'sucesso' && (
-        <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-3 rounded-lg">
-          Google Agenda conectado com sucesso.
-        </div>
-      )}
-      {googleStatus === 'erro' && (
-        <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 px-4 py-3 rounded-lg">
-          Não foi possível conectar ao Google Agenda. Tente novamente.
-        </div>
-      )}
 
       <div className="bg-white rounded-xl p-6 border border-border">
         <ConfiguracaoForm config={config} />
       </div>
-
-      <GoogleCalendarCard
-        conectado={config.googleConectado ?? false}
-        email={config.googleEmail ?? null}
-      />
 
       <ResponsavelTecnicoCard
         tecnicos={tecnicos}

@@ -4,29 +4,22 @@ import { useState, useTransition } from 'react'
 import { Plus, Pencil, Trash2, Lock, Loader2 } from 'lucide-react'
 import type { TipoServico } from './page'
 
-const CALENDAR_COLORS: { id: string; label: string; hex: string }[] = [
-  { id: '7',  label: 'Azul (Peacock)',    hex: '#039BE5' },
-  { id: '10', label: 'Verde (Basil)',     hex: '#0B8043' },
-  { id: '2',  label: 'Verde claro (Sage)',hex: '#33B679' },
-  { id: '5',  label: 'Amarelo (Banana)',  hex: '#F6BF26' },
-  { id: '6',  label: 'Laranja (Tang.)',   hex: '#F4511E' },
-  { id: '11', label: 'Vermelho (Tomato)', hex: '#D50000' },
-  { id: '3',  label: 'Roxo (Grape)',      hex: '#8E24AA' },
-  { id: '4',  label: 'Rosa (Flamingo)',   hex: '#E67C73' },
-  { id: '9',  label: 'Az. escuro (Blue)', hex: '#3F51B5' },
-  { id: '1',  label: 'Lavanda',           hex: '#7986CB' },
-  { id: '8',  label: 'Cinza (Graphite)',  hex: '#616161' },
-]
-
 type FormData = {
   sigla: string
   nome: string
   corHex: string
-  calendarColorId: string
+  horas: string
+  minutos: string
   valorPadrao: string
 }
 
-const EMPTY: FormData = { sigla: '', nome: '', corHex: '#0B8043', calendarColorId: '10', valorPadrao: '' }
+const EMPTY: FormData = { sigla: '', nome: '', corHex: '#0B8043', horas: '1', minutos: '0', valorPadrao: '' }
+
+function duracaoLegivel(min: number): string {
+  const h = Math.floor(min / 60), m = min % 60
+  if (h === 0) return `${m} min`
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
+}
 
 async function apiCall(method: string, path: string, body?: object) {
   const res = await fetch(`/api/tipos-servico-proxy?path=${encodeURIComponent(path)}`, {
@@ -61,7 +54,8 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
       sigla:           ts.sigla,
       nome:            ts.nome,
       corHex:          ts.corHex,
-      calendarColorId: ts.calendarColorId,
+      horas:           String(Math.floor(ts.duracaoMinutos / 60)),
+      minutos:         String(ts.duracaoMinutos % 60),
       valorPadrao:     ts.valorPadrao != null ? String(ts.valorPadrao) : '',
     })
     setEditando(ts)
@@ -84,7 +78,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
           sigla:           form.sigla.trim().toUpperCase(),
           nome:            form.nome.trim(),
           corHex:          form.corHex,
-          calendarColorId: form.calendarColorId,
+          duracaoMinutos:  (parseInt(form.horas || '0', 10) * 60) + parseInt(form.minutos || '0', 10),
           valorPadrao:     form.valorPadrao ? parseFloat(form.valorPadrao) : null,
         }
         if (modal === 'novo') {
@@ -93,7 +87,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
           await apiCall('PATCH', `/tipos-servico/${editando.id}`, {
             nome:            body.nome,
             corHex:          body.corHex,
-            calendarColorId: body.calendarColorId,
+            duracaoMinutos:  body.duracaoMinutos,
             valorPadrao:     body.valorPadrao,
           })
         }
@@ -140,7 +134,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sigla</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nome</th>
               <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cor</th>
-              <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Google Agenda</th>
+              <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Duração</th>
               <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Valor Padrão</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Ações</th>
             </tr>
@@ -231,25 +225,25 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cor no Google Agenda</label>
-                <select
-                  value={form.calendarColorId}
-                  onChange={(e) => setForm({ ...form, calendarColorId: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                >
-                  {CALENDAR_COLORS.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="mt-2 flex items-center gap-2">
-                  <div
-                    className="w-5 h-5 rounded"
-                    style={{ backgroundColor: CALENDAR_COLORS.find((c) => c.id === form.calendarColorId)?.hex ?? '#039BE5' }}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Duração na agenda</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number" min="0" max="24" value={form.horas}
+                    onChange={(e) => setForm({ ...form, horas: e.target.value })}
+                    className="w-20 px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
-                  <span className="text-xs text-gray-500">Prévia da cor no calendário</span>
+                  <span className="text-sm text-gray-500">h</span>
+                  <input
+                    type="number" min="0" max="59" step="5" value={form.minutos}
+                    onChange={(e) => setForm({ ...form, minutos: e.target.value })}
+                    className="w-20 px-3 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  />
+                  <span className="text-sm text-gray-500">min</span>
                 </div>
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Tempo que este serviço ocupa na agenda (ex.: Visita Técnica 1h, Limpeza 2h). Vale para as próximas O.S.
+                  e eventos; se a O.S. já tiver horário de término, ele prevalece.
+                </p>
               </div>
             </div>
 
@@ -266,7 +260,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
               </button>
               <button
                 onClick={salvar}
-                disabled={isPending || !form.nome.trim() || (modal === 'novo' && !form.sigla.trim())}
+                disabled={isPending || !form.nome.trim() || (modal === 'novo' && !form.sigla.trim()) || ((parseInt(form.horas || '0', 10) * 60) + parseInt(form.minutos || '0', 10)) < 5}
                 className="flex-1 py-2.5 bg-action text-white font-semibold rounded-lg text-sm hover:bg-action/90 disabled:opacity-60 transition-colors"
               >
                 {isPending ? <Loader2 size={14} className="animate-spin inline" /> : 'Salvar'}
@@ -287,7 +281,6 @@ function TipoRow({
   onExcluir: (ts: TipoServico) => void
   isPending: boolean
 }) {
-  const cor = CALENDAR_COLORS.find((c) => c.id === ts.calendarColorId)
   return (
     <tr className={`hover:bg-surface transition-colors ${!ts.ativo ? 'opacity-50' : ''}`}>
       <td className="px-4 py-3">
@@ -305,11 +298,8 @@ function TipoRow({
           <span className="text-xs font-mono text-gray-500">{ts.corHex}</span>
         </div>
       </td>
-      <td className="hidden md:table-cell px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: cor?.hex ?? '#039BE5' }} />
-          <span className="text-xs text-gray-500">{cor?.label ?? `#${ts.calendarColorId}`}</span>
-        </div>
+      <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-700 font-medium">
+        {duracaoLegivel(ts.duracaoMinutos)}
       </td>
       <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-sm">
         {ts.valorPadrao != null

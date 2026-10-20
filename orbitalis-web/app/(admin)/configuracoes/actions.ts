@@ -27,11 +27,6 @@ export async function salvarConfiguracao(
   }
 }
 
-export async function desconectarGoogle() {
-  await api.delete('/configuracao/google')
-  revalidatePath('/configuracoes')
-}
-
 export async function salvarResponsavelTecnico(responsavelTecnicoId: string | null) {
   try {
     await api.patch('/configuracao', { responsavelTecnicoId: responsavelTecnicoId || null })

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/lib/auth'
-import { ClipboardList, LogOut } from 'lucide-react'
+import { CalendarDays, ClipboardList, LogOut } from 'lucide-react'
 import { OfflineBanner } from '@/components/ui/offline-banner'
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
@@ -35,6 +35,16 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         >
           <ClipboardList size={22} />
           Minhas O.S.
+        </Link>
+        <Link
+          href="/minha-agenda"
+          className={[
+            'flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-[10px] font-semibold tracking-wide transition-colors',
+            path.startsWith('/minha-agenda') ? 'text-white' : 'text-white/45 hover:text-white/80',
+          ].join(' ')}
+        >
+          <CalendarDays size={22} />
+          Agenda
         </Link>
         <form action={logout} className="flex-1">
           <button

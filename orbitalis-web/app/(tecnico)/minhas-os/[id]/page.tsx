@@ -3,7 +3,8 @@ import { getUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { OsExecucao, type OsParaExecucao } from './os-execucao'
-import { ArrowLeft, MapPin, Building2, Calendar, Package } from 'lucide-react'
+import { ArrowLeft, MapPin, Building2, Calendar, Package, Navigation, Phone } from 'lucide-react'
+import { mapaUrl, wazeUrl } from '@/lib/agenda'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -17,7 +18,7 @@ type OrdemServico = OsParaExecucao & {
   ambiente: {
     nome: string
     localizacaoInterna: string
-    cliente: { razaoSocial: string; nomeFantasia: string | null }
+    cliente: { razaoSocial: string; nomeFantasia: string | null; endereco: string; telefone: string | null }
   }
 }
 
@@ -123,6 +124,27 @@ export default async function OsDetailPage({ params }: Props) {
               <p className="text-gray-400 uppercase tracking-wide text-[10px]">Equipamentos</p>
               <p className="font-medium text-gray-700">{os.itens.length}</p>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-3 bg-surface rounded-lg p-3 text-xs">
+          <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Endereço do atendimento</p>
+          <p className="font-medium text-gray-700">{os.ambiente.cliente.endereco}</p>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <a href={mapaUrl(os.ambiente.cliente.endereco)} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-action text-white font-semibold rounded-lg">
+              <Navigation size={12} /> Abrir no mapa
+            </a>
+            <a href={wazeUrl(os.ambiente.cliente.endereco)} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border text-gray-700 font-semibold rounded-lg">
+              Waze
+            </a>
+            {os.ambiente.cliente.telefone && (
+              <a href={`tel:${os.ambiente.cliente.telefone}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border text-gray-700 font-semibold rounded-lg">
+                <Phone size={12} /> Ligar
+              </a>
+            )}
           </div>
         </div>
 

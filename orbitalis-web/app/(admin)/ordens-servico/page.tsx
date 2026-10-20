@@ -106,7 +106,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href="/ordens-servico/agenda"
+            href="/agenda"
             className="inline-flex items-center gap-2 px-4 py-2 border border-border text-sm font-semibold text-gray-600 rounded-lg hover:bg-surface transition-colors"
           >
             <CalendarDays size={14} />

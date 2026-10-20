@@ -8,10 +8,10 @@ const PUBLIC = ['/login', '/e/', '/o/', '/convite/', '/registro']
 const ADMIN_ONLY = [
   '/dashboard', '/clientes', '/ambientes', '/equipamentos', '/ordens-servico', '/planos-manutencao',
   '/usuarios', '/checklists', '/alertas', '/orcamentos', '/contratos', '/equipe', '/financeiro',
-  '/relatorios', '/servicos', '/tecnicos', '/configuracoes',
+  '/relatorios', '/servicos', '/tecnicos', '/configuracoes', '/agenda',
 ]
 const CLIENT_ONLY = ['/meus-ambientes', '/abrir-chamado', '/historico', '/meu-painel', '/meus-orcamentos']
-const TECNICO_ONLY = ['/minhas-os']
+const TECNICO_ONLY = ['/minhas-os', '/minha-agenda']
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get('orbitalis_token')?.value

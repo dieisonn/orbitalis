@@ -39,7 +39,7 @@ const NAV_GROUPS = [
     items: [
       { href: '/dashboard',             label: 'Cockpit',           icon: LayoutDashboard },
       { href: '/alertas',               label: 'Alertas',           icon: Bell },
-      { href: '/ordens-servico/agenda', label: 'Agenda',            icon: CalendarDays },
+      { href: '/agenda',                label: 'Agenda',            icon: CalendarDays },
       { href: '/ordens-servico',        label: 'Ordens de Serviço', icon: ClipboardList },
       { href: '/planos-manutencao',     label: 'Planos Prev.',      icon: CalendarClock },
     ],
@@ -88,7 +88,7 @@ const ALL_HREFS = NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href))
 
 const EXACT_ROUTES = new Set([
   '/dashboard',
-  '/ordens-servico/agenda',
+  '/agenda',
   '/equipamentos/confiabilidade',
 ])
 
