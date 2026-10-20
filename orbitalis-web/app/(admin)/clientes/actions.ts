@@ -13,7 +13,7 @@ export async function deletarCliente(id: string): Promise<{ error: string } | vo
 export type ClienteExportRow = {
   razaoSocial: string
   nomeFantasia: string | null
-  documento: string
+  documento: string | null
   endereco: string
   telefone: string | null
 }
@@ -26,46 +26,31 @@ export async function exportarClientesData(): Promise<ClienteExportRow[]> {
 export type ImportRow = {
   razaoSocial: string
   nomeFantasia?: string
-  documento: string
-  endereco: string
+  documento?: string
+  endereco?: string
   telefone?: string
+  celular?: string
+  email?: string
+  cidade?: string
+  uf?: string
 }
 
-export type ImportResult = {
-  razaoSocial: string
-  documento: string
-  status: 'ok' | 'erro'
+export type ResultadoLinha = {
+  linha: number
+  nome: string
+  status: 'criado' | 'ignorado' | 'erro'
   mensagem?: string
 }
 
-export async function importarClientes(rows: ImportRow[]): Promise<ImportResult[]> {
-  const results: ImportResult[] = []
-  for (const row of rows) {
-    try {
-      await api.post(
-        '/clientes',
-        {
-          documento: row.documento.replace(/\D/g, ''),
-          razaoSocial: row.razaoSocial,
-          nomeFantasia: row.nomeFantasia || undefined,
-          endereco: row.endereco,
-          telefone: row.telefone || undefined,
-        },
-      )
-      results.push({
-        razaoSocial: row.razaoSocial,
-        documento: row.documento,
-        status: 'ok',
-      })
-    } catch (e) {
-      results.push({
-        razaoSocial: row.razaoSocial,
-        documento: row.documento,
-        status: 'erro',
-        mensagem: e instanceof Error ? e.message : 'Erro desconhecido',
-      })
-    }
+// Envia um lote (até 500 clientes) para a API; a tela chama em pedaços para mostrar o andamento.
+export async function importarLote(
+  clientes: ImportRow[],
+): Promise<{ resultados: ResultadoLinha[] } | { error: string }> {
+  try {
+    const res = await api.post<{ resultados: ResultadoLinha[] }>('/clientes/importar', { clientes })
+    revalidatePath('/clientes')
+    return { resultados: res.resultados }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Erro ao importar' }
   }
-  revalidatePath('/clientes')
-  return results
 }

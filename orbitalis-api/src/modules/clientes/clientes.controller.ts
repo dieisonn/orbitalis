@@ -15,7 +15,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { ClientesService } from './clientes.service';
-import { CreateClienteDto } from './dto/create-cliente.dto';
+import { CreateClienteDto, ImportarClientesDto, UpdateClienteDto } from './dto/create-cliente.dto';
 
 @Controller('clientes')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -36,6 +36,13 @@ export class ClientesController {
     return this.clientesService.consultarCnpj(cnpj);
   }
 
+  // POST /api/v1/clientes/importar — cadastro em lote vindo de planilhas
+  @Post('importar')
+  @Roles(UsuarioTipo.admin)
+  importar(@Body() body: ImportarClientesDto) {
+    return this.clientesService.importar(body?.clientes);
+  }
+
   // POST /api/v1/clientes
   @Post()
   @Roles(UsuarioTipo.admin)
@@ -46,8 +53,8 @@ export class ClientesController {
   // GET /api/v1/clientes
   @Get()
   @Roles(UsuarioTipo.admin)
-  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string) {
-    return this.clientesService.findAll(Number(page) || 1, Number(perPage) || 20);
+  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string, @Query('q') q?: string) {
+    return this.clientesService.findAll(Number(page) || 1, Number(perPage) || 20, q);
   }
 
   // GET /api/v1/clientes/:id
@@ -68,7 +75,7 @@ export class ClientesController {
   @Roles(UsuarioTipo.admin)
   update(
     @Param('id') id: string,
-    @Body() body: { razaoSocial?: string; nomeFantasia?: string; endereco?: string; telefone?: string },
+    @Body() body: UpdateClienteDto,
   ) {
     return this.clientesService.update(id, body);
   }

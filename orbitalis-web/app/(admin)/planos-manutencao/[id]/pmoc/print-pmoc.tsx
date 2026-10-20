@@ -234,7 +234,7 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
               <div style={S.sectionBody}>
                 <p style={{ fontWeight: 700, fontSize: '9pt', marginBottom: '3px' }}>{plano.cliente.razaoSocial}</p>
                 {plano.cliente.nomeFantasia && <p style={{ fontSize: '8pt', color: '#6b7280', marginBottom: '3px' }}>{plano.cliente.nomeFantasia}</p>}
-                <p style={{ fontSize: '7.5pt', color: '#6b7280' }}>CNPJ/CPF: {plano.cliente.documento}</p>
+                {plano.cliente.documento && <p style={{ fontSize: '7.5pt', color: '#6b7280' }}>CNPJ/CPF: {plano.cliente.documento}</p>}
                 {plano.cliente.telefone && <p style={{ fontSize: '7.5pt', color: '#6b7280' }}>Tel: {plano.cliente.telefone}</p>}
                 <p style={{ fontSize: '7.5pt', color: '#6b7280', marginTop: '2px' }}>{plano.cliente.endereco}</p>
               </div>
@@ -328,7 +328,7 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
               <div style={{ padding: '8px 12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                 <InfoRow label="Razão Social"  value={plano.cliente.razaoSocial} full />
                 {plano.cliente.nomeFantasia && <InfoRow label="Nome Fantasia" value={plano.cliente.nomeFantasia} full />}
-                <InfoRow label="CNPJ / CPF"   value={plano.cliente.documento} />
+                <InfoRow label="CNPJ / CPF"   value={plano.cliente.documento ?? '—'} />
                 <InfoRow label="Telefone"      value={plano.cliente.telefone ?? '—'} />
                 <InfoRow label="Endereço"      value={plano.cliente.endereco} full />
               </div>

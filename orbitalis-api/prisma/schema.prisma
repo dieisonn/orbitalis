@@ -135,11 +135,15 @@ model Usuario {
 model Cliente {
   id           String    @id @default(uuid()) @db.Uuid
   usuarioId    String?   @unique @map("usuario_id") @db.Uuid
-  documento    String    @db.VarChar(14)
+  documento    String?   @db.VarChar(14)
   razaoSocial  String    @map("razao_social") @db.VarChar(255)
   nomeFantasia String?   @map("nome_fantasia") @db.VarChar(255)
   endereco     String    @db.Text
   telefone     String?   @db.VarChar(20)
+  celular      String?   @db.VarChar(20)
+  email        String?   @db.VarChar(255)
+  cidade       String?   @db.VarChar(100)
+  uf           String?   @db.VarChar(2)
   deletedAt    DateTime? @map("deleted_at")
   empresaId    String?   @map("empresa_id") @db.Uuid
 

@@ -7,7 +7,10 @@ type Props = { params: Promise<{ id: string }> }
 export default async function EditarClientePage({ params }: Props) {
   const { id } = await params
 
-  let cliente: { id: string; razaoSocial: string; nomeFantasia: string | null; endereco: string; telefone: string | null }
+  let cliente: {
+    id: string; documento: string | null; razaoSocial: string; nomeFantasia: string | null; endereco: string
+    telefone: string | null; celular: string | null; email: string | null; cidade: string | null; uf: string | null
+  }
   try {
     cliente = await api.get(`/clientes/${id}`)
   } catch {
@@ -23,6 +26,11 @@ export default async function EditarClientePage({ params }: Props) {
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
         <EditarClienteForm
           id={cliente.id}
+          documento={cliente.documento}
+          celular={cliente.celular}
+          email={cliente.email}
+          cidade={cliente.cidade}
+          uf={cliente.uf}
           razaoSocial={cliente.razaoSocial}
           nomeFantasia={cliente.nomeFantasia}
           endereco={cliente.endereco}

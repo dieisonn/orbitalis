@@ -78,7 +78,7 @@ export function PrintOrcamento({ orc, config }: { orc: Orc; config?: Config }) {
             <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#777', margin: '0 0 4px 0' }}>Cliente</p>
             <p style={{ fontWeight: 700, margin: 0 }}>{orc.cliente.razaoSocial}</p>
             {orc.cliente.nomeFantasia && <p style={{ color: '#555', margin: 0 }}>{orc.cliente.nomeFantasia}</p>}
-            <p style={{ fontSize: '8pt', color: '#888', margin: 0 }}>{orc.cliente.documento}</p>
+            {orc.cliente.documento && <p style={{ fontSize: '8pt', color: '#888', margin: 0 }}>{orc.cliente.documento}</p>}
             <p style={{ fontSize: '8pt', color: '#888', margin: 0 }}>{orc.cliente.endereco}</p>
           </div>
           <div>

@@ -135,7 +135,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
               <><br /><span style={{ color: '#555' }}>{os.ambiente.cliente.nomeFantasia}</span></>
             )}
             <br />
-            <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.documento}</span>
+            {os.ambiente.cliente.documento && <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.documento}</span>}
             <br />
             <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.endereco}</span>
           </Cell>

@@ -9,7 +9,7 @@ import {
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string; marca: string; modelo: string | null; numeroSerie: string | null }
 type Ambiente = { id: string; nome: string; localizacaoInterna: string; metrosQuadrados: number; capacidadeTermica: string; equipamentos: Equipamento[] }
-type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null; documento: string; endereco: string; ambientes: Ambiente[] }
+type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null; documento: string | null; endereco: string; telefone: string | null; celular: string | null; email: string | null; cidade: string | null; uf: string | null; ambientes: Ambiente[] }
 type Contrato = { id: string; descricao: string; valorMensal: number | null; vigenciaInicio: string; vigenciaFim: string; numOsIncluidas: number | null; ativo: boolean }
 type OsResumo = { id: string; numero: number | null; status: string; tipo: string; dataAgendamento: string; dataConclusao: string | null; ambiente: { nome: string }; tecnico: { nome: string | null; email: string } | null }
 type Dashboard = {
@@ -160,8 +160,17 @@ export default async function ClienteDetalhePage({ params }: Props) {
         <div>
           <h1 className="text-2xl font-bold text-primary">{cliente.razaoSocial}</h1>
           {cliente.nomeFantasia && <p className="text-gray-400 text-sm mt-0.5">{cliente.nomeFantasia}</p>}
-          <p className="text-gray-500 text-sm mt-1 font-mono">{cliente.documento}</p>
-          <p className="text-gray-400 text-xs mt-0.5">{cliente.endereco}</p>
+          <p className="text-gray-500 text-sm mt-1 font-mono">
+            {cliente.documento ?? <span className="font-sans text-gray-400">Sem CPF/CNPJ — <a href={`/clientes/${id}/editar`} className="text-primary hover:underline">completar</a></span>}
+          </p>
+          {(cliente.endereco || cliente.cidade) && (
+            <p className="text-gray-500 text-xs mt-0.5">{cliente.endereco || `${cliente.cidade}${cliente.uf ? `/${cliente.uf}` : ''}`}</p>
+          )}
+          {(cliente.telefone || cliente.celular || cliente.email) && (
+            <p className="text-gray-500 text-xs mt-0.5">
+              {[cliente.telefone, cliente.celular, cliente.email].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <a href={`/contratos/novo?clienteId=${id}`}

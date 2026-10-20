@@ -38,16 +38,16 @@ export function NovoClienteForm() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    const documento    = fd.get('documento') as string
-    const razaoSocial  = fd.get('razaoSocial') as string
-    const nomeFantasia = fd.get('nomeFantasia') as string
-    const endereco     = fd.get('endereco') as string
-    const telefone     = fd.get('telefone') as string
+    const campo = (n: string) => ((fd.get(n) as string) ?? '').trim()
 
     setError(null)
     startTransition(async () => {
       try {
-        const result = await criarCliente(documento, razaoSocial, nomeFantasia, endereco, telefone || undefined)
+        const result = await criarCliente({
+          documento: campo('documento'), razaoSocial: campo('razaoSocial'), nomeFantasia: campo('nomeFantasia'),
+          endereco: campo('endereco'), telefone: campo('telefone'), celular: campo('celular'),
+          email: campo('email'), cidade: campo('cidade'), uf: campo('uf'),
+        })
         setSuccess(result)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Erro ao criar cliente')
@@ -91,13 +91,12 @@ export function NovoClienteForm() {
       {/* CNPJ / CPF com consulta */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          CNPJ ou CPF <span className="text-destructive">*</span>
+          CNPJ ou CPF <span className="text-gray-500 font-normal">(opcional)</span>
         </label>
         <div className="flex gap-2">
           <input
             ref={cnpjRef}
             name="documento"
-            required
             placeholder="00.000.000/0000-00"
             className="flex-1 px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
@@ -154,15 +153,36 @@ export function NovoClienteForm() {
         />
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+          <input name="telefone" placeholder="(00) 0000-0000"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Celular</label>
+          <input name="celular" placeholder="(00) 00000-0000"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+      </div>
+
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Telefone
-        </label>
-        <input
-          name="telefone"
-          placeholder="(00) 00000-0000"
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-        />
+        <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+        <input name="email" type="email" placeholder="contato@empresa.com.br"
+          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+      </div>
+
+      <div className="grid grid-cols-[1fr_6rem] gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+          <input name="cidade"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">UF</label>
+          <input name="uf" maxLength={2} placeholder="MG"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm uppercase focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
       </div>
 
       {error && (

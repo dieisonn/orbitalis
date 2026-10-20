@@ -123,7 +123,7 @@ export default async function OrcamentoPage({ params }: Props) {
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cliente</p>
           <p className="font-medium text-gray-900">{orc.cliente.razaoSocial}</p>
           {orc.cliente.nomeFantasia && <p className="text-gray-500">{orc.cliente.nomeFantasia}</p>}
-          <p className="text-xs text-gray-500 mt-0.5">{orc.cliente.documento}</p>
+          {orc.cliente.documento && <p className="text-xs text-gray-500 mt-0.5">{orc.cliente.documento}</p>}
         </div>
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Validade</p>

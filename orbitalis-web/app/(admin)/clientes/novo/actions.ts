@@ -46,22 +46,30 @@ export type CriarClienteResult = {
 }
 
 // O cliente é criado sem login. O acesso ao portal é dado depois, por convite.
-export async function criarCliente(
-  documento: string,
-  razaoSocial: string,
-  nomeFantasia: string,
-  endereco: string,
-  telefone?: string,
-): Promise<CriarClienteResult> {
-  const result = await api.post<{ cliente: { id: string } }>(
-    '/clientes',
-    {
-      documento: documento.replace(/\D/g, ''),
-      razaoSocial,
-      nomeFantasia: nomeFantasia || undefined,
-      endereco,
-      telefone: telefone || undefined,
-    },
-  )
+export type DadosNovoCliente = {
+  documento?: string
+  razaoSocial: string
+  nomeFantasia?: string
+  endereco: string
+  telefone?: string
+  celular?: string
+  email?: string
+  cidade?: string
+  uf?: string
+}
+
+export async function criarCliente(d: DadosNovoCliente): Promise<CriarClienteResult> {
+  const vazio = (v?: string) => (v && v.trim() ? v.trim() : undefined)
+  const result = await api.post<{ cliente: { id: string } }>('/clientes', {
+    documento: vazio(d.documento?.replace(/\D/g, '')),
+    razaoSocial: d.razaoSocial,
+    nomeFantasia: vazio(d.nomeFantasia),
+    endereco: d.endereco,
+    telefone: vazio(d.telefone),
+    celular: vazio(d.celular),
+    email: vazio(d.email),
+    cidade: vazio(d.cidade),
+    uf: vazio(d.uf),
+  })
   return { clienteId: result.cliente.id }
 }

@@ -91,7 +91,7 @@ export class BuscaService {
       clientes: clientes.map((c) => ({
         id: c.id,
         label: c.nomeFantasia ?? c.razaoSocial,
-        sublabel: c.documento,
+        sublabel: c.documento ?? undefined,
         href: `/clientes/${c.id}`,
         tipo: 'cliente' as const,
       })),
