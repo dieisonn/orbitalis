@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, MapPin, Navigation, ExternalLink, Loader2, Pencil, Trash2, RotateCcw, User, Phone, Clock, Building2 } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, relogio, instante, hhmm, diaPorExtenso, hoje,
@@ -14,6 +14,7 @@ export type TecnicoOpcao = { id: string; email: string; nome: string | null }
 type Props = {
   evento: EventoAgenda | null          // null = novo
   inicioSugerido?: string              // ISO — usado no novo
+  fimSugerido?: string                 // ISO — fim do intervalo arrastado na grade (novo)
   tipos: TipoOpcao[]
   clientes: ClienteOpcao[]
   tecnicos: TecnicoOpcao[]
@@ -38,8 +39,15 @@ async function chamar(method: string, path: string, body?: object) {
 const nomeCliente = (c: ClienteOpcao) => c.nomeFantasia?.trim() || c.razaoSocial
 const dataInput = (d: Dia) => `${d.y}-${String(d.m + 1).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`
 
-export function EventoModal({ evento, inicioSugerido, tipos, clientes, tecnicos, onFechar, onMudou }: Props) {
+export function EventoModal({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }: Props) {
   const [editando, setEditando] = useState(evento === null)
+
+  // Esc fecha, como no Google Agenda
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [onFechar])
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onFechar}>
@@ -48,7 +56,7 @@ export function EventoModal({ evento, inicioSugerido, tipos, clientes, tecnicos,
         onClick={(e) => e.stopPropagation()}
       >
         {editando
-          ? <Formulario {...{ evento, inicioSugerido, tipos, clientes, tecnicos, onFechar, onMudou }} onCancelar={evento ? () => setEditando(false) : onFechar} />
+          ? <Formulario {...{ evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }} onCancelar={evento ? () => setEditando(false) : onFechar} />
           : <Detalhe evento={evento!} onFechar={onFechar} onEditar={() => setEditando(true)} onMudou={onMudou} />}
       </div>
     </div>
@@ -183,7 +191,7 @@ function Info({ icon, rotulo, valor }: { icon?: React.ReactNode; rotulo: string;
 
 // ─── Formulário (novo / editar) ──────────────────────────────────────────────
 
-function Formulario({ evento, inicioSugerido, tipos, clientes, tecnicos, onFechar, onMudou, onCancelar }: Props & { onCancelar: () => void }) {
+function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou, onCancelar }: Props & { onCancelar: () => void }) {
   const ehOs = !!evento?.ordemServico
   const h0 = hoje()
   const base = evento ? evento.inicio : (inicioSugerido ?? instante(h0.y, h0.m, h0.d, 8, 0))
@@ -201,10 +209,13 @@ function Formulario({ evento, inicioSugerido, tipos, clientes, tecnicos, onFecha
   const [diaInteiro, setDiaInteiro] = useState(evento?.diaInteiro ?? false)
   const [data, setData] = useState(dataInput(rIni))
   const [horaIni, setHoraIni] = useState(`${String(rIni.hh).padStart(2, '0')}:${String(rIni.mm).padStart(2, '0')}`)
+  const rFimSug = !evento && fimSugerido ? relogio(fimSugerido) : null
   const [horaFim, setHoraFim] = useState(
-    evento ? `${String(rFim.hh).padStart(2, '0')}:${String(rFim.mm).padStart(2, '0')}` : '',
+    evento ? `${String(rFim.hh).padStart(2, '0')}:${String(rFim.mm).padStart(2, '0')}`
+      : rFimSug ? `${String(rFimSug.hh).padStart(2, '0')}:${String(rFimSug.mm).padStart(2, '0')}` : '',
   )
-  const [tocou, setTocou] = useState({ titulo: !!evento, local: !!evento, fim: !!evento })
+  // fim vindo do arrasto vale como "já escolhido": o tipo de serviço não o sobrescreve
+  const [tocou, setTocou] = useState({ titulo: !!evento, local: !!evento, fim: !!evento || !!rFimSug })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 

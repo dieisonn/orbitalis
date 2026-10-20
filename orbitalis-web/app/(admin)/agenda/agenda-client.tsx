@@ -42,7 +42,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
   const [erro, setErro] = useState<string | null>(null)
   const [tecnicoFiltro, setTecnicoFiltro] = useState('')
   const [aberto, setAberto] = useState<EventoAgenda | null>(null)
-  const [novo, setNovo] = useState<string | null>(null) // ISO sugerido
+  const [novo, setNovo] = useState<{ inicio: string; fim?: string } | null>(null) // intervalo sugerido (ISO)
   const arrastando = useRef<EventoAgenda | null>(null)
   const [alvo, setAlvo] = useState<string | null>(null)
 
@@ -125,11 +125,36 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
 
   const hojeDia = hoje()
 
+  function novoHoje() { const h = hoje(); setNovo({ inicio: instante(h.y, h.m, h.d, 8, 0) }) }
+
+  // Atalhos como no Google Agenda: D dia · W semana · M mês · T hoje · ←/→ (ou J/K) navegar · C criar
+  const atalho = useRef<(e: KeyboardEvent) => void>(() => {})
+  atalho.current = (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || aberto || novo) return
+    const alvoEl = e.target as HTMLElement | null
+    if (alvoEl && (alvoEl.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(alvoEl.tagName))) return
+    const k = e.key.toLowerCase()
+    if (k === 'm') setVisao('mes')
+    else if (k === 'w') setVisao('semana')
+    else if (k === 'd') setVisao('dia')
+    else if (k === 't') setCursor(hoje())
+    else if (k === 'arrowleft' || k === 'j' || k === 'p') navegar(-1)
+    else if (k === 'arrowright' || k === 'k' || k === 'n') navegar(1)
+    else if (k === 'c') novoHoje()
+    else return
+    e.preventDefault()
+  }
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => atalho.current(e)
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [])
+
   return (
     <div>
       {/* Barra superior */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <button onClick={() => { setCursor(hoje()) }}
+        <button onClick={() => { setCursor(hoje()) }} title="Ir para hoje (T)"
           className="px-3 py-2 border border-border text-sm font-semibold text-gray-700 rounded-lg hover:bg-surface">Hoje</button>
         <div className="flex">
           <button onClick={() => navegar(-1)} className="p-2 border border-border rounded-l-lg hover:bg-surface text-gray-600" aria-label="Anterior"><ChevronLeft size={16} /></button>
@@ -146,13 +171,13 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
           </select>
           <div className="flex rounded-lg border border-border overflow-hidden text-sm font-semibold">
             {(['mes', 'semana', 'dia'] as Visao[]).map((v) => (
-              <button key={v} onClick={() => setVisao(v)}
+              <button key={v} onClick={() => setVisao(v)} title={`${v === 'mes' ? 'Mês' : v === 'semana' ? 'Semana' : 'Dia'} (${v === 'mes' ? 'M' : v === 'semana' ? 'W' : 'D'})`}
                 className={`px-3 py-2 ${visao === v ? 'bg-primary text-white' : 'bg-white text-gray-600 hover:bg-surface'}`}>
                 {v === 'mes' ? 'Mês' : v === 'semana' ? 'Semana' : 'Dia'}
               </button>
             ))}
           </div>
-          <button onClick={() => { const h = hoje(); setNovo(instante(h.y, h.m, h.d, 8, 0)) }}
+          <button onClick={novoHoje} title="Novo evento (C)"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
             <Plus size={14} /> Novo evento
           </button>
@@ -177,7 +202,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
               const ehHoje = mesmoDia(dia, hojeDia)
               return (
                 <div key={k}
-                  onClick={() => setNovo(instante(dia.y, dia.m, dia.d, 8, 0))}
+                  onClick={() => setNovo({ inicio: instante(dia.y, dia.m, dia.d, 8, 0) })}
                   onDragOver={(e) => { e.preventDefault(); setAlvo(k) }}
                   onDragLeave={() => setAlvo((a) => (a === k ? null : a))}
                   onDrop={(e) => { e.preventDefault(); soltar(dia) }}
@@ -199,14 +224,20 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
         </div>
       ) : (
         <GradeHoras dias={Array.from({ length: dias }, (_, i) => somarDias(diaIni, i))} porDia={porDia}
-          onAbrir={setAberto} onNovo={setNovo} />
+          onAbrir={setAberto} onNovo={(inicio, fim) => setNovo({ inicio, fim })} />
       )}
+
+      <p className="hidden md:block mt-2 text-xs text-gray-500">
+        {visao !== 'mes' && 'Arraste na grade para criar um evento já com o horário. '}
+        Atalhos: <kbd className="font-mono">D</kbd> dia · <kbd className="font-mono">W</kbd> semana · <kbd className="font-mono">M</kbd> mês · <kbd className="font-mono">T</kbd> hoje · <kbd className="font-mono">←</kbd> <kbd className="font-mono">→</kbd> navegar · <kbd className="font-mono">C</kbd> novo evento
+      </p>
 
       {(aberto || novo) && (
         <EventoModal
           key={aberto?.id ?? 'novo'}
           evento={aberto}
-          inicioSugerido={novo ?? undefined}
+          inicioSugerido={novo?.inicio}
+          fimSugerido={novo?.fim}
           tipos={tipos} clientes={clientes} tecnicos={tecnicos}
           onFechar={() => { setAberto(null); setNovo(null) }}
           onMudou={carregar}
@@ -294,10 +325,23 @@ function posicionar(lista: EventoAgenda[], dia: Dia): Posicionado[] {
   return out
 }
 
+const SNAP = 15 // minutos
+const hm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
+
 function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
   dias: Dia[]; porDia: Record<string, EventoAgenda[]>
-  onAbrir: (e: EventoAgenda) => void; onNovo: (iso: string) => void
+  onAbrir: (e: EventoAgenda) => void; onNovo: (inicio: string, fim?: string) => void
 }) {
+  // Seleção por arrasto: âncora = onde apertou; ini/fim = intervalo (minutos do dia)
+  const [sel, setSel] = useState<{ k: string; ini: number; fim: number } | null>(null)
+  const drag = useRef<{ k: string; dia: Dia; ancora: number; y0: number; moveu: boolean } | null>(null)
+  const limite = (min: number) => Math.min(HORA_FIM * 60, Math.max(HORA_INI * 60, min))
+  const minutoEm = (el: HTMLElement, clientY: number) =>
+    HORA_INI * 60 + ((clientY - el.getBoundingClientRect().top) / PX_HORA) * 60
+  const intervaloDe = (ancora: number, atual: number) => atual >= ancora
+    ? { ini: ancora, fim: limite(Math.max(Math.ceil(atual / SNAP) * SNAP, ancora + SNAP)) }
+    : { ini: limite(Math.floor(atual / SNAP) * SNAP), fim: ancora + SNAP }
+
   const horas = Array.from({ length: HORA_FIM - HORA_INI }, (_, i) => HORA_INI + i)
   const [lista, setLista] = useState<EventoAgenda[] | null>(null)
   const rolagem = useRef<HTMLDivElement>(null)
@@ -349,13 +393,44 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
             const pos = posicionar(porDia[k] ?? [], d)
             const ehHoje = mesmoDia(d, hojeDia)
             return (
-              <div key={k} className="relative border-l border-border min-w-0" style={{ height: horas.length * PX_HORA }}
-                onClick={(ev) => {
-                  const r = (ev.currentTarget as HTMLElement).getBoundingClientRect()
-                  const min = Math.floor(((ev.clientY - r.top) / PX_HORA) * 2) * 30 + HORA_INI * 60
-                  onNovo(instante(d.y, d.m, d.d, Math.floor(min / 60), min % 60))
-                }}>
+              <div key={k} className="relative border-l border-border min-w-0 select-none" style={{ height: horas.length * PX_HORA, touchAction: 'pan-y' }}
+                onPointerDown={(ev) => {
+                  if (ev.button !== 0 || (ev.target as HTMLElement).closest('button')) return
+                  const el = ev.currentTarget as HTMLElement
+                  el.setPointerCapture(ev.pointerId)
+                  const ancora = limite(Math.floor(minutoEm(el, ev.clientY) / SNAP) * SNAP)
+                  drag.current = { k, dia: d, ancora, y0: ev.clientY, moveu: false }
+                }}
+                onPointerMove={(ev) => {
+                  const g = drag.current
+                  if (!g || g.k !== k) return
+                  if (!g.moveu && Math.abs(ev.clientY - g.y0) < 5) return
+                  g.moveu = true
+                  const { ini, fim } = intervaloDe(g.ancora, minutoEm(ev.currentTarget as HTMLElement, ev.clientY))
+                  setSel({ k, ini, fim })
+                }}
+                onPointerUp={(ev) => {
+                  const g = drag.current
+                  drag.current = null
+                  setSel(null)
+                  if (!g || g.k !== k) return
+                  if (g.moveu) {
+                    const { ini, fim } = intervaloDe(g.ancora, minutoEm(ev.currentTarget as HTMLElement, ev.clientY))
+                    onNovo(instante(d.y, d.m, d.d, Math.floor(ini / 60), ini % 60), instante(d.y, d.m, d.d, Math.floor(fim / 60), fim % 60))
+                  } else {
+                    // clique simples: início na meia hora, duração padrão
+                    const min = Math.floor((minutoEm(ev.currentTarget as HTMLElement, ev.clientY)) / 30) * 30
+                    onNovo(instante(d.y, d.m, d.d, Math.floor(min / 60), min % 60))
+                  }
+                }}
+                onPointerCancel={() => { drag.current = null; setSel(null) }}>
                 {horas.map((h) => <div key={h} style={{ height: PX_HORA }} className="border-b border-border/70" />)}
+                {sel && sel.k === k && (
+                  <div className="absolute inset-x-0.5 rounded bg-primary/25 border border-primary pointer-events-none z-20 px-1.5 py-0.5 text-[11px] font-semibold text-primary overflow-hidden"
+                    style={{ top: ((sel.ini - HORA_INI * 60) / 60) * PX_HORA, height: ((sel.fim - sel.ini) / 60) * PX_HORA }}>
+                    {hm(sel.ini)} – {hm(sel.fim)}
+                  </div>
+                )}
                 {ehHoje && agora.hh >= HORA_INI && agora.hh < HORA_FIM && (
                   <div className="absolute inset-x-0 border-t-2 border-red-500 pointer-events-none z-10"
                     style={{ top: ((agora.hh * 60 + agora.mm - HORA_INI * 60) / 60) * PX_HORA }} />
