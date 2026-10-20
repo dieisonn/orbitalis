@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -37,7 +37,23 @@ export class PlanosManutencaoService {
     private readonly googleCalendar: GoogleCalendarService,
   ) {}
 
+  // Todos os equipamentos do plano precisam estar em ambientes do cliente do plano
+  private async validarEquipamentosDoCliente(clienteId: string, equipamentoIds: string[]) {
+    if (equipamentoIds.length === 0) return;
+    const ids = [...new Set(equipamentoIds)];
+    const validos = await this.prisma.equipamento.count({
+      where: { id: { in: ids }, deletedAt: null, ambiente: { clienteId, deletedAt: null } },
+    });
+    if (validos !== ids.length) {
+      throw new BadRequestException('Há equipamentos que não pertencem a este cliente');
+    }
+  }
+
   async create(dto: CreatePlanoManutencaoDto) {
+    await this.validarEquipamentosDoCliente(
+      dto.clienteId,
+      (dto.equipamentosConfig ?? []).map((c) => c.equipamentoId),
+    );
     return this.prisma.$transaction(async (tx) => {
       const plano = await tx.planoManutencao.create({
         data: {
@@ -134,6 +150,13 @@ export class PlanosManutencaoService {
     if (!plano) throw new NotFoundException('Plano não encontrado');
 
     const { proximaGeracao, dataFim, equipamentosConfig, ...rest } = data;
+
+    if (equipamentosConfig !== undefined) {
+      await this.validarEquipamentosDoCliente(
+        (rest as { clienteId?: string }).clienteId ?? plano.clienteId,
+        equipamentosConfig.map((c) => c.equipamentoId),
+      );
+    }
 
     return this.prisma.$transaction(async (tx) => {
       await tx.planoManutencao.update({

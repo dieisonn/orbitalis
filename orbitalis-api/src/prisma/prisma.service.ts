@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { getTenantId } from '../common/tenant.context';
 
@@ -23,6 +23,54 @@ const UNIQUE_OPS = new Set([
 
 // Nas extensões o Prisma entrega `model` em PascalCase ("Cliente"); TENANT_MODELS usa o delegate.
 const delegateName = (model: string) => model.charAt(0).toLowerCase() + model.slice(1);
+
+// Chaves estrangeiras que precisam apontar para registros da MESMA empresa.
+// O Prisma só confere se o id existe; sem isto, dava para criar um ambiente, equipamento,
+// contrato ou plano dentro dos dados de outra empresa informando apenas o id.
+const REFERENCIAS: Record<string, Record<string, string>> = {
+  ambiente:               { clienteId: 'cliente' },
+  equipamento:            { ambienteId: 'ambiente' },
+  contrato:               { clienteId: 'cliente' },
+  cliente:                { usuarioId: 'usuario' },
+  convite:                { clienteId: 'cliente' },
+  configuracaoEmpresa:    { responsavelTecnicoId: 'usuario' },
+  modeloChecklist:        { tipoServicoId: 'tipoServico' },
+  planoManutencao:        { clienteId: 'cliente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico' },
+  planoEquipamentoConfig: { planoId: 'planoManutencao', equipamentoId: 'equipamento', modeloChecklistId: 'modeloChecklist' },
+  ordemServico:           { ambienteId: 'ambiente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico', planoId: 'planoManutencao' },
+  ordemServicoItem:       { ordemServicoId: 'ordemServico', equipamentoId: 'equipamento' },
+  orcamento: {
+    clienteId: 'cliente', ambienteId: 'ambiente', tipoServicoId: 'tipoServico',
+    modeloChecklistId: 'modeloChecklist', ordemServicoId: 'ordemServico', criadoPorId: 'usuario',
+  },
+};
+
+const WRITE_OPS = new Set(['create', 'createMany', 'createManyAndReturn', 'update', 'updateMany', 'upsert']);
+
+type Finder = (alvo: string, id: string) => Promise<unknown>;
+
+async function verificarReferencias(delegate: string, operation: string, args: any, find: Finder) {
+  const refs = REFERENCIAS[delegate];
+  if (!refs || !WRITE_OPS.has(operation) || !args) return;
+
+  const registros: any[] = [];
+  for (const d of [args.data, args.create, args.update]) {
+    if (Array.isArray(d)) registros.push(...d);
+    else if (d && typeof d === 'object') registros.push(d);
+  }
+
+  const vistos = new Set<string>();
+  for (const reg of registros) {
+    for (const [campo, alvo] of Object.entries(refs)) {
+      const id = reg[campo];
+      if (typeof id !== 'string' || vistos.has(`${alvo}:${id}`)) continue;
+      vistos.add(`${alvo}:${id}`);
+      if (!(await find(alvo, id))) {
+        throw new NotFoundException(`Registro referenciado não encontrado (${campo})`);
+      }
+    }
+  }
+}
 
 /**
  * Aplica o tenant (empresaId) aos argumentos de uma operação.
@@ -61,19 +109,29 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   private _installTenantFilter() {
+    let tenantedRef: any;
     const tenanted = this.$extends({
       query: {
         $allModels: {
           async $allOperations({ model, operation, args, query }: any) {
             const empresaId = getTenantId();
-            if (empresaId && TENANT_MODELS.has(delegateName(model))) {
+            const delegate = delegateName(model);
+            if (empresaId && TENANT_MODELS.has(delegate)) {
               args = scopeArgs(operation, args, empresaId);
+            }
+            // Delegates fora de TENANT_MODELS (itens, configs) também têm referências a validar
+            if (empresaId && REFERENCIAS[delegate]) {
+              await verificarReferencias(delegate, operation, args, (alvo, id) =>
+                tenantedRef[alvo].findFirst({ where: { id }, select: { id: true } }),
+              );
             }
             return query(args);
           },
         },
       },
     });
+
+    tenantedRef = tenanted;
 
     // Substitui os delegates de model no próprio this para que todos os
     // services existentes continuem chamando this.prisma.usuario sem mudar nada
@@ -103,15 +161,22 @@ function wrapTx(tx: any) {
   return new Proxy(tx, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver);
-      if (typeof prop !== 'string' || !TENANT_MODELS.has(prop) || !value) return value;
+      if (typeof prop !== 'string' || !value || typeof value !== 'object') return value;
+      const tenantModel = TENANT_MODELS.has(prop);
+      if (!tenantModel && !REFERENCIAS[prop]) return value;
 
       return new Proxy(value, {
         get(delegate, op) {
           const fn = delegate[op];
           if (typeof fn !== 'function') return fn;
-          return (args?: any) => {
+          return async (args?: any) => {
             const empresaId = getTenantId();
-            return fn.call(delegate, empresaId ? scopeArgs(String(op), args, empresaId) : args);
+            if (!empresaId) return fn.call(delegate, args);
+            if (tenantModel) args = scopeArgs(String(op), args, empresaId);
+            await verificarReferencias(prop, String(op), args, (alvo, id) =>
+              target[alvo].findFirst(scopeArgs('findFirst', { where: { id }, select: { id: true } }, empresaId)),
+            );
+            return fn.call(delegate, args);
           };
         },
       });
