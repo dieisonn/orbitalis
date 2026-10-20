@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AlertasService } from '../alertas/alertas.service';
 import { GoogleCalendarService, CalendarEventPayload } from '../google-calendar/google-calendar.service';
-import { resolverChecklistItens } from '../../common/checklist-resolver';
+import { gerarOsDoPlano, INCLUDE_GERACAO } from './geracao-preventiva';
 
 @Injectable()
 export class CronService {
@@ -31,161 +31,16 @@ export class CronService {
         proximaGeracao: { lte: agora },
         OR: [{ dataFim: null }, { dataFim: { gte: agora } }],
       },
-      include: {
-        tipoServico: { select: { id: true, sigla: true, calendarColorId: true } },
-        tecnico: { select: { id: true, nome: true } },
-        equipamentosConfig: {
-          // Ignora equipamentos/ambientes/clientes excluídos (soft delete)
-          where: { equipamento: { deletedAt: null, ambiente: { deletedAt: null, cliente: { deletedAt: null } } } },
-          include: {
-            equipamento: {
-              select: {
-                id: true,
-                ambienteId: true,
-                nome: true,
-                ambiente: {
-                  select: { id: true, nome: true, cliente: { select: { razaoSocial: true, telefone: true } } },
-                },
-              },
-            },
-            modeloChecklist: true,
-          },
-        },
-      },
+      include: INCLUDE_GERACAO,
     });
 
     this.logger.log(`${planos.length} plano(s) elegível(is) encontrado(s)`);
 
     let geradas = 0;
-
     for (const plano of planos) {
       try {
-        // Checklist padrão para equipamentos sem modelo próprio: preventiva + tipo de serviço do plano
-        const checklistPadrao = await resolverChecklistItens(this.prisma, {
-          tipo: 'preventiva',
-          tipoServicoId: plano.tipoServicoId,
-        });
-
-        const configs = plano.equipamentosConfig.map((c) => ({
-          equipamentoId: c.equipamentoId,
-          equipamentoNome: c.equipamento.nome,
-          ambienteId: c.equipamento.ambienteId,
-          ambienteNome: c.equipamento.ambiente.nome,
-          clienteNome: c.equipamento.ambiente.cliente.razaoSocial,
-          clienteTelefone: c.equipamento.ambiente.cliente.telefone,
-          snapshot: c.modeloChecklist
-            ? (JSON.parse(JSON.stringify(c.modeloChecklist.itens)) as Prisma.InputJsonValue)
-            : checklistPadrao,
-        }));
-
-        const datasParaGerar: Date[] = [];
-        let cursor = new Date(plano.proximaGeracao);
-
-        if (plano.dataFim) {
-          while (cursor <= plano.dataFim) {
-            datasParaGerar.push(new Date(cursor));
-            cursor = new Date(cursor.getTime() + plano.frequenciaDias * 86_400_000);
-          }
-        } else {
-          datasParaGerar.push(new Date(cursor));
-        }
-
-        if (datasParaGerar.length === 0) {
-          // Nenhum ciclo cabe mais dentro do prazo → encerra o plano
-          await this.prisma.planoManutencao.update({
-            where: { id: plano.id },
-            data: { ativo: false },
-          });
-          this.logger.log(`Plano ${plano.id}: sem ciclos restantes — marcado como concluído`);
-          continue;
-        }
-
-        for (const dataGeracao of datasParaGerar) {
-          // Cria uma O.S. por equipamento (sem vincular evento do Calendar individualmente)
-          let novasNaData = 0;
-          for (const config of configs) {
-            // Idempotência: não recria se este equipamento já tem O.S. deste plano nesta data
-            const jaExiste = await this.prisma.ordemServico.findFirst({
-              where: {
-                planoId: plano.id,
-                dataAgendamento: dataGeracao,
-                itens: { some: { equipamentoId: config.equipamentoId } },
-              },
-              select: { id: true },
-            });
-            if (jaExiste) continue;
-
-            await this.prisma.$transaction(async (tx) => {
-              const created = await tx.ordemServico.create({
-                data: {
-                  ambienteId: config.ambienteId,
-                  planoId: plano.id,
-                  tecnicoId: plano.tecnicoId,
-                  tipoServicoId: plano.tipoServicoId,
-                  status: 'agendada',
-                  tipo: 'preventiva',
-                  origem: 'preventiva_automatica',
-                  dataAgendamento: dataGeracao,
-                  empresaId: plano.empresaId ?? undefined,
-                },
-                select: { id: true },
-              });
-
-              await tx.ordemServicoItem.create({
-                data: {
-                  ordemServicoId: created.id,
-                  equipamentoId: config.equipamentoId,
-                  statusItem: 'pendente',
-                  checklistSnapshot: config.snapshot,
-                },
-              });
-            });
-
-            geradas++;
-            novasNaData++;
-          }
-
-          // UM evento por visita — todos os equipamentos do cliente agrupados
-          if (configs.length > 0 && novasNaData > 0) {
-            const d = dataGeracao;
-            const dateLabel = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
-            const payload: CalendarEventPayload = {
-              osNumero: dateLabel,
-              ambienteNome: configs[0].clienteNome,
-              clienteNome: configs[0].clienteNome,
-              clienteTelefone: configs[0].clienteTelefone ?? null,
-              tecnicoNome: plano.tecnico?.nome ?? null,
-              tipo: 'preventiva',
-              dataAgendamento: dataGeracao,
-              equipamentos: configs.map((c) => c.equipamentoNome),
-              observacoesGerais: null,
-              status: 'agendada',
-              tipoServicoSigla: plano.tipoServico?.sigla ?? null,
-              tipoServicoColorId: plano.tipoServico?.calendarColorId ?? null,
-              horaInicio: null,
-              horaFim: null,
-            };
-            this.googleCalendar.criarEvento(payload).catch(() => null);
-          }
-        }
-
-        const ultimaData = datasParaGerar[datasParaGerar.length - 1];
-        const proximaGeracao = new Date(ultimaData);
-        proximaGeracao.setDate(proximaGeracao.getDate() + plano.frequenciaDias);
-        const esgotado = plano.dataFim ? proximaGeracao > plano.dataFim : false;
-
-        await this.prisma.planoManutencao.update({
-          where: { id: plano.id },
-          data: {
-            ultimaGeracao: ultimaData,
-            proximaGeracao,
-            ...(esgotado ? { ativo: false } : {}),
-          },
-        });
-
-        this.logger.log(
-          `Plano ${plano.id}: ${datasParaGerar.length} ciclo(s) × ${configs.length} equipamento(s)${esgotado ? ' [CONCLUÍDO]' : ''}`,
-        );
+        const r = await gerarOsDoPlano(this.prisma, this.googleCalendar, this.logger, plano);
+        geradas += r.geradas;
       } catch (err) {
         this.logger.error(`Falha ao gerar O.S. para plano ${plano.id}:`, err);
       }
@@ -193,6 +48,15 @@ export class CronService {
 
     this.logger.log(`Cron finalizado — ${geradas} O.S. gerada(s) no total`);
     return geradas;
+  }
+
+  // Gera as O.S. restantes de UM plano (botão "Gerar O.S." do plano)
+  async gerarOsPlano(id: string) {
+    const plano = await this.prisma.planoManutencao.findUnique({ where: { id }, include: INCLUDE_GERACAO });
+    if (!plano) throw new NotFoundException('Plano não encontrado');
+    const r = await gerarOsDoPlano(this.prisma, this.googleCalendar, this.logger, plano);
+    if (r.semCiclos) return { geradas: 0, mensagem: 'Nenhuma data restante para gerar.' };
+    return { geradas: r.geradas, esgotado: r.esgotado };
   }
 
   // Executa diariamente às 08:00 — notifica admins sobre O.S. atrasadas
