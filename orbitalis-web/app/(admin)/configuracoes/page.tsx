@@ -1,7 +1,6 @@
 import { api } from '@/lib/api'
 import { ConfiguracaoForm } from './form'
 import { ResponsavelTecnicoCard } from './responsavel-tecnico-card'
-import { LgmvRecomputeCard } from './lgmv-recompute-card'
 import { ConfiabilidadeCard } from './confiabilidade-card'
 
 type Config = {
@@ -63,8 +62,6 @@ export default async function ConfiguracoesPage({
         mtbfLimiteDias={config.mtbfLimiteDias ?? null}
         custoHoraParada={config.custoHoraParada ?? null}
       />
-
-      <LgmvRecomputeCard />
     </div>
   )
 }

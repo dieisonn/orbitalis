@@ -204,7 +204,6 @@ model Equipamento {
   ambiente         Ambiente                @relation(fields: [ambienteId], references: [id])
   itensOs          OrdemServicoItem[]
   planoConfigs     PlanoEquipamentoConfig[]
-  diagnosticosLgmv DiagnosticoLgmv[]
 
   @@index([codigoQr])
   @@index([empresaId])
@@ -315,7 +314,6 @@ model OrdemServico {
   tipoServico  TipoServico?                    @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
   itens            OrdemServicoItem[]
   conflitos        AuditoriaConflitoSincronizacao[]
-  diagnosticosLgmv DiagnosticoLgmv[]
   orcamento        Orcamento?
   evento           EventoAgenda?
 
@@ -523,29 +521,6 @@ model OrcamentoItem {
 
   @@map("orcamento_itens")
 }
-
-// ─────────────────────────────────────────
-// diagnosticos_lgmv  (laudos LGMV por equipamento)
-// ─────────────────────────────────────────
-model DiagnosticoLgmv {
-  id             String    @id @default(uuid()) @db.Uuid
-  equipamentoId  String    @map("equipamento_id") @db.Uuid
-  osId           String?   @map("os_id") @db.Uuid
-  arquivoIduNome String?   @map("arquivo_idu_nome") @db.VarChar(255)
-  arquivoOduNome String?   @map("arquivo_odu_nome") @db.VarChar(255)
-  dataInspecao   DateTime? @map("data_inspecao")
-  dadosIdu       Json?     @map("dados_idu")
-  dadosOdu       Json?     @map("dados_odu")
-  relatorio      Json
-  criadoEm       DateTime  @default(now()) @map("criado_em")
-
-  equipamento Equipamento   @relation(fields: [equipamentoId], references: [id], onDelete: Cascade)
-  os          OrdemServico? @relation(fields: [osId], references: [id], onDelete: SetNull)
-
-  @@index([equipamentoId])
-  @@map("diagnosticos_lgmv")
-}
-
 
 // ─────────────────────────────────────────
 // contadores_empresa  (numeração sequencial por empresa: O.S., orçamentos)

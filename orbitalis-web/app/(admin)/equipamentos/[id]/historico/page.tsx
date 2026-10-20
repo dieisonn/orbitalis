@@ -1,9 +1,6 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
-import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle, Activity, Clock, RefreshCw } from 'lucide-react'
-import { LgmvUpload } from '@/components/ui/lgmv-upload'
-import { LgmvDiagnosticosTable } from './lgmv-diagnosticos-table'
-import type { DiagnosticoResumido } from './lgmv-diagnosticos-table'
+import { History, Wrench, TrendingUp, Calendar, Tag, ClipboardList, AlertTriangle, Clock, RefreshCw } from 'lucide-react'
 import { MttrTrendChart } from './mttr-trend-chart'
 
 type Props = { params: Promise<{ id: string }> }
@@ -77,13 +74,11 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
   const { id } = await params
 
   let hist: Historico
-  let diagnosticos: DiagnosticoResumido[] = []
   let config: Config = { mttrLimiteHoras: null, mtbfLimiteDias: null }
   try {
     [hist] = await Promise.all([
       api.get<Historico>(`/equipamentos/${id}/historico`),
     ])
-    diagnosticos = await api.get<DiagnosticoResumido[]>(`/diagnosticos-lgmv/equipamento/${id}`).catch(() => [])
     config = await api.get<Config>('/configuracao').catch(() => ({ mttrLimiteHoras: null, mtbfLimiteDias: null }))
   } catch {
     notFound()
@@ -428,23 +423,6 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-
-      {/* ── Diagnósticos LGMV ── */}
-      <div className="mt-8">
-        <h2 className="text-base font-bold text-gray-800 flex items-center gap-2 mb-4">
-          <Activity size={16} className="text-primary" />
-          Diagnósticos LGMV
-          <span className="text-xs font-normal text-gray-400">({diagnosticos.length} registro{diagnosticos.length !== 1 ? 's' : ''})</span>
-        </h2>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          <LgmvUpload equipamentoId={id} equipamentoNome={eq.nome} />
-        </div>
-
-        {diagnosticos.length > 0 && (
-          <LgmvDiagnosticosTable equipamentoId={id} diagnosticos={diagnosticos} />
         )}
       </div>
     </div>

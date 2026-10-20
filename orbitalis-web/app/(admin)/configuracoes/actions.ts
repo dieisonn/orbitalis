@@ -54,15 +54,3 @@ export async function salvarThresholdsConfiabilidade(
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar' }
   }
 }
-
-export async function recomputarRelatoriosLgmv() {
-  try {
-    const result = await api.post<{ total: number; updated: number; skipped: number; erros: string[] }>(
-      '/diagnosticos-lgmv/recompute-all',
-      {},
-    )
-    return { ok: true as const, ...result }
-  } catch (err) {
-    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao reprocessar' }
-  }
-}

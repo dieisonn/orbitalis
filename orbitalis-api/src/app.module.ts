@@ -18,7 +18,6 @@ import { ContratosModule } from './modules/contratos/contratos.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { AgendaModule } from './modules/agenda/agenda.module';
 import { TiposServicoModule } from './modules/tipos-servico/tipos-servico.module';
-import { DiagnosticosLgmvModule } from './modules/diagnosticos-lgmv/diagnosticos-lgmv.module';
 import { BuscaModule } from './modules/busca/busca.module';
 import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
@@ -49,7 +48,6 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     AlertasModule,
     AgendaModule,
     TiposServicoModule,
-    DiagnosticosLgmvModule,
     BuscaModule,
     OrcamentosModule,
     FinanceiroModule,
