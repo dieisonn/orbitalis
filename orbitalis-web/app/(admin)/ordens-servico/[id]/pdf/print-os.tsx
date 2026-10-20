@@ -15,7 +15,7 @@ type Item = {
   }
 }
 
-type OS = {
+export type OS = {
   id: string; numero: number | null; status: string; origem: string
   dataAgendamento: string; dataInicio: string | null; dataConclusao: string | null
   observacoesGerais: string | null
@@ -24,13 +24,14 @@ type OS = {
   quantidadeGasGramas: number | null
   ambiente: {
     nome: string; localizacaoInterna: string; capacidadeTermica: string
-    cliente: { razaoSocial: string; nomeFantasia: string | null; documento: string; endereco: string }
+    cliente: { razaoSocial: string; nomeFantasia: string | null; documento: string | null; endereco: string; telefone?: string | null; celular?: string | null }
   }
   tecnico: { email: string; nome: string | null } | null
+  tipoServico?: { sigla: string; nome: string } | null
   itens: Item[]
 }
 
-type Config = {
+export type Config = {
   nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null
   corPrimaria: string | null; cnpj: string | null; telefone: string | null; endereco: string | null
 } | null
@@ -56,27 +57,27 @@ function parseSnapshot(snapshot: unknown): ChecklistItem[] {
   } catch { return [] }
 }
 
-export function PrintOS({ os, config }: { os: OS; config?: Config }) {
-  const numero = os.numero != null
-    ? `OS-${String(os.numero).padStart(4, '0')}`
-    : `OS-${os.id.slice(0, 6).toUpperCase()}`
-  const nomeEmpresa = config?.nomeFantasia ?? config?.nomeEmpresa ?? 'Orbitalis'
-  const logoUrl = config?.logoUrl ?? null
-  const cor = config?.corPrimaria ?? '#0505ad'
-  const tecnicoLabel = os.tecnico ? (os.tecnico.nome ?? os.tecnico.email) : 'Não atribuído'
-
-  return (
-    <>
-      <style>{`
+export const PRINT_CSS = `
         @page { size: A4; margin: 14mm 12mm 12mm 12mm; }
         @media print {
           .no-print { display: none !important; }
+          html, body, main { background: #fff !important; }
           body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .page-break { page-break-before: always; }
         }
         body { margin: 0; font-family: 'Arial', sans-serif; }
         * { box-sizing: border-box; }
-      `}</style>
+      `
+
+export function PrintOS({ os, config }: { os: OS; config?: Config }) {
+  const numero = os.numero != null
+    ? `OS-${String(os.numero).padStart(4, '0')}`
+    : `OS-${os.id.slice(0, 6).toUpperCase()}`
+  const cor = config?.corPrimaria ?? '#0505ad'
+
+  return (
+    <>
+      <style>{PRINT_CSS}</style>
 
       {/* Barra de ações — apenas na tela */}
       <div className="no-print fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
@@ -95,6 +96,26 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
       </div>
       <div className="no-print h-14" />
 
+      <DocumentoOS os={os} config={config} />
+    </>
+  )
+}
+
+/** O documento da O.S. (sem a barra de ações). `modoDia` = folha do técnico: horário, telefone e espaço para anotações. */
+export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: Config; modoDia?: boolean }) {
+  const numero = os.numero != null
+    ? `OS-${String(os.numero).padStart(4, '0')}`
+    : `OS-${os.id.slice(0, 6).toUpperCase()}`
+  const nomeEmpresa = config?.nomeFantasia ?? config?.nomeEmpresa ?? 'Orbitalis'
+  const logoUrl = config?.logoUrl ?? null
+  const cor = config?.corPrimaria ?? '#0505ad'
+  const tecnicoLabel = os.tecnico ? (os.tecnico.nome ?? os.tecnico.email) : 'Não atribuído'
+  const horario = new Date(os.dataAgendamento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+  const dataLonga = new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' })
+  const fone = [os.ambiente.cliente.telefone, os.ambiente.cliente.celular].filter(Boolean).join(' · ')
+
+  return (
+    <>
       {/* ── DOCUMENTO ── */}
       <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '9.5pt', color: '#111', background: '#fff', maxWidth: '210mm', margin: '0 auto' }}>
 
@@ -123,7 +144,9 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '1px', color: '#666', margin: '0 0 2px 0' }}>Ordem de Serviço</p>
             <p style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '20pt', margin: 0, color: '#111' }}>{numero}</p>
-            <p style={{ fontSize: '7.5pt', color: '#666', margin: '2px 0 0 0' }}>{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
+            <p style={{ fontSize: '7.5pt', color: '#666', margin: '2px 0 0 0' }}>
+              {os.tipoServico ? `${os.tipoServico.sigla} · ${os.tipoServico.nome} · ` : ''}{ORIGEM_LABEL[os.origem] ?? os.origem}
+            </p>
           </div>
         </div>
 
@@ -138,6 +161,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
             {os.ambiente.cliente.documento && <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.documento}</span>}
             <br />
             <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.endereco}</span>
+            {modoDia && fone && <><br /><span style={{ fontSize: '8.5pt' }}>Tel.: {fone}</span></>}
           </Cell>
 
           <Cell label="Ambiente / Local">
@@ -156,7 +180,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
           </Cell>
 
           <Cell label="Datas">
-            <Row k="Agendamento" v={fmt(os.dataAgendamento)} />
+            <Row k="Agendamento" v={modoDia ? `${fmt(os.dataAgendamento)} às ${horario}` : fmt(os.dataAgendamento)} />
             {os.dataInicio    && <Row k="Início"     v={fmt(os.dataInicio)} />}
             {os.dataConclusao && <Row k="Conclusão"  v={fmt(os.dataConclusao)} />}
           </Cell>
@@ -248,6 +272,16 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
           })}
         </div>
 
+        {/* ANOTAÇÕES DO TÉCNICO — só na folha do dia */}
+        {modoDia && (
+          <div style={{ breakInside: 'avoid', marginTop: '8px' }}>
+            <SectionLabel>Anotações do técnico</SectionLabel>
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} style={{ height: '24px', borderBottom: '1px solid #bbb' }} />
+            ))}
+          </div>
+        )}
+
         {/* ASSINATURAS */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginTop: '16px', paddingTop: '16px', borderTop: '1.5px solid #111' }}>
           <div>
@@ -278,7 +312,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
             {config?.telefone ? ` · ${config.telefone}` : ''}
           </p>
           <p style={{ fontSize: '7pt', color: '#aaa', margin: 0 }}>
-            {new Date().toLocaleString('pt-BR')}
+            {modoDia ? dataLonga : new Date().toLocaleString('pt-BR')}
           </p>
         </div>
 
