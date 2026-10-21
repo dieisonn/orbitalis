@@ -1,12 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Loader2, Navigation } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Loader2, Navigation, Flag } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, DIAS_SEMANA, MESES, hoje, somarDias, chaveDia, chaveDoInstante, mesmoDia,
   diaDaSemana, diffDias, instante, relogio, hhmm, diaPorExtenso, DIA_MS,
 } from '@/lib/agenda'
 import { textoSobre } from '@/lib/cor'
+import { feriadosNacionais, ROTULO_FERIADO, type TipoFeriado } from '@/lib/feriados'
+import { FeriadosModal } from './feriados-modal'
 import { EventoModal, type ClienteOpcao, type TecnicoOpcao, type TipoOpcao } from './evento-modal'
 import { EventoPopover, EventoMenu, type Ancora } from './evento-popover'
 
@@ -15,6 +17,7 @@ type AoAbrir = (e: EventoAgenda, a: Ancora) => void
 type AoMenu = (e: EventoAgenda, x: number, y: number) => void
 
 type Visao = 'mes' | 'semana' | 'dia'
+type Marca = { nome: string; tipo: TipoFeriado | 'agenda'; semEvento: boolean }  // 'semEvento': ainda não foi lançado como evento FE
 
 const HORA_INI = 6      // grade semanal/diária: 06:00 …
 const HORA_FIM = 21     // … até 21:00
@@ -49,6 +52,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
   const [tecnicoFiltro, setTecnicoFiltro] = useState('')
   // cartão (clique esquerdo), menu (clique direito) e formulário (novo, editar ou duplicar)
   const [pop, setPop] = useState<{ e: EventoAgenda; a: Ancora } | null>(null)
+  const [feriadosAberto, setFeriadosAberto] = useState(false)
   const [menu, setMenu] = useState<{ e: EventoAgenda; x: number; y: number } | null>(null)
   const [modal, setModal] = useState<{ evento: EventoAgenda | null; modelo?: EventoAgenda | null; inicio?: string; fim?: string } | null>(null)
   const setNovo = (v: { inicio: string; fim?: string }) => { setPop(null); setMenu(null); setModal({ evento: null, ...v }) }
@@ -93,6 +97,21 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
     }
     return mapa
   }, [eventos])
+
+  // Dias de feriado: nacionais (calculados) + eventos FE lançados na agenda (municipais, pontos facultativos…)
+  const marcas = useMemo(() => {
+    const mapa: Record<string, Marca> = {}
+    const ultimo = somarDias(diaIni, dias - 1)
+    for (let a = diaIni.y; a <= ultimo.y; a++) {
+      for (const f of feriadosNacionais(a)) mapa[chaveDia(f.data)] = { nome: f.nome, tipo: f.tipo, semEvento: true }
+    }
+    for (const e of eventos) {
+      if (e.tipoServico?.sigla !== 'FE' && !/^FE\s*-\s*/i.test(e.titulo)) continue
+      const k = chaveDia(relogio(e.inicio))
+      mapa[k] = { nome: e.titulo.replace(/^FE\s*-\s*/i, ''), tipo: 'agenda', semEvento: false }
+    }
+    return mapa
+  }, [eventos, diaIni, dias])
 
   function navegar(sentido: -1 | 1) {
     if (visao === 'mes') setCursor((c) => ({ y: c.m + sentido < 0 ? c.y - 1 : c.m + sentido > 11 ? c.y + 1 : c.y, m: (c.m + sentido + 12) % 12, d: 1 }))
@@ -141,7 +160,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
   // Atalhos como no Google Agenda: D dia · W semana · M mês · T hoje · ←/→ (ou J/K) navegar · C criar
   const atalho = useRef<(e: KeyboardEvent) => void>(() => {})
   atalho.current = (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey || modal) return
+    if (e.ctrlKey || e.metaKey || e.altKey || modal || feriadosAberto) return
     const alvoEl = e.target as HTMLElement | null
     if (alvoEl && (alvoEl.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(alvoEl.tagName))) return
     const k = e.key.toLowerCase()
@@ -189,6 +208,10 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
               </button>
             ))}
           </div>
+          <button onClick={() => { setPop(null); setMenu(null); setFeriadosAberto(true) }} title="Feriados: lançar e cadastrar"
+            className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-sm font-semibold text-gray-700 rounded-lg bg-white hover:bg-surface">
+            <Flag size={14} /> Feriados
+          </button>
           <button onClick={novoHoje} title="Novo evento (C)"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
             <Plus size={14} /> Novo evento
@@ -212,14 +235,16 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
               const lista = porDia[k] ?? []
               const foraDoMes = dia.m !== cursor.m
               const ehHoje = mesmoDia(dia, hojeDia)
+              const marca = marcas[k]
               return (
                 <div key={k}
                   onClick={() => setNovo({ inicio: instante(dia.y, dia.m, dia.d, 8, 0) })}
                   onDragOver={(e) => { e.preventDefault(); setAlvo(k) }}
                   onDragLeave={() => setAlvo((a) => (a === k ? null : a))}
                   onDrop={(e) => { e.preventDefault(); soltar(dia) }}
-                  className={`min-h-[104px] border-b border-r border-border p-1.5 cursor-pointer hover:bg-surface/60 ${foraDoMes ? 'bg-surface/50' : ''} ${alvo === k ? 'bg-blue-50' : ''}`}>
-                  <div className="flex justify-end mb-1">
+                  className={`min-h-[104px] border-b border-r border-border p-1.5 cursor-pointer hover:bg-surface/60 ${foraDoMes ? 'bg-surface/50' : ''} ${marca && marca.tipo !== 'facultativo' ? 'bg-gray-100' : ''} ${alvo === k ? 'bg-blue-50' : ''}`}>
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    {marca?.semEvento ? <span title={`${ROTULO_FERIADO[marca.tipo as TipoFeriado]}: ${marca.nome}`} className="text-[10px] leading-tight font-medium text-gray-700 truncate pt-1">{marca.nome}</span> : <span />}
                     <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full ${ehHoje ? 'bg-primary text-white font-bold' : foraDoMes ? 'text-gray-500' : 'text-gray-600'}`}>{dia.d}</span>
                   </div>
                   <div className="space-y-0.5">
@@ -235,7 +260,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
           </div>
         </div>
       ) : (
-        <GradeHoras dias={Array.from({ length: dias }, (_, i) => somarDias(diaIni, i))} porDia={porDia}
+        <GradeHoras dias={Array.from({ length: dias }, (_, i) => somarDias(diaIni, i))} porDia={porDia} marcas={marcas}
           onAbrir={abrir} onMenu={abrirMenu} onNovo={(inicio, fim) => setNovo({ inicio, fim })} />
       )}
 
@@ -244,6 +269,9 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
         Atalhos: <kbd className="font-mono">D</kbd> dia · <kbd className="font-mono">W</kbd> semana · <kbd className="font-mono">M</kbd> mês · <kbd className="font-mono">T</kbd> hoje · <kbd className="font-mono">←</kbd> <kbd className="font-mono">→</kbd> navegar · <kbd className="font-mono">C</kbd> novo evento
       </p>
 
+      {feriadosAberto && (
+        <FeriadosModal anoInicial={cursor.y} tipos={tipos} onFechar={() => setFeriadosAberto(false)} onMudou={carregar} />
+      )}
       {pop && (
         <EventoPopover
           key={pop.e.id}
@@ -360,8 +388,8 @@ function posicionar(lista: EventoAgenda[], dia: Dia): Posicionado[] {
 const SNAP = 15 // minutos
 const hm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 
-function GradeHoras({ dias, porDia, onAbrir, onMenu, onNovo }: {
-  dias: Dia[]; porDia: Record<string, EventoAgenda[]>
+function GradeHoras({ dias, porDia, marcas, onAbrir, onMenu, onNovo }: {
+  dias: Dia[]; porDia: Record<string, EventoAgenda[]>; marcas: Record<string, Marca>
   onAbrir: AoAbrir; onMenu: AoMenu; onNovo: (inicio: string, fim?: string) => void
 }) {
   // Seleção por arrasto: âncora = onde apertou; ini/fim = intervalo (minutos do dia)
@@ -395,12 +423,16 @@ function GradeHoras({ dias, porDia, onAbrir, onMenu, onNovo }: {
           const k = chaveDia(d)
           const inteiros = (porDia[k] ?? []).filter((e) => e.diaInteiro)
           const ehHoje = mesmoDia(d, hojeDia)
+          const marca = marcas[k]
           return (
-            <div key={k} className="border-l border-border px-1 py-1.5 min-w-0">
+            <div key={k} className={`border-l border-border px-1 py-1.5 min-w-0 ${marca && marca.tipo !== 'facultativo' ? 'bg-gray-100' : ''}`}>
               <p className="text-center text-[11px] uppercase tracking-wide text-gray-500">{DIAS_SEMANA[diaDaSemana(d)]}</p>
               <p className="flex justify-center">
                 <span className={`text-sm w-7 h-7 flex items-center justify-center rounded-full ${ehHoje ? 'bg-primary text-white font-bold' : 'text-gray-800'}`}>{d.d}</span>
               </p>
+              {marca?.semEvento && (
+                <p title={`${ROTULO_FERIADO[marca.tipo as TipoFeriado]}: ${marca.nome}`} className="text-[10px] leading-tight text-center font-medium text-gray-700 truncate">{marca.nome}</p>
+              )}
               <div className="space-y-0.5 mt-1">
                 {inteiros.map((e) => <Chip key={e.id} e={e} onAbrir={onAbrir} onMenu={onMenu} onArrastar={() => {}} />)}
               </div>
@@ -424,8 +456,9 @@ function GradeHoras({ dias, porDia, onAbrir, onMenu, onNovo }: {
             const k = chaveDia(d)
             const pos = posicionar(porDia[k] ?? [], d)
             const ehHoje = mesmoDia(d, hojeDia)
+            const feriado = marcas[k] && marcas[k].tipo !== 'facultativo'
             return (
-              <div key={k} className="relative border-l border-border min-w-0 select-none" style={{ height: horas.length * PX_HORA, touchAction: 'pan-y' }}
+              <div key={k} className={`relative border-l border-border min-w-0 select-none ${feriado ? 'bg-gray-100/70' : ''}`} style={{ height: horas.length * PX_HORA, touchAction: 'pan-y' }}
                 onPointerDown={(ev) => {
                   if (ev.button !== 0 || (ev.target as HTMLElement).closest('button')) return
                   const el = ev.currentTarget as HTMLElement
