@@ -5,10 +5,11 @@ import { AgendaClient } from './agenda-client'
 import type { ClienteOpcao, TecnicoOpcao, TipoOpcao } from './evento-modal'
 
 export default async function AgendaPage() {
-  const [tipos, clientesRes, tecnicosRes] = await Promise.all([
+  const [tipos, clientesRes, tecnicosRes, config] = await Promise.all([
     api.get<TipoOpcao[]>('/tipos-servico').catch(() => [] as TipoOpcao[]),
     api.get<{ data: ClienteOpcao[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as ClienteOpcao[] })),
     api.get<{ data: TecnicoOpcao[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as TecnicoOpcao[] })),
+    api.get<{ cidade?: string | null; uf?: string | null }>('/configuracao').catch(() => ({} as { cidade?: string | null; uf?: string | null })),
   ])
 
   return (
@@ -32,7 +33,7 @@ export default async function AgendaPage() {
           Toda O.S. agendada aparece aqui com título, endereço e descrição. Clique num dia para criar um evento.
         </p>
       </div>
-      <AgendaClient tipos={tipos} clientes={clientesRes.data} tecnicos={tecnicosRes.data} />
+      <AgendaClient tipos={tipos} clientes={clientesRes.data} tecnicos={tecnicosRes.data} cidade={config.cidade ?? null} uf={config.uf ?? null} />
     </div>
   )
 }

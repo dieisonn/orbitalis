@@ -10,6 +10,7 @@ export async function salvarConfiguracao(
   cnpj: string,
   telefone: string,
   endereco: string,
+  local?: { cidade: string; uf: string; codigoIbge: string },   // só enviado quando a pessoa alterou a localização
 ) {
   try {
     await api.patch('/configuracao', {
@@ -20,6 +21,7 @@ export async function salvarConfiguracao(
       cnpj: cnpj || undefined,
       telefone: telefone || undefined,
       endereco: endereco || undefined,
+      ...(local ? { cidade: local.cidade, uf: local.uf, codigoIbge: local.codigoIbge } : {}),
     })
     return { ok: true as const }
   } catch (err) {

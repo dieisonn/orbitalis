@@ -7,7 +7,7 @@ import {
   diaDaSemana, diffDias, instante, relogio, hhmm, diaPorExtenso, DIA_MS,
 } from '@/lib/agenda'
 import { textoSobre } from '@/lib/cor'
-import { feriadosNacionais, ROTULO_FERIADO, type TipoFeriado } from '@/lib/feriados'
+import { ROTULO_FERIADO, type Feriado, type TipoFeriado } from '@/lib/feriados'
 import { FeriadosModal } from './feriados-modal'
 import { EventoModal, type ClienteOpcao, type TecnicoOpcao, type TipoOpcao } from './evento-modal'
 import { EventoPopover, EventoMenu, type Ancora } from './evento-popover'
@@ -41,8 +41,8 @@ const estiloStatus = (e: EventoAgenda) => {
   } as React.CSSProperties
 }
 
-export function AgendaClient({ tipos, clientes, tecnicos }: {
-  tipos: TipoOpcao[]; clientes: ClienteOpcao[]; tecnicos: TecnicoOpcao[]
+export function AgendaClient({ tipos, clientes, tecnicos, cidade, uf }: {
+  tipos: TipoOpcao[]; clientes: ClienteOpcao[]; tecnicos: TecnicoOpcao[]; cidade: string | null; uf: string | null
 }) {
   const [visao, setVisao] = useState<Visao>('mes')
   const [cursor, setCursor] = useState<Dia>(hoje())
@@ -98,12 +98,36 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
     return mapa
   }, [eventos])
 
-  // Dias de feriado: nacionais (calculados) + eventos FE lançados na agenda (municipais, pontos facultativos…)
+  // Feriados do período vêm da API (nacionais + os da empresa), um pedido por ano visível
+  const [feriados, setFeriados] = useState<Record<number, Feriado[]>>({})
+  const [versaoFeriados, setVersaoFeriados] = useState(0)   // sobe quando a lista muda (cadastro/remoção)
+  const pedidos = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const ultimo = somarDias(diaIni, dias - 1)
+    for (let ano = diaIni.y; ano <= ultimo.y; ano++) {
+      const chave = `${versaoFeriados}:${ano}`
+      if (pedidos.current.has(chave)) continue
+      pedidos.current.add(chave)
+      fetch(`/api/agenda-proxy?path=${encodeURIComponent(`/feriados?ano=${ano}`)}`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((lista: Feriado[] | null) => { if (lista) setFeriados((f) => ({ ...f, [ano]: lista })) })
+        .catch(() => { pedidos.current.delete(chave) })
+    }
+  }, [diaIni, dias, versaoFeriados])
+
+  // Marca por dia: feriado da lista ou evento FE já lançado na agenda
   const marcas = useMemo(() => {
     const mapa: Record<string, Marca> = {}
-    const ultimo = somarDias(diaIni, dias - 1)
-    for (let a = diaIni.y; a <= ultimo.y; a++) {
-      for (const f of feriadosNacionais(a)) mapa[chaveDia(f.data)] = { nome: f.nome, tipo: f.tipo, semEvento: true }
+    for (const lista of Object.values(feriados)) {
+      for (const f of lista) {
+        const atual = mapa[f.data]
+        // vários no mesmo dia: junta os nomes; "facultativo" só vale se não houver feriado de verdade
+        if (!atual) mapa[f.data] = { nome: f.nome, tipo: f.tipo, semEvento: true }
+        else {
+          atual.nome = `${atual.nome} · ${f.nome}`
+          if (atual.tipo === 'facultativo' && f.tipo !== 'facultativo') atual.tipo = f.tipo
+        }
+      }
     }
     for (const e of eventos) {
       if (e.tipoServico?.sigla !== 'FE' && !/^FE\s*-\s*/i.test(e.titulo)) continue
@@ -111,7 +135,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
       mapa[k] = { nome: e.titulo.replace(/^FE\s*-\s*/i, ''), tipo: 'agenda', semEvento: false }
     }
     return mapa
-  }, [eventos, diaIni, dias])
+  }, [feriados, eventos])
 
   function navegar(sentido: -1 | 1) {
     if (visao === 'mes') setCursor((c) => ({ y: c.m + sentido < 0 ? c.y - 1 : c.m + sentido > 11 ? c.y + 1 : c.y, m: (c.m + sentido + 12) % 12, d: 1 }))
@@ -270,7 +294,8 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
       </p>
 
       {feriadosAberto && (
-        <FeriadosModal anoInicial={cursor.y} tipos={tipos} onFechar={() => setFeriadosAberto(false)} onMudou={carregar} />
+        <FeriadosModal anoInicial={cursor.y} tipos={tipos} cidade={cidade} uf={uf} onFechar={() => setFeriadosAberto(false)} onMudou={carregar}
+          onFeriadosMudaram={() => { setFeriados({}); setVersaoFeriados((v) => v + 1) }} />
       )}
       {pop && (
         <EventoPopover

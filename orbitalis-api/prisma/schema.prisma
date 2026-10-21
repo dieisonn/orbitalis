@@ -377,6 +377,10 @@ model ConfiguracaoEmpresa {
   cnpj         String?  @db.VarChar(18)
   telefone     String?  @db.VarChar(30)
   endereco     String?  @db.VarChar(255)
+  // Localização da empresa (base para feriados estaduais/municipais e documentos)
+  cidade       String?  @db.VarChar(120)
+  uf           String?  @db.VarChar(2)
+  codigoIbge   String?  @map("codigo_ibge") @db.VarChar(7)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
 
 
@@ -567,4 +571,32 @@ model EventoAgenda {
   @@index([empresaId, inicio])
   @@index([tecnicoId])
   @@map("eventos_agenda")
+}
+
+
+// ─────────────────────────────────────────
+// feriados_empresa
+// Feriados que a empresa cadastra (municipais, estaduais, recessos próprios).
+// Os nacionais não ficam aqui: são calculados pela API. `recorrente` repete todo ano
+// no mesmo dia/mês. `origem` deixa espaço para importadores (ex.: 'manual' | 'importado').
+// ─────────────────────────────────────────
+enum TipoFeriado {
+  municipal
+  estadual
+  personalizado
+}
+
+model FeriadoEmpresa {
+  id         String      @id @default(uuid()) @db.Uuid
+  empresaId  String?     @map("empresa_id") @db.Uuid
+  data       DateTime    @db.Date
+  nome       String      @db.VarChar(150)
+  tipo       TipoFeriado
+  recorrente Boolean     @default(false)
+  origem     String      @default("manual") @db.VarChar(30)
+  criadoEm   DateTime    @default(now()) @map("criado_em")
+
+  @@unique([empresaId, data, nome])
+  @@index([empresaId, data])
+  @@map("feriados_empresa")
 }
