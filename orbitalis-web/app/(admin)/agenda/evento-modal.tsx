@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, MapPin, Navigation, ExternalLink, Loader2, Pencil, Trash2, RotateCcw, User, Phone, Clock, Building2 } from 'lucide-react'
+import { X, MapPin, Navigation, ExternalLink, Loader2, Pencil, Trash2, RotateCcw, User, Phone, Clock, Building2, Copy, Repeat } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, relogio, instante, hhmm, diaPorExtenso, hoje,
   duracaoLegivel, mapaUrl, wazeUrl, STATUS_OS_LABEL,
+  gerarOcorrencias, MAX_REPETICOES, DIAS_SEMANA, dataBR, diaDaSemana, type Regra, type Unidade,
 } from '@/lib/agenda'
 
 export type TipoOpcao = { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number; ativo: boolean }
@@ -13,6 +14,7 @@ export type TecnicoOpcao = { id: string; email: string; nome: string | null }
 
 type Props = {
   evento: EventoAgenda | null          // null = novo
+  modelo?: EventoAgenda | null         // ao duplicar: evento de onde copiar os campos
   inicioSugerido?: string              // ISO — usado no novo
   fimSugerido?: string                 // ISO — fim do intervalo arrastado na grade (novo)
   tipos: TipoOpcao[]
@@ -41,6 +43,7 @@ const dataInput = (d: Dia) => `${d.y}-${String(d.m + 1).padStart(2, '0')}-${Stri
 
 export function EventoModal({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }: Props) {
   const [editando, setEditando] = useState(evento === null)
+  const [duplicando, setDuplicando] = useState(false)
 
   // Esc fecha, como no Google Agenda
   useEffect(() => {
@@ -55,9 +58,11 @@ export function EventoModal({ evento, inicioSugerido, fimSugerido, tipos, client
         className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {editando
-          ? <Formulario {...{ evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }} onCancelar={evento ? () => setEditando(false) : onFechar} />
-          : <Detalhe evento={evento!} onFechar={onFechar} onEditar={() => setEditando(true)} onMudou={onMudou} />}
+        {duplicando
+          ? <Formulario {...{ evento: null, modelo: evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }} onCancelar={() => setDuplicando(false)} />
+          : editando
+            ? <Formulario {...{ evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }} onCancelar={evento ? () => setEditando(false) : onFechar} />
+            : <Detalhe evento={evento!} onFechar={onFechar} onEditar={() => setEditando(true)} onDuplicar={() => setDuplicando(true)} onMudou={onMudou} />}
       </div>
     </div>
   )
@@ -65,8 +70,8 @@ export function EventoModal({ evento, inicioSugerido, fimSugerido, tipos, client
 
 // ─── Visualização ────────────────────────────────────────────────────────────
 
-function Detalhe({ evento: e, onFechar, onEditar, onMudou }: {
-  evento: EventoAgenda; onFechar: () => void; onEditar: () => void; onMudou: () => void
+function Detalhe({ evento: e, onFechar, onEditar, onDuplicar, onMudou }: {
+  evento: EventoAgenda; onFechar: () => void; onEditar: () => void; onDuplicar: () => void; onMudou: () => void
 }) {
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -156,6 +161,10 @@ function Detalhe({ evento: e, onFechar, onEditar, onMudou }: {
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 disabled:opacity-60">
             <Pencil size={14} /> Editar
           </button>
+          <button onClick={onDuplicar} disabled={ocupado}
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border text-gray-700 text-sm font-semibold rounded-lg hover:bg-surface">
+            <Copy size={14} /> Duplicar
+          </button>
           {ehOs && (
             <a href={`/ordens-servico/${e.ordemServico!.id}`}
               className="inline-flex items-center gap-1.5 px-4 py-2 border border-border text-gray-700 text-sm font-semibold rounded-lg hover:bg-surface">
@@ -191,32 +200,41 @@ function Info({ icon, rotulo, valor }: { icon?: React.ReactNode; rotulo: string;
 
 // ─── Formulário (novo / editar) ──────────────────────────────────────────────
 
-function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou, onCancelar }: Props & { onCancelar: () => void }) {
+function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou, onCancelar }: Props & { onCancelar: () => void }) {
   const ehOs = !!evento?.ordemServico
+  const origem = evento ?? modelo   // de onde vêm os valores iniciais (editar ou duplicar)
   const h0 = hoje()
-  const base = evento ? evento.inicio : (inicioSugerido ?? instante(h0.y, h0.m, h0.d, 8, 0))
+  const base = origem ? origem.inicio : (inicioSugerido ?? instante(h0.y, h0.m, h0.d, 8, 0))
   const rIni = relogio(base)
-  const rFim = relogio(evento ? evento.fim : base)
+  const rFim = relogio(origem ? origem.fim : base)
 
-  const [tipoId, setTipoId] = useState(evento?.tipoServico?.id ?? '')
-  const [clienteId, setClienteId] = useState(evento?.cliente?.id ?? '')
-  const [titulo, setTitulo] = useState(evento?.titulo ?? '')
-  const [local, setLocal] = useState(evento?.local ?? '')
-  const [descricao, setDescricao] = useState(evento?.descricao ?? '')
-  const [tecnicoId, setTecnicoId] = useState(evento?.tecnico?.id ?? '')
-  const [cor, setCor] = useState(evento ? evento.corHex : '#039BE5')
-  const [corEscolhida, setCorEscolhida] = useState(!!evento && !ehOs)
-  const [diaInteiro, setDiaInteiro] = useState(evento?.diaInteiro ?? false)
+  const [tipoId, setTipoId] = useState(origem?.tipoServico?.id ?? '')
+  const [clienteId, setClienteId] = useState(origem?.cliente?.id ?? '')
+  const [titulo, setTitulo] = useState(origem?.titulo ?? '')
+  const [local, setLocal] = useState(origem?.local ?? '')
+  const [descricao, setDescricao] = useState(origem?.descricao ?? '')
+  const [tecnicoId, setTecnicoId] = useState(origem?.tecnico?.id ?? '')
+  const [cor, setCor] = useState(origem ? origem.corHex : '#039BE5')
+  const [corEscolhida, setCorEscolhida] = useState(!!origem && !origem.ordemServico)
+  const [diaInteiro, setDiaInteiro] = useState(origem?.diaInteiro ?? false)
   const [data, setData] = useState(dataInput(rIni))
   const [horaIni, setHoraIni] = useState(`${String(rIni.hh).padStart(2, '0')}:${String(rIni.mm).padStart(2, '0')}`)
   const rFimSug = !evento && fimSugerido ? relogio(fimSugerido) : null
   const [horaFim, setHoraFim] = useState(
-    evento ? `${String(rFim.hh).padStart(2, '0')}:${String(rFim.mm).padStart(2, '0')}`
+    origem ? `${String(rFim.hh).padStart(2, '0')}:${String(rFim.mm).padStart(2, '0')}`
       : rFimSug ? `${String(rFimSug.hh).padStart(2, '0')}:${String(rFimSug.mm).padStart(2, '0')}` : '',
   )
   // fim vindo do arrasto vale como "já escolhido": o tipo de serviço não o sobrescreve
-  const [tocou, setTocou] = useState({ titulo: !!evento, local: !!evento, fim: !!evento || !!rFimSug })
+  const [tocou, setTocou] = useState({ titulo: !!origem, local: !!origem, fim: !!origem || !!rFimSug })
   const [salvando, setSalvando] = useState(false)
+  // Repetição (só em evento novo ou duplicado)
+  const [repete, setRepete] = useState<'nao' | 'dia' | 'util' | 'semana' | 'mes' | 'ano' | 'custom'>('nao')
+  const [intervalo, setIntervalo] = useState(1)
+  const [unidade, setUnidade] = useState<Unidade>('semana')
+  const [diasSem, setDiasSem] = useState<number[]>([])
+  const [termino, setTermino] = useState<'vezes' | 'ate'>('vezes')
+  const [vezes, setVezes] = useState(10)
+  const [ate, setAte] = useState('')
   const [erro, setErro] = useState<string | null>(null)
 
   const tipo = tipos.find((t) => t.id === tipoId)
@@ -237,6 +255,21 @@ function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecn
     if (!tocou.local && novoCliente) setLocal(novoCliente.endereco)
     if (!tocou.fim && !diaInteiro) setHoraFim(somar(hIni, novoTipo?.duracaoMinutos ?? 60))
   }
+
+  const diaBase: Dia | null = (() => { const [y, m, d] = data.split('-').map(Number); return y ? { y, m: m - 1, d } : null })()
+  const regra: Regra | null = (() => {
+    if (repete === 'nao' || !diaBase) return null
+    const fim: Regra['fim'] = termino === 'vezes'
+      ? { tipo: 'vezes', vezes }
+      : { tipo: 'ate', ate: (() => { const [y, m, d] = ate.split('-').map(Number); return { y, m: m - 1, d } })() }
+    if (repete === 'dia') return { intervalo: 1, unidade: 'dia', diasSemana: [], fim }
+    if (repete === 'util') return { intervalo: 1, unidade: 'semana', diasSemana: [1, 2, 3, 4, 5], fim }
+    if (repete === 'semana') return { intervalo: 1, unidade: 'semana', diasSemana: [diaDaSemana(diaBase)], fim }
+    if (repete === 'mes') return { intervalo: 1, unidade: 'mes', diasSemana: [], fim }
+    if (repete === 'ano') return { intervalo: 1, unidade: 'ano', diasSemana: [], fim }
+    return { intervalo, unidade, diasSemana: unidade === 'semana' ? (diasSem.length ? diasSem : [diaDaSemana(diaBase)]) : [], fim }
+  })()
+  const ocorrencias: Dia[] = regra && (termino === 'vezes' || ate) ? gerarOcorrencias(diaBase!, regra) : (diaBase ? [diaBase] : [])
 
   // Sem fim preenchido (novo evento), mostra a duração padrão
   const fimEfetivo = horaFim || somar(horaIni, tipo?.duracaoMinutos ?? 60)
@@ -264,16 +297,35 @@ function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecn
           ...(corEscolhida ? { cor } : {}),
         })
       } else {
-        await chamar('POST', '/agenda', {
-          titulo: titulo.trim() || undefined,
-          descricao: descricao.trim() || null,
-          local: local.trim() || null,
-          inicio, fim, diaInteiro,
-          tecnicoId: tecnicoId || null,
-          tipoServicoId: tipoId || null,
-          clienteId: clienteId || null,
-          ...(corEscolhida ? { cor } : {}),
-        })
+        if (regra && termino === 'ate' && !ate) { setSalvando(false); return setErro('Informe até quando repetir') }
+        if (ocorrencias.length > MAX_REPETICOES) { setSalvando(false); return setErro(`No máximo ${MAX_REPETICOES} repetições por vez`) }
+        const [hi, mi] = horaIni.split(':').map(Number)
+        const [hf, mf] = fimEfetivo.split(':').map(Number)
+        const lista = ocorrencias.length ? ocorrencias : [{ y, m: mo - 1, d }]
+        let criados = 0
+        try {
+          for (const o of lista) {
+            await chamar('POST', '/agenda', {
+              titulo: titulo.trim() || undefined,
+              descricao: descricao.trim() || null,
+              local: local.trim() || null,
+              inicio: diaInteiro ? instante(o.y, o.m, o.d, 0, 0) : instante(o.y, o.m, o.d, hi, mi),
+              fim: diaInteiro ? instante(o.y, o.m, o.d + 1, 0, 0) : instante(o.y, o.m, o.d, hf, mf),
+              diaInteiro,
+              tecnicoId: tecnicoId || null,
+              tipoServicoId: tipoId || null,
+              clienteId: clienteId || null,
+              ...(corEscolhida ? { cor } : {}),
+            })
+            criados++
+          }
+        } catch (err) {
+          if (criados > 0) onMudou()
+          const base = err instanceof Error ? err.message : 'Erro ao salvar'
+          setErro(criados > 0 ? `${base} — ${criados} de ${lista.length} eventos foram criados.` : base)
+          setSalvando(false)
+          return
+        }
       }
       onMudou(); onFechar()
     } catch (err) {
@@ -288,7 +340,7 @@ function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecn
   return (
     <>
       <div className="flex items-center justify-between p-5 pb-2">
-        <h2 className="text-base font-semibold text-gray-900">{evento ? 'Editar evento' : 'Novo evento'}</h2>
+        <h2 className="text-base font-semibold text-gray-900">{evento ? 'Editar evento' : modelo ? 'Duplicar evento' : 'Novo evento'}</h2>
         <button onClick={onFechar} className="p-1 text-gray-400 hover:text-gray-700"><X size={18} /></button>
       </div>
 
@@ -324,7 +376,7 @@ function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecn
           <label className={rot}>Título</label>
           <input value={titulo} className={campo} placeholder="Ex.: VT - Kátia"
             onChange={(e) => { setTitulo(e.target.value); setTocou((t) => ({ ...t, titulo: true })) }} />
-          {!evento && <p className="text-[11px] text-gray-400 mt-1">Em branco, usa “SIGLA - Cliente” automaticamente.</p>}
+          {!origem && <p className="text-[11px] text-gray-400 mt-1">Em branco, usa “SIGLA - Cliente” automaticamente.</p>}
         </div>
 
         <div className="grid grid-cols-3 gap-3">
@@ -352,6 +404,77 @@ function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecn
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={diaInteiro} onChange={(e) => setDiaInteiro(e.target.checked)} /> Dia inteiro
           </label>
+        )}
+
+        {!evento && (
+          <div className="space-y-2">
+            <label className={rot} htmlFor="repete"><Repeat size={11} className="inline -mt-0.5 mr-1" />Repetir</label>
+            <select id="repete" value={repete} onChange={(e) => setRepete(e.target.value as typeof repete)} className={campo}>
+              <option value="nao">Não repete</option>
+              <option value="dia">Todos os dias</option>
+              <option value="util">Todos os dias úteis (seg a sex)</option>
+              <option value="semana">Toda semana{diaBase ? ` (${DIAS_SEMANA[diaDaSemana(diaBase)]})` : ''}</option>
+              <option value="mes">Todo mês{diaBase ? ` (dia ${diaBase.d})` : ''}</option>
+              <option value="ano">Todo ano{diaBase ? ` (${String(diaBase.d).padStart(2, '0')}/${String(diaBase.m + 1).padStart(2, '0')})` : ''}</option>
+              <option value="custom">Personalizado…</option>
+            </select>
+
+            {repete === 'custom' && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+                <span>A cada</span>
+                <input type="number" min={1} max={99} value={intervalo} aria-label="Intervalo de repetição"
+                  onChange={(e) => setIntervalo(Math.max(1, Number(e.target.value) || 1))} className={`${campo} !w-16`} />
+                <select value={unidade} aria-label="Unidade de repetição" onChange={(e) => setUnidade(e.target.value as Unidade)} className={`${campo} !w-auto`}>
+                  <option value="dia">dia(s)</option>
+                  <option value="semana">semana(s)</option>
+                  <option value="mes">mês(es)</option>
+                  <option value="ano">ano(s)</option>
+                </select>
+              </div>
+            )}
+            {repete === 'custom' && unidade === 'semana' && (
+              <div className="flex gap-1.5" role="group" aria-label="Dias da semana">
+                {DIAS_SEMANA.map((nome, i) => {
+                  const on = diasSem.includes(i) || (!diasSem.length && diaBase && diaDaSemana(diaBase) === i)
+                  return (
+                    <button key={i} type="button" aria-pressed={!!on}
+                      onClick={() => setDiasSem((v) => { const base = v.length ? v : (diaBase ? [diaDaSemana(diaBase)] : []); return base.includes(i) ? base.filter((x) => x !== i) : [...base, i] })}
+                      className={`w-9 h-8 text-xs font-semibold rounded-md border ${on ? 'bg-action text-white border-action' : 'bg-white text-gray-700 border-border hover:bg-surface'}`}>
+                      {nome.slice(0, 3)}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {repete !== 'nao' && (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+                <span>Termina</span>
+                <select value={termino} aria-label="Quando termina" onChange={(e) => setTermino(e.target.value as 'vezes' | 'ate')} className={`${campo} !w-auto`}>
+                  <option value="vezes">após</option>
+                  <option value="ate">em</option>
+                </select>
+                {termino === 'vezes' ? (
+                  <>
+                    <input type="number" min={1} max={MAX_REPETICOES} value={vezes} aria-label="Número de ocorrências"
+                      onChange={(e) => setVezes(Math.max(1, Math.min(MAX_REPETICOES, Number(e.target.value) || 1)))} className={`${campo} !w-20`} />
+                    <span>ocorrência(s)</span>
+                  </>
+                ) : (
+                  <input type="date" value={ate} min={data} aria-label="Repetir até" onChange={(e) => setAte(e.target.value)} className={`${campo} !w-auto`} />
+                )}
+              </div>
+            )}
+            {regra && (
+              <p className="text-[11px] text-gray-500">
+                {ocorrencias.length > MAX_REPETICOES
+                  ? `Passa do limite de ${MAX_REPETICOES} eventos por vez. Reduza o período.`
+                  : ocorrencias.length > 1
+                    ? `Serão criados ${ocorrencias.length} eventos, de ${dataBR(ocorrencias[0])} a ${dataBR(ocorrencias[ocorrencias.length - 1])}. Cada um é independente: depois pode ser editado ou excluído sozinho.`
+                    : 'Nenhuma repetição no período escolhido.'}
+              </p>
+            )}
+          </div>
         )}
 
         <div>
@@ -400,7 +523,7 @@ function Formulario({ evento, inicioSugerido, fimSugerido, tipos, clientes, tecn
           </button>
           <button onClick={salvar} disabled={salvando}
             className="flex-1 py-2.5 bg-action text-white font-semibold rounded-lg text-sm hover:bg-action/90 disabled:opacity-60">
-            {salvando ? <Loader2 size={14} className="animate-spin inline" /> : 'Salvar'}
+            {salvando ? <Loader2 size={14} className="animate-spin inline" /> : (ocorrencias.length > 1 && !evento ? `Criar ${ocorrencias.length} eventos` : 'Salvar')}
           </button>
         </div>
       </div>

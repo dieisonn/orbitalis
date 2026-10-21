@@ -90,3 +90,60 @@ export const STATUS_OS_LABEL: Record<string, string> = {
   aberta: 'Aberta', agendada: 'Agendada', em_andamento: 'Em andamento',
   concluida: 'Concluída', cancelada: 'Cancelada',
 }
+
+// ─── Repetição de eventos ────────────────────────────────────────────────────
+// A API ainda não tem "série": cada repetição vira um evento independente,
+// criado pelo mesmo endpoint de evento avulso.
+
+export type Unidade = 'dia' | 'semana' | 'mes' | 'ano'
+export type Regra = {
+  intervalo: number            // a cada N unidades
+  unidade: Unidade
+  diasSemana: number[]         // 0=dom … 6=sáb (só para unidade 'semana')
+  fim: { tipo: 'vezes'; vezes: number } | { tipo: 'ate'; ate: Dia }
+}
+
+export const MAX_REPETICOES = 100
+
+const ultimoDiaDoMes = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+
+/** Datas das ocorrências (a primeira é o próprio dia inicial). Mês curto: usa o último dia. */
+export function gerarOcorrencias(inicio: Dia, regra: Regra): Dia[] {
+  const out: Dia[] = []
+  const passo = Math.max(1, Math.floor(regra.intervalo) || 1)
+  const limiteVezes = regra.fim.tipo === 'vezes' ? Math.max(1, Math.floor(regra.fim.vezes) || 1) : MAX_REPETICOES + 1
+  const ate = regra.fim.tipo === 'ate' ? regra.fim.ate : null
+  const passouDoFim = (d: Dia) => !!ate && diffDias(ate, d) > 0 // d depois de ate
+  const cheio = () => out.length >= Math.min(limiteVezes, MAX_REPETICOES + 1)
+
+  if (regra.unidade === 'semana') {
+    const dias = regra.diasSemana.length ? [...regra.diasSemana].sort() : [diaDaSemana(inicio)]
+    const domingo = somarDias(inicio, -diaDaSemana(inicio)) // início da semana do evento
+    for (let s = 0; !cheio() && s < 5000; s += passo) {
+      for (const ds of dias) {
+        const d = somarDias(domingo, s * 7 + ds)
+        if (diffDias(d, inicio) > 0) continue            // antes do início
+        if (passouDoFim(d)) return out
+        out.push(d)
+        if (cheio()) break
+      }
+    }
+    return out
+  }
+
+  for (let i = 0; !cheio() && i < 5000; i++) {
+    let d: Dia
+    if (regra.unidade === 'dia') d = somarDias(inicio, i * passo)
+    else if (regra.unidade === 'mes') {
+      const total = inicio.m + i * passo
+      const y = inicio.y + Math.floor(total / 12), m = ((total % 12) + 12) % 12
+      d = { y, m, d: Math.min(inicio.d, ultimoDiaDoMes(y, m)) }
+    } else {
+      const y = inicio.y + i * passo
+      d = { y, m: inicio.m, d: Math.min(inicio.d, ultimoDiaDoMes(y, inicio.m)) }
+    }
+    if (passouDoFim(d)) break
+    out.push(d)
+  }
+  return out
+}
