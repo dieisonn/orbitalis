@@ -58,7 +58,7 @@ export default async function ContratosPage() {
                 <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="Ordens de Serviço incluídas mensalmente no contrato">O.S./mês</th>
                 <th className="hidden lg:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="O.S. dos planos preventivos vinculados: concluídas / geradas">Consumo</th>
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
-                <th className="px-4 py-3" />
+                <th className="px-4 py-3"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -90,7 +90,7 @@ export default async function ContratosPage() {
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">
                       <span className="text-xs">{fmtDate(c.vigenciaInicio)}</span>
-                      <span className="text-gray-300 mx-1">→</span>
+                      <span className="text-gray-500 mx-1">→</span>
                       <span className={`text-xs font-semibold ${vencido ? 'text-red-600' : urgente ? 'text-yellow-600' : 'text-gray-700'}`}>
                         {fmtDate(c.vigenciaFim)}
                       </span>
@@ -115,7 +115,7 @@ export default async function ContratosPage() {
                           )}
                         </>
                       ) : (
-                        <span className="text-gray-300" title="Vincule um plano preventivo a este contrato">sem plano</span>
+                        <span className="text-gray-500" title="Vincule um plano preventivo a este contrato">sem plano</span>
                       )}
                     </td>
                     <td className="hidden sm:table-cell px-4 py-3">

@@ -4,6 +4,7 @@ import { useTransition, useState, useMemo } from 'react'
 import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { editarPlano } from './actions'
 import { Building2 } from 'lucide-react'
+import { textoSobre } from '@/lib/cor'
 
 const FREQUENCIAS = [
   { label: 'Mensal',      value: 30 },
@@ -169,11 +170,11 @@ export function EditarPlanoForm({
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
                     tipoServicoId === ts.id ? 'border-transparent text-white' : 'border-border text-gray-600 hover:bg-surface'
                   }`}
-                  style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex } : {}}
+                  style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex, color: textoSobre(ts.corHex) } : {}}
                 >
                   <span
                     className="w-6 text-center py-0.5 rounded text-white text-xs font-bold"
-                    style={{ backgroundColor: tipoServicoId === ts.id ? 'rgba(255,255,255,0.25)' : ts.corHex }}
+                    style={{ backgroundColor: tipoServicoId === ts.id ? 'transparent' : ts.corHex, boxShadow: tipoServicoId === ts.id ? 'inset 0 0 0 1px currentColor' : undefined, color: tipoServicoId === ts.id ? 'inherit' : textoSobre(ts.corHex) }}
                   >
                     {ts.sigla}
                   </span>
@@ -229,7 +230,7 @@ export function EditarPlanoForm({
 
         {/* Toggle ativo */}
         <div className="flex items-center gap-3 pt-2">
-          <button type="button" onClick={() => setIsAtivo((v) => !v)}
+          <button type="button" role="switch" aria-checked={isAtivo} aria-label="Plano ativo" onClick={() => setIsAtivo((v) => !v)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isAtivo ? 'bg-action' : 'bg-gray-300'}`}>
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isAtivo ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
@@ -255,24 +256,25 @@ export function EditarPlanoForm({
                 <div className="px-5 py-2 bg-primary/5 border-b border-border flex items-center gap-2">
                   <Building2 size={12} className="text-primary/70 shrink-0" />
                   <span className="text-xs font-bold text-primary">{a.nome}</span>
-                  <span className="text-xs text-gray-400">{a.localizacaoInterna}</span>
+                  <span className="text-xs text-gray-500">{a.localizacaoInterna}</span>
                 </div>
                 <table className="w-full text-sm">
                   <tbody className="divide-y divide-border">
                     {a.equipamentos.map((eq) => {
                       const isIn = includidos.has(eq.id)
                       return (
-                        <tr key={eq.id} className={`transition-colors ${isIn ? 'hover:bg-surface/50' : 'opacity-50'}`}>
+                        <tr key={eq.id} className={`transition-colors ${isIn ? 'hover:bg-surface/50' : 'bg-gray-50'}`}>
                           <td className="px-5 py-3 w-10">
-                            <input type="checkbox" checked={isIn} onChange={() => toggleEquip(eq.id)}
+                            <input type="checkbox" checked={isIn} onChange={() => toggleEquip(eq.id)} aria-label={`Incluir ${eq.nome} no plano`}
                               className="w-4 h-4 accent-primary cursor-pointer" />
                           </td>
                           <td className="px-5 py-3 font-medium text-gray-900">{eq.nome}</td>
-                          <td className="px-5 py-3 text-gray-400 text-xs">
+                          <td className="px-5 py-3 text-gray-500 text-xs">
                             {eq.tipoEquipamento} · {[eq.marca, eq.modelo].filter(Boolean).join(' ')}
                           </td>
                           <td className="px-5 py-3 w-72">
                             <select
+                              aria-label={`Checklist de ${eq.nome}`}
                               value={checklistPorEquip[eq.id] ?? ''}
                               onChange={(e) => setChecklist(eq.id, e.target.value)}
                               disabled={!isIn}

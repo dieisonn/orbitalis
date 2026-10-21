@@ -68,7 +68,7 @@ export default async function OsDoDiaPage({ searchParams }: Props) {
   return (
     <div className="max-w-5xl">
       <div className="print:hidden">
-        <Link href="/ordens-servico" className="text-sm text-gray-500 hover:text-gray-900 inline-flex items-center gap-1 mb-3">
+        <Link href="/ordens-servico" className="text-sm text-gray-600 underline underline-offset-2 hover:text-gray-900 inline-flex items-center gap-1 mb-3">
           <ArrowLeft size={14} /> Ordens de serviço
         </Link>
         <h1 className="text-xl font-semibold text-gray-900 flex items-center gap-2"><Printer size={20} /> O.S. do dia para impressão</h1>

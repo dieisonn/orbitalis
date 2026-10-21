@@ -6,6 +6,7 @@ import {
   type EventoAgenda, type Dia, DIAS_SEMANA, MESES, hoje, somarDias, chaveDia, chaveDoInstante, mesmoDia,
   diaDaSemana, diffDias, instante, relogio, hhmm, diaPorExtenso, DIA_MS,
 } from '@/lib/agenda'
+import { textoSobre } from '@/lib/cor'
 import { EventoModal, type ClienteOpcao, type TecnicoOpcao, type TipoOpcao } from './evento-modal'
 
 type Visao = 'mes' | 'semana' | 'dia'
@@ -164,7 +165,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
         {carregando && <Loader2 size={16} className="animate-spin text-gray-400" />}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <select value={tecnicoFiltro} onChange={(e) => setTecnicoFiltro(e.target.value)}
+          <select aria-label="Filtrar por técnico" value={tecnicoFiltro} onChange={(e) => setTecnicoFiltro(e.target.value)}
             className="px-3 py-2 border border-border rounded-lg text-sm text-gray-700 bg-white">
             <option value="">Todos os técnicos</option>
             {tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>)}
@@ -208,7 +209,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
                   onDrop={(e) => { e.preventDefault(); soltar(dia) }}
                   className={`min-h-[104px] border-b border-r border-border p-1.5 cursor-pointer hover:bg-surface/60 ${foraDoMes ? 'bg-surface/50' : ''} ${alvo === k ? 'bg-blue-50' : ''}`}>
                   <div className="flex justify-end mb-1">
-                    <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full ${ehHoje ? 'bg-primary text-white font-bold' : foraDoMes ? 'text-gray-300' : 'text-gray-600'}`}>{dia.d}</span>
+                    <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full ${ehHoje ? 'bg-primary text-white font-bold' : foraDoMes ? 'text-gray-500' : 'text-gray-600'}`}>{dia.d}</span>
                   </div>
                   <div className="space-y-0.5">
                     {lista.slice(0, 3).map((e) => <Chip key={e.id} e={e} onAbrir={setAberto} onArrastar={(ev) => { arrastando.current = ev }} />)}
@@ -254,7 +255,7 @@ function Chip({ e, onAbrir, onArrastar }: { e: EventoAgenda; onAbrir: (e: Evento
       onDragStart={(ev) => { ev.dataTransfer.effectAllowed = 'move'; onArrastar(e) }}
       onClick={(ev) => { ev.stopPropagation(); onAbrir(e) }}
       title={`${e.diaInteiro ? '' : hhmm(e.inicio) + ' '}${e.titulo}`}
-      style={{ backgroundColor: e.corHex, ...estiloStatus(e) }}
+      style={{ backgroundColor: e.corHex, color: textoSobre(e.corHex), ...estiloStatus(e) }}
       className="w-full text-left text-[11px] leading-tight text-white rounded px-1.5 py-1 truncate hover:brightness-110">
       {!e.diaInteiro && <span className="font-semibold mr-1">{hhmm(e.inicio)}</span>}
       {e.titulo}
@@ -448,7 +449,7 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
                     onClick={(ev) => { ev.stopPropagation(); onAbrir(e) }}
                     style={{
                       top: topo, height: altura, left: `${(coluna / colunas) * 100}%`, width: `${100 / colunas}%`,
-                      backgroundColor: e.corHex, ...estiloStatus(e),
+                      backgroundColor: e.corHex, color: textoSobre(e.corHex), ...estiloStatus(e),
                     }}
                     className="absolute text-left text-white rounded px-1.5 py-1 overflow-hidden border border-white/60 hover:brightness-110 text-[11px] leading-tight">
                     <span className="font-semibold">{hhmm(e.inicio)}</span> {e.titulo}

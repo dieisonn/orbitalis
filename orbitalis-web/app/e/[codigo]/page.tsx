@@ -40,25 +40,25 @@ export default async function QrLandingPage({ params }: Props) {
 
   if (!equipamento) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <main id="conteudo" className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-border text-center max-w-sm w-full">
           <QrCode size={40} className="mx-auto text-gray-300 mb-4" />
           <h1 className="text-lg font-bold text-gray-800 mb-1">Equipamento não encontrado</h1>
           <p className="text-sm text-gray-400">O código QR escaneado não corresponde a nenhum equipamento ativo.</p>
           <p className="font-mono text-xs text-gray-300 mt-2">{codigo}</p>
         </div>
-      </div>
+      </main>
     )
   }
 
   const cliente = equipamento.ambiente.cliente.nomeFantasia ?? equipamento.ambiente.cliente.razaoSocial
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <main id="conteudo" className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-2xl shadow-sm border border-border max-w-sm w-full overflow-hidden">
         {/* Header */}
         <div className="bg-primary px-6 py-5">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/50 mb-1">Orbitalis</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-white/80 mb-1">Orbitalis</p>
           <h1 className="text-xl font-bold text-white">{equipamento.nome}</h1>
           <p className="text-sm text-white/70 mt-0.5">{equipamento.tipoEquipamento}</p>
         </div>
@@ -120,6 +120,6 @@ export default async function QrLandingPage({ params }: Props) {
           <p className="text-center text-[10px] font-mono text-gray-300">{equipamento.codigoQr}</p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

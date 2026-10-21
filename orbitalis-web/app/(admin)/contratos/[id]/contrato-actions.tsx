@@ -28,7 +28,7 @@ export function ContratoActions({ contratoId, ativo }: { contratoId: string; ati
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} disabled={pending}
+      <button onClick={() => setOpen((v) => !v)} disabled={pending} aria-label="Ações do contrato" aria-haspopup="menu" aria-expanded={open}
         className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface text-gray-400 hover:text-gray-600 transition-colors">
         <MoreVertical size={15} />
       </button>

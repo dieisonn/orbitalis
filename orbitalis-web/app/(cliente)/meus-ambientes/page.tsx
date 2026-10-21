@@ -39,7 +39,7 @@ export default async function MeusAmbientesPage() {
   if (!perfil) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-400">Não foi possível carregar seu perfil.</p>
+        <h1 className="text-gray-500">Não foi possível carregar seu perfil.</h1>
       </div>
     )
   }

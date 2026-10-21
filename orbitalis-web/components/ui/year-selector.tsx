@@ -22,6 +22,7 @@ export function YearSelector({ ano }: { ano: number }) {
         onClick={() => navigate(ano - 1)}
         className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
         title="Ano anterior"
+        aria-label="Ano anterior"
       >
         <ChevronLeft size={15} />
       </button>
@@ -33,6 +34,7 @@ export function YearSelector({ ano }: { ano: number }) {
         disabled={ano >= anoAtual + 1}
         className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         title="Próximo ano"
+        aria-label="Próximo ano"
       >
         <ChevronRight size={15} />
       </button>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { textoSobre } from '@/lib/cor'
 import { Plus, Pencil, Trash2, Lock, Loader2 } from 'lucide-react'
 import type { TipoServico } from './page'
 
@@ -286,7 +287,7 @@ function TipoRow({
       <td className="px-4 py-3">
         <span
           className="inline-flex items-center justify-center w-10 h-7 rounded text-white text-xs font-bold"
-          style={{ backgroundColor: ts.corHex }}
+          style={{ backgroundColor: ts.corHex, color: textoSobre(ts.corHex) }}
         >
           {ts.sigla}
         </span>
@@ -311,6 +312,7 @@ function TipoRow({
           <button
             onClick={() => onEditar(ts)}
             disabled={isPending}
+            aria-label={`Editar ${ts.nome}`}
             className="p-1.5 text-gray-400 hover:text-primary transition-colors rounded"
           >
             <Pencil size={14} />
@@ -323,6 +325,7 @@ function TipoRow({
             <button
               onClick={() => onExcluir(ts)}
               disabled={isPending}
+              aria-label={`Excluir ${ts.nome}`}
               className="p-1.5 text-gray-400 hover:text-destructive transition-colors rounded"
             >
               <Trash2 size={14} />

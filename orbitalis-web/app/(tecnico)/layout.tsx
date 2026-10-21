@@ -20,7 +20,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       <OfflineBanner />
 
       {/* Conteúdo principal */}
-      <main className="px-4 py-4 pb-20 max-w-xl mx-auto">{children}</main>
+      <main id="conteudo" className="px-4 py-4 pb-20 max-w-xl mx-auto">{children}</main>
 
       {/* Bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-border flex safe-pb">

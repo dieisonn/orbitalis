@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DadosOperador } from '@/components/legal/legal-shell'
 import {
   QrCode, ClipboardList, CalendarClock, Users, BarChart3, Smartphone,
   CheckCircle2, ArrowRight, Zap, Shield, Clock,
@@ -19,12 +20,12 @@ const FEATURES = [
   {
     icon: QrCode,
     title: 'Gestão de Ativos com QR Code',
-    desc: 'Etiqueta QR por equipamento. Técnico escaneia, vê o histórico e abre OS em segundos, direto do celular.',
+    desc: 'Etiqueta QR por equipamento. Ao escanear, aparecem os dados do equipamento e dá para abrir um chamado, direto do celular.',
   },
   {
     icon: Users,
     title: 'Portal do Cliente',
-    desc: 'O cliente acompanha OS em tempo real, aprova orçamentos e consulta o histórico de manutenções — sem ligar para você.',
+    desc: 'O cliente acompanha as ordens de serviço, aprova orçamentos e consulta o histórico de manutenções, sem precisar ligar.',
   },
   {
     icon: BarChart3,
@@ -34,15 +35,15 @@ const FEATURES = [
   {
     icon: Smartphone,
     title: 'App Mobile (PWA)',
-    desc: 'Instale no iPhone ou Android sem passar pela loja. Trabalhe offline em campo e sincronize ao retornar.',
+    desc: 'Instale no iPhone ou Android sem passar pela loja e acesse suas ordens de serviço direto do celular.',
   },
 ]
 
 const STEPS = [
   {
     n: '01',
-    title: 'Crie sua conta em 30 segundos',
-    desc: 'Registre sua empresa, defina seu identificador e pronto. Sem cartão de crédito, sem burocracia.',
+    title: 'Crie a conta da sua empresa',
+    desc: 'Registre sua empresa e defina seu identificador. Não pedimos cartão de crédito.',
     icon: Zap,
   },
   {
@@ -53,61 +54,9 @@ const STEPS = [
   },
   {
     n: '03',
-    title: 'Opere com total controle',
-    desc: 'Crie OS, execute checklists, assine no celular e acompanhe tudo no painel em tempo real.',
+    title: 'Acompanhe a operação',
+    desc: 'Crie O.S., execute checklists, colete a assinatura no celular e acompanhe tudo no painel.',
     icon: Shield,
-  },
-]
-
-const PLANOS = [
-  {
-    nome: 'Básico',
-    preco: 'Grátis',
-    periodo: 'para sempre',
-    desc: 'Ideal para começar e testar a plataforma.',
-    destaque: false,
-    cta: 'Criar conta grátis',
-    itens: [
-      'Até 2 técnicos',
-      'Até 10 clientes',
-      '50 O.S. por mês',
-      'App mobile (PWA)',
-      'Portal do cliente',
-      'Suporte por e-mail',
-    ],
-  },
-  {
-    nome: 'Pro',
-    preco: 'R$ 149',
-    periodo: 'por mês',
-    desc: 'Para empresas em crescimento que precisam de mais.',
-    destaque: true,
-    cta: 'Começar período grátis',
-    itens: [
-      'Até 10 técnicos',
-      'Clientes ilimitados',
-      'O.S. ilimitadas',
-      'Relatórios PDF / PMOC',
-      'Agenda própria integrada às O.S.',
-      'Dashboards avançados',
-      'Suporte prioritário',
-    ],
-  },
-  {
-    nome: 'Enterprise',
-    preco: 'R$ 399',
-    periodo: 'por mês',
-    desc: 'Para grandes operações com múltiplas equipes.',
-    destaque: false,
-    cta: 'Falar com vendas',
-    itens: [
-      'Técnicos ilimitados',
-      'Multi-filial',
-      'API & Webhooks',
-      'SLA garantido 99,9%',
-      'Onboarding dedicado',
-      'Suporte 24/7',
-    ],
   },
 ]
 
@@ -120,7 +69,7 @@ function HeroMockup() {
     { label: 'Concluídas',   n: '43', color: 'bg-emerald-400' },
   ]
   return (
-    <div className="relative w-full max-w-lg mx-auto select-none pointer-events-none">
+    <div aria-hidden="true" className="relative w-full max-w-lg mx-auto select-none pointer-events-none">
       {/* Janela do painel */}
       <div className="rounded-lg overflow-hidden border border-white/10 bg-white/5 ">
         {/* Barra de título */}
@@ -128,11 +77,11 @@ function HeroMockup() {
           <span className="w-3 h-3 rounded-full bg-white/30" />
           <span className="w-3 h-3 rounded-full bg-white/30" />
           <span className="w-3 h-3 rounded-full bg-white/30" />
-          <span className="ml-3 text-xs text-white/40 font-mono">orbitalis.com.br/dashboard</span>
+          <span className="ml-3 text-xs text-white/70 font-mono">orbitalis.com.br/dashboard</span>
         </div>
         {/* Conteúdo */}
         <div className="p-5 space-y-4">
-          <p className="text-xs font-semibold text-white/50 uppercase tracking-widest">Painel</p>
+          <p className="text-xs font-semibold text-white/75 uppercase tracking-widest">Painel</p>
           {/* KPI cards */}
           <div className="grid grid-cols-4 gap-2">
             {cards.map((c) => (
@@ -144,7 +93,7 @@ function HeroMockup() {
           </div>
           {/* Fake chart bars */}
           <div className="bg-white/5 rounded-md p-4">
-            <p className="text-[11px] text-white/40 mb-3">O.S. por mês</p>
+            <p className="text-[11px] text-white/70 mb-3">O.S. por mês</p>
             <div className="flex items-end gap-1.5 h-16">
               {[30, 55, 45, 70, 40, 65, 80, 60, 75, 50, 85, 68].map((h, i) => (
                 <div
@@ -166,7 +115,7 @@ function HeroMockup() {
           </div>
         </div>
       </div>
-      {/* Glow effect */}
+      <p className="mt-3 text-center text-xs text-white/70">Ilustração com dados de exemplo</p>
     </div>
   )
 }
@@ -188,7 +137,7 @@ export default function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-500">
             <a href="#features"      className="hover:text-gray-900 transition-colors">Funcionalidades</a>
             <a href="#como-funciona" className="hover:text-gray-900 transition-colors">Como funciona</a>
-            <a href="#precos"        className="hover:text-gray-900 transition-colors">Preços</a>
+            <a href="#acesso"        className="hover:text-gray-900 transition-colors">Acesso</a>
           </nav>
           <div className="flex items-center gap-2 ml-4">
             <Link href="/login"
@@ -197,11 +146,13 @@ export default function LandingPage() {
             </Link>
             <Link href="/registro"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-sm font-bold rounded-md hover:bg-primary/90 transition-colors">
-              Começar grátis <ArrowRight size={14} />
+              Criar conta <ArrowRight size={14} />
             </Link>
           </div>
         </div>
       </header>
+
+      <main id="conteudo">
 
       {/* ── HERO ──────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-primary py-24 md:py-32">
@@ -215,20 +166,20 @@ export default function LandingPage() {
               Dados em Órbita.<br />Manutenção<br />
               <span className="text-white/70">em Dia.</span>
             </h1>
-            <p className="text-white/60 mt-5 text-lg leading-relaxed max-w-md">
+            <p className="text-white/80 mt-5 text-lg leading-relaxed max-w-md">
               Controle ativos, execute planos PMOC, gerencie sua equipe de campo e encante seus clientes — tudo em um sistema só.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link href="/registro"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-primary font-semibold rounded-md hover:bg-white/90 transition-colors text-base">
-                Criar conta grátis <ArrowRight size={16} />
+                Criar conta <ArrowRight size={16} />
               </Link>
               <Link href="/login"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white/10 text-white font-semibold rounded-md hover:bg-white/15 transition-colors text-base">
                 Já tenho conta
               </Link>
             </div>
-            <p className="text-white/35 text-xs mt-4">Sem cartão de crédito · Configuração em 30 segundos</p>
+            <p className="text-white/75 text-xs mt-4">Sem cartão de crédito · Sem cobrança na fase inicial</p>
           </div>
 
           <div className="hidden md:block">
@@ -241,10 +192,10 @@ export default function LandingPage() {
       <section className="bg-gray-50 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-5 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
           {[
-            { n: '100%', label: 'Multi-tenant SaaS'         },
-            { n: 'PWA',  label: 'Funciona offline'          },
-            { n: 'PMOC', label: 'Laudos em PDF'             },
-            { n: '∞',    label: 'Equipamentos por tenant'   },
+            { n: 'PMOC',   label: 'Laudos em PDF'              },
+            { n: 'QR',     label: 'Etiqueta por equipamento'   },
+            { n: 'PWA',    label: 'Instalável no celular'      },
+            { n: 'Portal', label: 'Acesso para o seu cliente'  },
           ].map(({ n, label }) => (
             <div key={label} className="text-center">
               <p className="text-3xl font-semibold text-primary">{n}</p>
@@ -282,7 +233,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-14">
             <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Como funciona</p>
-            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Operando em menos de 5 minutos</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Do cadastro ao primeiro atendimento</h2>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 relative">
@@ -293,7 +244,7 @@ export default function LandingPage() {
               <div key={n} className="text-center relative">
                 <div className="w-24 h-24 mx-auto rounded-lg bg-white border-2 border-primary/15 flex items-center justify-center mb-5">
                   <div className="text-center">
-                    <p className="text-xs font-semibold text-primary/40">{n}</p>
+                    <p className="text-xs font-semibold text-primary/75">{n}</p>
                     <Icon size={28} className="text-primary mx-auto mt-0.5" />
                   </div>
                 </div>
@@ -305,59 +256,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── PREÇOS ────────────────────────────────────────────── */}
-      <section id="precos" className="py-24 max-w-6xl mx-auto px-5">
-        <div className="text-center mb-14">
-          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Preços</p>
-          <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Simples e transparente</h2>
-          <p className="text-gray-500 mt-3">Comece grátis. Escale quando precisar.</p>
+      {/* ── ACESSO ────────────────────────────────────────────── */}
+      <section id="acesso" className="py-24 max-w-3xl mx-auto px-5">
+        <div className="text-center mb-10">
+          <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Acesso</p>
+          <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Em fase inicial, sem cobrança</h2>
+          <p className="text-gray-600 mt-3">O Orbitalis está em desenvolvimento ativo. Você pode criar a conta da sua empresa e testar com a sua operação.</p>
         </div>
-
-        <div className="grid md:grid-cols-3 gap-6 items-start">
-          {PLANOS.map(({ nome, preco, periodo, desc, destaque, cta, itens }) => (
-            <div
-              key={nome}
-              className={[
-                'rounded-lg p-7 relative',
-                destaque
-                  ? 'bg-primary text-white ring-4 ring-primary/20 scale-105'
-                  : 'bg-white border border-gray-200',
-              ].join(' ')}
-            >
-              {destaque && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[11px] font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
-                  Mais popular
-                </div>
-              )}
-              <p className={`text-sm font-bold mb-1 ${destaque ? 'text-white/70' : 'text-gray-500'}`}>{nome}</p>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className={`text-4xl font-semibold ${destaque ? 'text-white' : 'text-gray-900'}`}>{preco}</span>
-                <span className={`text-sm ${destaque ? 'text-white/50' : 'text-gray-400'}`}>{periodo}</span>
-              </div>
-              <p className={`text-sm mb-6 ${destaque ? 'text-white/60' : 'text-gray-500'}`}>{desc}</p>
-
-              <Link
-                href="/registro"
-                className={[
-                  'block text-center py-3 rounded-md font-bold text-sm transition-colors mb-6',
-                  destaque
-                    ? 'bg-white text-primary hover:bg-white/90'
-                    : 'bg-primary text-white hover:bg-primary/90',
-                ].join(' ')}
-              >
-                {cta}
-              </Link>
-
-              <ul className="space-y-2.5">
-                {itens.map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <CheckCircle2 size={15} className={`shrink-0 mt-0.5 ${destaque ? 'text-white/60' : 'text-emerald-500'}`} />
-                    <span className={`text-sm ${destaque ? 'text-white/80' : 'text-gray-600'}`}>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+        <ul className="bg-white border border-gray-200 rounded-lg p-7 space-y-3.5 max-w-xl mx-auto">
+          {[
+            'Não pedimos cartão de crédito.',
+            'Se passarmos a cobrar, valores e condições serão informados antes de qualquer cobrança.',
+            'Você pode pedir a exclusão dos seus dados a qualquer momento.',
+          ].map((item) => (
+            <li key={item} className="flex items-start gap-2.5">
+              <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-600" />
+              <span className="text-sm text-gray-700">{item}</span>
+            </li>
           ))}
+        </ul>
+        <div className="text-center mt-8">
+          <Link href="/registro" className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition-colors text-sm">
+            Criar conta <ArrowRight size={15} />
+          </Link>
         </div>
       </section>
 
@@ -367,21 +288,23 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-4xl font-semibold text-white mb-4">
             Pronto para colocar sua operação em órbita?
           </h2>
-          <p className="text-white/60 text-lg mb-8">
-            Junte-se a empresas que já modernizaram sua gestão de ativos.
+          <p className="text-white/80 text-lg mb-8">
+            Crie a conta da sua empresa e teste o Orbitalis com a sua operação.
           </p>
           <Link
             href="/registro"
             className="inline-flex items-center gap-2 px-8 py-4 bg-white text-primary font-semibold rounded-md text-base hover:bg-white/90 transition-colors"
           >
-            Criar conta grátis <ArrowRight size={18} />
+            Criar conta <ArrowRight size={18} />
           </Link>
-          <p className="text-white/30 text-sm mt-4">Sem cartão · Configuração em 30 segundos · Cancele quando quiser</p>
+          <p className="text-white/75 text-sm mt-4">Sem cartão de crédito · Sem cobrança na fase inicial</p>
         </div>
       </section>
 
+      </main>
+
       {/* ── FOOTER ────────────────────────────────────────────── */}
-      <footer className="bg-gray-900 text-gray-400 py-12">
+      <footer className="bg-gray-900 text-gray-300 py-12">
         <div className="max-w-6xl mx-auto px-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
@@ -392,13 +315,16 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <a href="#features"      className="hover:text-white transition-colors">Funcionalidades</a>
-              <a href="#precos"        className="hover:text-white transition-colors">Preços</a>
+              <a href="#acesso"        className="hover:text-white transition-colors">Acesso</a>
               <Link href="/login"      className="hover:text-white transition-colors">Entrar</Link>
               <Link href="/registro"   className="hover:text-white transition-colors">Criar conta</Link>
+              <Link href="/privacidade" className="hover:text-white transition-colors">Privacidade</Link>
+              <Link href="/termos"      className="hover:text-white transition-colors">Termos de Uso</Link>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-xs text-gray-600">
-            © {new Date().getFullYear()} Orbitalis · Plataforma de Gestão de Ativos para Climatização e Refrigeração
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-xs text-gray-300 space-y-1.5">
+            <DadosOperador />
+            <p>© {new Date().getFullYear()} Orbitalis · Plataforma de Gestão de Ativos para Climatização e Refrigeração</p>
           </div>
         </div>
       </footer>

@@ -33,7 +33,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <main id="conteudo" className="min-h-screen flex">
       {/* ── Painel esquerdo — branding (desktop only) ──────────────── */}
       <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-primary flex-col justify-between p-12">
         {/* Logo */}
@@ -68,7 +68,7 @@ export default function LoginPage() {
         </div>
 
         {/* Rodapé */}
-        <p className="relative z-10 text-white/55 text-xs">
+        <p className="relative z-10 text-white/75 text-xs">
           © {new Date().getFullYear()} Orbitalis · Todos os direitos reservados
         </p>
       </div>
@@ -133,17 +133,22 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-gray-400 mt-8">
+          <p className="text-center text-xs text-gray-600 mt-8">
             Ainda não tem conta?{' '}
             <Link href="/registro" className="text-primary font-medium hover:underline">
               Registrar minha empresa
             </Link>
           </p>
-          <p className="text-center text-xs text-gray-300 mt-3">
+          <p className="text-center text-xs text-gray-600 mt-3">
             Acesso restrito a administradores e técnicos autorizados.
+          </p>
+          <p className="text-center text-xs text-gray-600 mt-3">
+            <Link href="/privacidade" className="hover:underline">Política de Privacidade</Link>
+            {' · '}
+            <Link href="/termos" className="hover:underline">Termos de Uso</Link>
           </p>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

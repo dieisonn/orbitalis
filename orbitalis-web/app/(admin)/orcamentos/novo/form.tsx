@@ -213,10 +213,11 @@ export function NovoOrcamentoForm({
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input
                   value={item.descricao} onChange={(e) => updateItem(i, 'descricao', e.target.value)}
-                  placeholder="Descrição do serviço ou produto"
+                  placeholder="Descrição do serviço ou produto" aria-label={`Descrição do item ${i + 1}`}
                   className="col-span-12 md:col-span-4 px-3 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <select
+                  aria-label={`Categoria do item ${i + 1}`}
                   value={item.categoria} onChange={(e) => updateItem(i, 'categoria', e.target.value)}
                   className="col-span-4 md:col-span-2 px-2 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
@@ -224,23 +225,24 @@ export function NovoOrcamentoForm({
                   <option value="peca">Peça</option>
                 </select>
                 <input
-                  type="number" min="0.001" step="0.001"
+                  type="number" min="0.001" step="0.001" aria-label={`Quantidade do item ${i + 1}`}
                   value={item.quantidade} onChange={(e) => updateItem(i, 'quantidade', e.target.value)}
                   className="col-span-4 md:col-span-1 px-3 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <input
+                  aria-label={`Unidade do item ${i + 1}`}
                   value={item.unidade} onChange={(e) => updateItem(i, 'unidade', e.target.value)}
                   className="col-span-4 md:col-span-1 px-3 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <input
-                  type="number" min="0" step="0.01" placeholder="0,00"
+                  type="number" min="0" step="0.01" placeholder="0,00" aria-label={`Preço unitário do item ${i + 1}`}
                   value={item.precoUnitario} onChange={(e) => updateItem(i, 'precoUnitario', e.target.value)}
                   className="col-span-4 md:col-span-2 px-3 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
                 <div className="col-span-4 md:col-span-2 flex items-center justify-end gap-1">
                   <span className="text-xs text-gray-500 hidden md:block">{fmtBRL(subtotal)}</span>
                   {itens.length > 1 && (
-                    <button type="button" onClick={() => removeItem(i)} className="p-1 text-gray-500 hover:text-red-500 transition-colors">
+                    <button type="button" aria-label={`Remover item ${i + 1}`} onClick={() => removeItem(i)} className="p-1 text-gray-500 hover:text-red-500 transition-colors">
                       <Trash2 size={13} />
                     </button>
                   )}

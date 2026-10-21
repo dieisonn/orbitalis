@@ -4,6 +4,7 @@ import { useTransition, useState } from 'react'
 import { criarOs } from './actions'
 import { ChecklistSelect } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
+import { textoSobre } from '@/lib/cor'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string }
 type Ambiente = {
@@ -130,11 +131,11 @@ export function NovaOsForm({
                   ? 'border-transparent text-white shadow-sm'
                   : 'border-border text-gray-600 hover:bg-surface'
               }`}
-              style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex } : {}}
+              style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex, color: textoSobre(ts.corHex) } : {}}
             >
               <span
                 className="shrink-0 text-xs font-bold w-7 text-center py-0.5 rounded text-white"
-                style={{ backgroundColor: tipoServicoId === ts.id ? 'rgba(255,255,255,0.25)' : ts.corHex }}
+                style={{ backgroundColor: tipoServicoId === ts.id ? 'transparent' : ts.corHex, boxShadow: tipoServicoId === ts.id ? 'inset 0 0 0 1px currentColor' : undefined, color: tipoServicoId === ts.id ? 'inherit' : textoSobre(ts.corHex) }}
               >
                 {ts.sigla}
               </span>
@@ -302,7 +303,7 @@ export function NovaOsForm({
         <button
           type="submit"
           disabled={isPending || !ambienteId}
-          style={tipoSelecionado ? { backgroundColor: tipoSelecionado.corHex } : {}}
+          style={tipoSelecionado ? { backgroundColor: tipoSelecionado.corHex, color: textoSobre(tipoSelecionado.corHex) } : {}}
           className={`flex-1 py-2.5 text-white font-semibold rounded-lg text-sm disabled:opacity-60 transition-colors ${
             !tipoSelecionado ? 'bg-action hover:bg-action/90' : 'hover:opacity-90'
           }`}

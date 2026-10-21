@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // Rotas públicas que não precisam de token
-// /o/ = orçamento público (link enviado ao cliente), /convite/ e /registro = cadastro por convite
-const PUBLIC = ['/login', '/e/', '/o/', '/convite/', '/registro']
+// /o/ = orçamento público (link enviado ao cliente), /convite/ e /registro = cadastro por convite,
+// /privacidade e /termos = documentos legais, abertos a qualquer visitante
+const PUBLIC = ['/login', '/e/', '/o/', '/convite/', '/registro', '/privacidade', '/termos']
 
 // Rotas exclusivas de admin
 const ADMIN_ONLY = [

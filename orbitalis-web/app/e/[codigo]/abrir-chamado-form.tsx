@@ -88,6 +88,11 @@ export function AbrirChamadoForm({ ambienteId, ambienteNome }: Props) {
         <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
       )}
 
+      <p className="text-xs text-gray-600">
+        Usaremos o que você informar apenas para atender este chamado. Saiba mais na{' '}
+        <a href="/privacidade" target="_blank" className="text-action underline">Política de Privacidade</a>.
+      </p>
+
       <button
         type="submit"
         disabled={isPending}

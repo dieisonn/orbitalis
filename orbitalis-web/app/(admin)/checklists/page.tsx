@@ -4,6 +4,7 @@ import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { deletarChecklist, importarPmocSplitHiwall, importarAnvisa, importarCorretiva } from './actions'
 import { ClipboardCheck, Pencil, Download } from 'lucide-react'
+import { textoSobre } from '@/lib/cor'
 
 type TipoItem = 'texto' | 'numero' | 'escolha_unica' | 'multipla_escolha'
 type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: TipoItem; unidade?: string; opcoes?: string[] }
@@ -83,7 +84,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
                       </span>
                       <span
                         className="text-xs px-2 py-0.5 rounded-md font-semibold text-white"
-                        style={{ backgroundColor: m.tipoServico?.corHex ?? '#9ca3af' }}
+                        style={{ backgroundColor: m.tipoServico?.corHex ?? '#9ca3af', color: textoSobre(m.tipoServico?.corHex ?? '#9ca3af') }}
                       >
                         {m.tipoServico ? m.tipoServico.nome : 'Qualquer serviço'}
                       </span>

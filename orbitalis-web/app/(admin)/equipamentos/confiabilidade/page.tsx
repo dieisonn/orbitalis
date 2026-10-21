@@ -200,34 +200,34 @@ export default async function ConfiabilidadePage() {
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE[corMttr!]}`}>
                             {m.mttrHoras < 24 ? `${m.mttrHoras}h` : `${(m.mttrHoras / 24).toFixed(1)}d`}
                           </span>
-                        ) : <span className="text-gray-300 text-xs">—</span>}
+                        ) : <span className="text-gray-500 text-xs">—</span>}
                       </td>
                       <td className="px-3 py-3 text-center">
                         {m.mtbfDias !== null ? (
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE[corMtbf!]}`}>
                             {m.mtbfDias}d
                           </span>
-                        ) : <span className="text-gray-300 text-xs" title="Mín. 2 corretivas para MTBF">—</span>}
+                        ) : <span className="text-gray-500 text-xs" title="Mín. 2 corretivas para MTBF">—</span>}
                       </td>
                       <td className="px-3 py-3 text-center">
                         {m.taxaRetrabalho !== null && m.taxaRetrabalho > 0 ? (
                           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
                             {m.taxaRetrabalho}%
                           </span>
-                        ) : <span className="text-gray-300 text-xs">—</span>}
+                        ) : <span className="text-gray-500 text-xs">—</span>}
                       </td>
                       <td className="hidden lg:table-cell px-3 py-3 text-center">
                         {m.slaHoras !== null ? (
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${m.slaHoras <= 4 ? 'bg-green-100 text-green-800' : m.slaHoras <= 24 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                             {m.slaHoras < 24 ? `${m.slaHoras}h` : `${(m.slaHoras / 24).toFixed(1)}d`}
                           </span>
-                        ) : <span className="text-gray-300 text-xs">—</span>}
+                        ) : <span className="text-gray-500 text-xs">—</span>}
                       </td>
                       {custoPorH !== null && (
                         <td className="px-3 py-3 text-center">
                           {custo !== null ? (
                             <span className="text-xs text-gray-700">{fmtBRL(custo)}</span>
-                          ) : <span className="text-gray-300 text-xs">—</span>}
+                          ) : <span className="text-gray-500 text-xs">—</span>}
                         </td>
                       )}
                       <td className="hidden md:table-cell px-4 py-3 text-xs text-gray-500">
@@ -246,7 +246,7 @@ export default async function ConfiabilidadePage() {
                       </td>
                     </tr>
                     {semDados.map((m) => (
-                      <tr key={m.id} className="hover:bg-surface/60 opacity-60">
+                      <tr key={m.id} className="hover:bg-surface/60 bg-gray-50">
                         <td className="px-4 py-2.5 min-w-[160px]">
                           <a href={`/equipamentos/${m.id}/historico`} className="text-sm text-gray-600 hover:text-primary block truncate">
                             {m.nome}

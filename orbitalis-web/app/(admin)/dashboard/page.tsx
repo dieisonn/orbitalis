@@ -218,7 +218,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                 <div key={t.tecnicoId}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[11px] text-gray-300 tabular-nums w-4 shrink-0">
+                      <span className="text-[11px] text-gray-500 tabular-nums w-4 shrink-0">
                         {String(idx + 1).padStart(2, '0')}
                       </span>
                       <span className="text-sm text-gray-700 truncate">{t.nome}</span>
@@ -333,7 +333,7 @@ export default async function DashboardPage({ searchParams }: Props) {
             <div className="space-y-3">
               {topEquipamentos.map((eq, i) => (
                 <div key={eq.id} className="flex items-center gap-3">
-                  <span className="text-[11px] text-gray-300 tabular-nums w-4 shrink-0">
+                  <span className="text-[11px] text-gray-500 tabular-nums w-4 shrink-0">
                     {String(i + 1).padStart(2, '0')}
                   </span>
                   <a href={`/equipamentos/${eq.id}/historico`} className="flex-1 min-w-0 hover:text-primary transition-colors">

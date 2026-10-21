@@ -4,6 +4,7 @@ import { useTransition, useState, useMemo } from 'react'
 import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { criarPlano } from './actions'
 import { Building2, Cpu } from 'lucide-react'
+import { textoSobre } from '@/lib/cor'
 
 type Equipamento = {
   id: string
@@ -173,11 +174,11 @@ export function NovoPlanoForm({
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
                     tipoServicoId === ts.id ? 'border-transparent text-white' : 'border-border text-gray-600 hover:bg-surface'
                   }`}
-                  style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex } : {}}
+                  style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex, color: textoSobre(ts.corHex) } : {}}
                 >
                   <span
                     className="w-6 text-center py-0.5 rounded text-white text-xs font-bold"
-                    style={{ backgroundColor: tipoServicoId === ts.id ? 'rgba(255,255,255,0.25)' : ts.corHex }}
+                    style={{ backgroundColor: tipoServicoId === ts.id ? 'transparent' : ts.corHex, boxShadow: tipoServicoId === ts.id ? 'inset 0 0 0 1px currentColor' : undefined, color: tipoServicoId === ts.id ? 'inherit' : textoSobre(ts.corHex) }}
                   >
                     {ts.sigla}
                   </span>

@@ -139,7 +139,7 @@ export default async function ContratoPage({ params }: Props) {
           </div>
         )}
 
-        <p className="text-xs text-gray-300 mt-5">Criado em {fmtDate(contrato.criadoEm)}</p>
+        <p className="text-xs text-gray-500 mt-5">Criado em {fmtDate(contrato.criadoEm)}</p>
       </div>
     </div>
   )

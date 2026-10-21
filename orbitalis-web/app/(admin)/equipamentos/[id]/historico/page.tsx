@@ -185,9 +185,9 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <a href="/equipamentos" className="text-gray-500 hover:text-primary transition-colors">Equipamentos</a>
-        <span className="text-gray-300">/</span>
+        <span className="text-gray-500">/</span>
         <a href={`/equipamentos/${id}/editar`} className="text-gray-500 hover:text-primary transition-colors">{eq.nome}</a>
-        <span className="text-gray-300">/</span>
+        <span className="text-gray-500">/</span>
         <span className="text-gray-700 font-medium">Histórico</span>
       </div>
 
@@ -268,7 +268,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
         <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
           <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
             <Clock size={11} />MTTR — Tempo Médio de Reparo
-            <span className="text-gray-300 ml-1">(12 meses)</span>
+            <span className="text-gray-500 ml-1">(12 meses)</span>
           </p>
           {mttrHoras !== null ? (
             <div className="flex items-baseline gap-2">
@@ -282,7 +282,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
               )}
             </div>
           ) : (
-            <p className="text-2xl font-bold text-gray-300">—</p>
+            <p className="text-2xl font-bold text-gray-500">—</p>
           )}
           <p className="text-xs text-gray-400 mt-1">
             {corretivasConcl.length} corretiva{corretivasConcl.length !== 1 ? 's' : ''} concluída{corretivasConcl.length !== 1 ? 's' : ''} · limite {mttrLimite}h
@@ -291,7 +291,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
         <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
           <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
             <RefreshCw size={11} />MTBF — Intervalo Médio entre Falhas
-            <span className="text-gray-300 ml-1">(12 meses)</span>
+            <span className="text-gray-500 ml-1">(12 meses)</span>
           </p>
           {mtbfDias !== null ? (
             <div className="flex items-baseline gap-2">
@@ -304,7 +304,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
             </div>
           ) : (
             <div>
-              <p className="text-2xl font-bold text-gray-300">—</p>
+              <p className="text-2xl font-bold text-gray-500">—</p>
               <p className="text-xs text-gray-400 mt-1">Mínimo 2 corretivas concluídas · limite {mtbfLimite}d</p>
             </div>
           )}
@@ -404,17 +404,17 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
                         {ORIGEM[os.origem] ?? os.origem}
                       </td>
                       <td className="px-3 py-3 text-gray-600 text-xs">
-                        {fmtBRL(os.valorMaoObra) ?? <span className="text-gray-300">—</span>}
+                        {fmtBRL(os.valorMaoObra) ?? <span className="text-gray-500">—</span>}
                       </td>
                       <td className="px-3 py-3 text-gray-600 text-xs">
-                        {fmtBRL(os.valorPecas) ?? <span className="text-gray-300">—</span>}
+                        {fmtBRL(os.valorPecas) ?? <span className="text-gray-500">—</span>}
                       </td>
                       <td className="px-3 py-3 text-gray-700 text-xs font-medium">
-                        {os.status === 'concluida' && item.custo > 0 ? fmtBRL(item.custo) : <span className="text-gray-300">—</span>}
+                        {os.status === 'concluida' && item.custo > 0 ? fmtBRL(item.custo) : <span className="text-gray-500">—</span>}
                       </td>
                       <td className="px-3 py-3 text-right">
                         <span className="text-xs font-bold text-primary">
-                          {os.status === 'concluida' ? fmtBRL(item.acumulado) : <span className="text-gray-300">—</span>}
+                          {os.status === 'concluida' ? fmtBRL(item.acumulado) : <span className="text-gray-500">—</span>}
                         </span>
                       </td>
                     </tr>

@@ -364,7 +364,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
                 <tr className="bg-surface border-b border-border">
                   {['Data Agendamento', 'Ambiente', 'Status', 'Conclusão', ''].map((h) => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
-                      {h}
+                      {h || <span className="sr-only">Ações</span>}
                     </th>
                   ))}
                 </tr>

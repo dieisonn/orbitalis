@@ -93,6 +93,7 @@ export function OsFilterBar({
           />
           {q && (
             <button type="button" onClick={() => { setQ(''); router.push(buildUrl({ q: undefined })) }}
+              aria-label="Limpar busca"
               className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-gray-400 hover:text-gray-600">
               <X size={13} />
             </button>
@@ -100,6 +101,7 @@ export function OsFilterBar({
         </form>
 
         <select
+          aria-label="Filtrar por status"
           value={atrasadas ? '' : (currentStatus ?? '')}
           onChange={(e) => router.push(buildUrl({ status: e.target.value || undefined, atrasadas: undefined }))}
           className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-w-[160px]"
@@ -110,6 +112,7 @@ export function OsFilterBar({
         </select>
 
         <select
+          aria-label="Ordenar por"
           value={currentOrderBy ?? 'numero_desc'}
           onChange={(e) => router.push(buildUrl({ orderBy: e.target.value }))}
           className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-w-[180px]"
@@ -143,6 +146,7 @@ export function OsFilterBar({
       {/* Linha 2: filtros avançados */}
       <div className="flex flex-wrap gap-2">
         <select
+          aria-label="Filtrar por técnico"
           value={currentTecnicoId ?? ''}
           onChange={(e) => router.push(buildUrl({ tecnicoId: e.target.value || undefined }))}
           className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
@@ -154,6 +158,7 @@ export function OsFilterBar({
         </select>
 
         <select
+          aria-label="Filtrar por cliente"
           value={currentClienteId ?? ''}
           onChange={(e) => router.push(buildUrl({ clienteId: e.target.value || undefined }))}
           className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-w-[180px]"
@@ -167,6 +172,7 @@ export function OsFilterBar({
         <div className="flex items-center gap-1">
           <input
             type="date"
+            aria-label="Data inicial"
             value={currentDataInicio ?? ''}
             onChange={(e) => router.push(buildUrl({ dataInicio: e.target.value || undefined, atrasadas: undefined }))}
             className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
@@ -174,6 +180,7 @@ export function OsFilterBar({
           <span className="text-xs text-gray-400">até</span>
           <input
             type="date"
+            aria-label="Data final"
             value={currentDataFim ?? ''}
             onChange={(e) => router.push(buildUrl({ dataFim: e.target.value || undefined, atrasadas: undefined }))}
             className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"

@@ -44,6 +44,7 @@ export function ResponsavelTecnicoCard({ tecnicos, responsavelTecnicoId, respons
 
       <div className="space-y-3">
         <select
+          aria-label="Responsável técnico"
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"

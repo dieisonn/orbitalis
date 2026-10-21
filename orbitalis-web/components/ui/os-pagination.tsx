@@ -42,6 +42,7 @@ export function OsPagination({ page, total, perPage }: Props) {
         <button
           onClick={() => goTo(page - 1)}
           disabled={page <= 1}
+          aria-label="Página anterior"
           className="p-1.5 rounded-lg hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <ChevronLeft size={15} />
@@ -78,6 +79,7 @@ export function OsPagination({ page, total, perPage }: Props) {
         <button
           onClick={() => goTo(page + 1)}
           disabled={page >= totalPages}
+          aria-label="Próxima página"
           className="p-1.5 rounded-lg hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <ChevronRight size={15} />

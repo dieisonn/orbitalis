@@ -82,7 +82,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
         </form>
       </header>
 
-      <main className="flex-1 min-w-0 px-4 pt-[4.5rem] pb-24 md:p-8 print:p-0">{children}</main>
+      <main id="conteudo" className="flex-1 min-w-0 px-4 pt-[4.5rem] pb-24 md:p-8 print:p-0">{children}</main>
 
       {/* Navegação inferior — celular */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 grid grid-cols-5 bg-white border-t border-border safe-pb print:hidden" aria-label="Principal">

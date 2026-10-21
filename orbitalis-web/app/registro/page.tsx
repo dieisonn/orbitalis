@@ -58,7 +58,7 @@ export default function RegistroPage() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <main id="conteudo" className="min-h-screen flex">
       {/* ── Painel esquerdo — branding ─────────────────────────── */}
       <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-primary flex-col justify-between p-12">
         <div className="pointer-events-none">
@@ -80,7 +80,7 @@ export default function RegistroPage() {
             <h1 className="text-4xl font-black text-white leading-snug">
               Comece agora.<br />Sem custo inicial.
             </h1>
-            <p className="text-white/55 mt-3 text-base leading-relaxed">
+            <p className="text-white/80 mt-3 text-base leading-relaxed">
               Crie a conta da sua empresa em segundos<br />e comece a gerenciar ativos hoje mesmo.
             </p>
           </div>
@@ -96,7 +96,7 @@ export default function RegistroPage() {
           </div>
         </div>
 
-        <p className="relative z-10 text-white/25 text-xs">
+        <p className="relative z-10 text-white/70 text-xs">
           © {new Date().getFullYear()} Orbitalis · Todos os direitos reservados
         </p>
       </div>
@@ -219,6 +219,16 @@ export default function RegistroPage() {
               </div>
             </div>
 
+
+            <label className="flex items-start gap-2.5 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" name="aceite" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-action)]" />
+              <span>
+                Li e aceito os{' '}
+                <Link href="/termos" target="_blank" className="text-action underline">Termos de Uso</Link> e a{' '}
+                <Link href="/privacidade" target="_blank" className="text-action underline">Política de Privacidade</Link>.
+              </span>
+            </label>
+
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 px-3 py-2.5 rounded-xl">
                 {error}
@@ -233,12 +243,12 @@ export default function RegistroPage() {
               {isPending ? (
                 <><Loader2 size={15} className="animate-spin" />Criando conta…</>
               ) : (
-                <><span>Criar conta gratuita</span><ArrowRight size={15} /></>
+                <><span>Criar conta</span><ArrowRight size={15} /></>
               )}
             </button>
           </form>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { aceitarConvite } from '@/lib/convites'
 import { User, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
@@ -44,7 +45,7 @@ export function ConviteForm({ token, tipo, emailPreenchido, nomeEmpresa, razaoSo
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface p-4">
+    <main id="conteudo" className="min-h-screen flex items-center justify-center bg-surface p-4">
       <div className="w-full max-w-md bg-white rounded-2xl border border-border shadow-sm p-8">
 
         {/* Logo + empresa */}
@@ -133,6 +134,16 @@ export function ConviteForm({ token, tipo, emailPreenchido, nomeEmpresa, razaoSo
             </div>
           </div>
 
+
+          <label className="flex items-start gap-2.5 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" name="aceite" required className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-action)]" />
+            <span>
+              Li e aceito os{' '}
+              <Link href="/termos" target="_blank" className="text-action underline">Termos de Uso</Link> e a{' '}
+              <Link href="/privacidade" target="_blank" className="text-action underline">Política de Privacidade</Link>.
+            </span>
+          </label>
+
           {error && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2.5 rounded-xl">
               {error}
@@ -152,6 +163,6 @@ export function ConviteForm({ token, tipo, emailPreenchido, nomeEmpresa, razaoSo
           </button>
         </form>
       </div>
-    </div>
+    </main>
   )
 }
