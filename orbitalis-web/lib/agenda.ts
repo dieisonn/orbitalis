@@ -147,3 +147,14 @@ export function gerarOcorrencias(inicio: Dia, regra: Regra): Dia[] {
   }
   return out
 }
+
+// ─── Cores ───────────────────────────────────────────────────────────────────
+export const COR_PADRAO = '#039BE5'
+/** Paleta de 24 cores (mesma ideia do Google Agenda) */
+export const PALETA = [
+  '#AD1457', '#D81B60', '#E67C73', '#D50000', '#F4511E', '#EF6C00', '#F09300', '#F6BF26', '#E4C441',
+  '#C0CA33', '#7CB342', '#0B8043', '#33B679', '#009688', '#039BE5', '#4285F4', '#7986CB', '#3F51B5',
+  '#B39DDB', '#9E69AF', '#8E24AA', '#795548', '#616161', '#A79B8E',
+]
+/** Cor que o evento teria sem personalização: a do tipo de serviço, ou a padrão */
+export const corPadraoDe = (e: Pick<EventoAgenda, 'tipoServico'>) => e.tipoServico?.corHex ?? COR_PADRAO

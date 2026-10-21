@@ -8,6 +8,11 @@ import {
 } from '@/lib/agenda'
 import { textoSobre } from '@/lib/cor'
 import { EventoModal, type ClienteOpcao, type TecnicoOpcao, type TipoOpcao } from './evento-modal'
+import { EventoPopover, EventoMenu, type Ancora } from './evento-popover'
+
+const ancoraDe = (el: Element): Ancora => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
+type AoAbrir = (e: EventoAgenda, a: Ancora) => void
+type AoMenu = (e: EventoAgenda, x: number, y: number) => void
 
 type Visao = 'mes' | 'semana' | 'dia'
 
@@ -42,8 +47,13 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [tecnicoFiltro, setTecnicoFiltro] = useState('')
-  const [aberto, setAberto] = useState<EventoAgenda | null>(null)
-  const [novo, setNovo] = useState<{ inicio: string; fim?: string } | null>(null) // intervalo sugerido (ISO)
+  // cartão (clique esquerdo), menu (clique direito) e formulário (novo, editar ou duplicar)
+  const [pop, setPop] = useState<{ e: EventoAgenda; a: Ancora } | null>(null)
+  const [menu, setMenu] = useState<{ e: EventoAgenda; x: number; y: number } | null>(null)
+  const [modal, setModal] = useState<{ evento: EventoAgenda | null; modelo?: EventoAgenda | null; inicio?: string; fim?: string } | null>(null)
+  const setNovo = (v: { inicio: string; fim?: string }) => { setPop(null); setMenu(null); setModal({ evento: null, ...v }) }
+  const abrir: AoAbrir = (e, a) => { setMenu(null); setPop({ e, a }) }
+  const abrirMenu: AoMenu = (e, x, y) => { setPop(null); setMenu({ e, x, y }) }
   const arrastando = useRef<EventoAgenda | null>(null)
   const [alvo, setAlvo] = useState<string | null>(null)
 
@@ -131,10 +141,11 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
   // Atalhos como no Google Agenda: D dia · W semana · M mês · T hoje · ←/→ (ou J/K) navegar · C criar
   const atalho = useRef<(e: KeyboardEvent) => void>(() => {})
   atalho.current = (e) => {
-    if (e.ctrlKey || e.metaKey || e.altKey || aberto || novo) return
+    if (e.ctrlKey || e.metaKey || e.altKey || modal) return
     const alvoEl = e.target as HTMLElement | null
     if (alvoEl && (alvoEl.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(alvoEl.tagName))) return
     const k = e.key.toLowerCase()
+    if (k !== 'escape') { setPop(null); setMenu(null) }
     if (k === 'm') setVisao('mes')
     else if (k === 'w') setVisao('semana')
     else if (k === 'd') setVisao('dia')
@@ -212,7 +223,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
                     <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full ${ehHoje ? 'bg-primary text-white font-bold' : foraDoMes ? 'text-gray-500' : 'text-gray-600'}`}>{dia.d}</span>
                   </div>
                   <div className="space-y-0.5">
-                    {lista.slice(0, 3).map((e) => <Chip key={e.id} e={e} onAbrir={setAberto} onArrastar={(ev) => { arrastando.current = ev }} />)}
+                    {lista.slice(0, 3).map((e) => <Chip key={e.id} e={e} onAbrir={abrir} onMenu={abrirMenu} onArrastar={(ev) => { arrastando.current = ev }} />)}
                     {lista.length > 3 && (
                       <button onClick={(ev) => { ev.stopPropagation(); setCursor(dia); setVisao('dia') }}
                         className="text-[11px] text-gray-500 hover:text-primary font-medium px-1">+{lista.length - 3} mais</button>
@@ -225,7 +236,7 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
         </div>
       ) : (
         <GradeHoras dias={Array.from({ length: dias }, (_, i) => somarDias(diaIni, i))} porDia={porDia}
-          onAbrir={setAberto} onNovo={(inicio, fim) => setNovo({ inicio, fim })} />
+          onAbrir={abrir} onMenu={abrirMenu} onNovo={(inicio, fim) => setNovo({ inicio, fim })} />
       )}
 
       <p className="hidden md:block mt-2 text-xs text-gray-500">
@@ -233,14 +244,33 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
         Atalhos: <kbd className="font-mono">D</kbd> dia · <kbd className="font-mono">W</kbd> semana · <kbd className="font-mono">M</kbd> mês · <kbd className="font-mono">T</kbd> hoje · <kbd className="font-mono">←</kbd> <kbd className="font-mono">→</kbd> navegar · <kbd className="font-mono">C</kbd> novo evento
       </p>
 
-      {(aberto || novo) && (
+      {pop && (
+        <EventoPopover
+          key={pop.e.id}
+          evento={pop.e} ancora={pop.a}
+          onFechar={() => setPop(null)}
+          onEditar={() => { setPop(null); setModal({ evento: pop.e }) }}
+          onDuplicar={() => { setPop(null); setModal({ evento: null, modelo: pop.e }) }}
+          onMudou={carregar}
+        />
+      )}
+      {menu && (
+        <EventoMenu
+          evento={menu.e} x={menu.x} y={menu.y}
+          onFechar={() => setMenu(null)}
+          onDuplicar={() => setModal({ evento: null, modelo: menu.e })}
+          onMudou={carregar}
+        />
+      )}
+      {modal && (
         <EventoModal
-          key={aberto?.id ?? 'novo'}
-          evento={aberto}
-          inicioSugerido={novo?.inicio}
-          fimSugerido={novo?.fim}
+          key={modal.evento?.id ?? (modal.modelo ? `dup-${modal.modelo.id}` : 'novo')}
+          evento={modal.evento}
+          modelo={modal.modelo}
+          inicioSugerido={modal.inicio}
+          fimSugerido={modal.fim}
           tipos={tipos} clientes={clientes} tecnicos={tecnicos}
-          onFechar={() => { setAberto(null); setNovo(null) }}
+          onFechar={() => setModal(null)}
           onMudou={carregar}
         />
       )}
@@ -248,12 +278,13 @@ export function AgendaClient({ tipos, clientes, tecnicos }: {
   )
 }
 
-function Chip({ e, onAbrir, onArrastar }: { e: EventoAgenda; onAbrir: (e: EventoAgenda) => void; onArrastar: (e: EventoAgenda) => void }) {
+function Chip({ e, onAbrir, onMenu, onArrastar }: { e: EventoAgenda; onAbrir: AoAbrir; onMenu: AoMenu; onArrastar: (e: EventoAgenda) => void }) {
   return (
     <button
       draggable
       onDragStart={(ev) => { ev.dataTransfer.effectAllowed = 'move'; onArrastar(e) }}
-      onClick={(ev) => { ev.stopPropagation(); onAbrir(e) }}
+      onClick={(ev) => { ev.stopPropagation(); onAbrir(e, ancoraDe(ev.currentTarget)) }}
+      onContextMenu={(ev) => { ev.preventDefault(); ev.stopPropagation(); onMenu(e, ev.clientX, ev.clientY) }}
       title={`${e.diaInteiro ? '' : hhmm(e.inicio) + ' '}${e.titulo}`}
       style={{ backgroundColor: e.corHex, color: textoSobre(e.corHex), ...estiloStatus(e) }}
       className="w-full text-left text-[11px] leading-tight text-white rounded px-1.5 py-1 truncate hover:brightness-110">
@@ -329,9 +360,9 @@ function posicionar(lista: EventoAgenda[], dia: Dia): Posicionado[] {
 const SNAP = 15 // minutos
 const hm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 
-function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
+function GradeHoras({ dias, porDia, onAbrir, onMenu, onNovo }: {
   dias: Dia[]; porDia: Record<string, EventoAgenda[]>
-  onAbrir: (e: EventoAgenda) => void; onNovo: (inicio: string, fim?: string) => void
+  onAbrir: AoAbrir; onMenu: AoMenu; onNovo: (inicio: string, fim?: string) => void
 }) {
   // Seleção por arrasto: âncora = onde apertou; ini/fim = intervalo (minutos do dia)
   const [sel, setSel] = useState<{ k: string; ini: number; fim: number } | null>(null)
@@ -371,7 +402,7 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
                 <span className={`text-sm w-7 h-7 flex items-center justify-center rounded-full ${ehHoje ? 'bg-primary text-white font-bold' : 'text-gray-800'}`}>{d.d}</span>
               </p>
               <div className="space-y-0.5 mt-1">
-                {inteiros.map((e) => <Chip key={e.id} e={e} onAbrir={onAbrir} onArrastar={() => {}} />)}
+                {inteiros.map((e) => <Chip key={e.id} e={e} onAbrir={onAbrir} onMenu={onMenu} onArrastar={() => {}} />)}
               </div>
             </div>
           )
@@ -446,7 +477,8 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
                   </button>
                 ) : (
                   <button key={e.id}
-                    onClick={(ev) => { ev.stopPropagation(); onAbrir(e) }}
+                    onClick={(ev) => { ev.stopPropagation(); onAbrir(e, ancoraDe(ev.currentTarget)) }}
+                    onContextMenu={(ev) => { ev.preventDefault(); ev.stopPropagation(); onMenu(e, ev.clientX, ev.clientY) }}
                     style={{
                       top: topo, height: altura, left: `${(coluna / colunas) * 100}%`, width: `${100 / colunas}%`,
                       backgroundColor: e.corHex, color: textoSobre(e.corHex), ...estiloStatus(e),
@@ -474,7 +506,7 @@ function GradeHoras({ dias, porDia, onAbrir, onNovo }: {
             <ul className="divide-y divide-border">
               {lista.map((e) => (
                 <li key={e.id}>
-                  <button onClick={() => { setLista(null); onAbrir(e) }}
+                  <button onClick={(ev) => { const a = ancoraDe(ev.currentTarget); setLista(null); onAbrir(e, a) }}
                     className="w-full text-left px-5 py-3 hover:bg-surface flex items-start gap-3">
                     <span className="mt-1.5 w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: e.corHex }} />
                     <span className="min-w-0">
