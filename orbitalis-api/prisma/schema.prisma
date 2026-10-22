@@ -118,6 +118,8 @@ model Usuario {
   crea          String?     @db.VarChar(20)
   dataCriacao   DateTime    @default(now()) @map("data_criacao")
   empresaId     String?     @map("empresa_id") @db.Uuid
+  // Avisos da agenda: quantos minutos antes de um evento a pessoa quer ser notificada (até 3)
+  avisosAgenda  Int[]       @default([30]) @map("avisos_agenda")
 
   cliente                        Cliente?
   ordensComoTecnico              OrdemServico[]    @relation("TecnicoOrdens")

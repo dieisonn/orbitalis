@@ -171,6 +171,17 @@ export class AgendaService implements OnApplicationBootstrap {
     };
   }
 
+  async avisos(usuarioId: string) {
+    const u = await this.prisma.usuario.findUnique({ where: { id: usuarioId }, select: { avisosAgenda: true } });
+    return { minutos: [...(u?.avisosAgenda ?? [30])].sort((a, b) => b - a) };
+  }
+
+  async salvarAvisos(usuarioId: string, minutos: number[]) {
+    const ordenados = [...minutos].sort((a, b) => b - a);
+    await this.prisma.usuario.update({ where: { id: usuarioId }, data: { avisosAgenda: ordenados } });
+    return { minutos: ordenados };
+  }
+
   async listar(user: AuthUser, q: { inicio?: string; fim?: string; tecnicoId?: string; clienteId?: string }) {
     const de = q.inicio ? new Date(q.inicio) : new Date(Date.now() - 30 * 86_400_000);
     const ate = q.fim ? new Date(q.fim) : new Date(Date.now() + 60 * 86_400_000);

@@ -9,11 +9,11 @@ async function proxy(request: NextRequest, method: string) {
   if (!token) return NextResponse.json({ message: 'Não autenticado' }, { status: 401 })
 
   const path = request.nextUrl.searchParams.get('path') ?? '/agenda'
-  if (!/^\/(agenda(\/[0-9a-f-]{36}(\/restaurar)?)?|feriados(\/[0-9a-f-]{36})?)(\?.*)?$/i.test(path)) {
+  if (!/^\/(agenda(\/avisos|\/[0-9a-f-]{36}(\/restaurar)?)?|feriados(\/[0-9a-f-]{36})?)(\?.*)?$/i.test(path)) {
     return NextResponse.json({ message: 'Rota inválida' }, { status: 400 })
   }
 
-  const hasBody = ['POST', 'PATCH'].includes(method)
+  const hasBody = ['POST', 'PATCH', 'PUT'].includes(method)
   const res = await fetch(`${BACKEND}${path}`, {
     method,
     headers: {
@@ -33,3 +33,4 @@ export const GET    = (req: NextRequest) => proxy(req, 'GET')
 export const POST   = (req: NextRequest) => proxy(req, 'POST')
 export const PATCH  = (req: NextRequest) => proxy(req, 'PATCH')
 export const DELETE = (req: NextRequest) => proxy(req, 'DELETE')
+export const PUT    = (req: NextRequest) => proxy(req, 'PUT')

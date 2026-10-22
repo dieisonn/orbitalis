@@ -9,6 +9,7 @@ import {
 import { textoSobre } from '@/lib/cor'
 import { ROTULO_FERIADO, type Feriado, type TipoFeriado } from '@/lib/feriados'
 import { FeriadosModal } from './feriados-modal'
+import { AvisosAgendaBotao } from '@/components/layout/avisos-agenda'
 import { EventoModal, type ClienteOpcao, type TecnicoOpcao, type TipoOpcao } from './evento-modal'
 import { EventoPopover, EventoMenu, type Ancora } from './evento-popover'
 
@@ -241,6 +242,7 @@ export function AgendaClient({ tipos, clientes, tecnicos, cidade, uf }: {
             className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-sm font-semibold text-gray-700 rounded-lg bg-white hover:bg-surface">
             <Flag size={14} /> Feriados
           </button>
+          <AvisosAgendaBotao />
           <button onClick={novoHoje} title="Novo evento (C)"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
             <Plus size={14} /> Novo evento

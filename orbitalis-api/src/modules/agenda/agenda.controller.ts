@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -6,6 +6,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AgendaService } from './agenda.service';
 import { CreateEventoDto, UpdateEventoDto } from './dto/evento.dto';
+import { AvisosAgendaDto } from './dto/avisos.dto';
 
 @Controller('agenda')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -35,6 +36,19 @@ export class AgendaController {
     @Query('clienteId') clienteId?: string,
   ) {
     return this.agenda.relatorio({ inicio, fim, tecnicoId, clienteId });
+  }
+
+  // Avisos de eventos próximos (minutos de antecedência) de quem está logado — antes de ':id'
+  @Get('avisos')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  avisos(@CurrentUser() user: AuthUser) {
+    return this.agenda.avisos(user.id);
+  }
+
+  @Put('avisos')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  salvarAvisos(@CurrentUser() user: AuthUser, @Body() dto: AvisosAgendaDto) {
+    return this.agenda.salvarAvisos(user.id, dto.minutos);
   }
 
   @Get(':id')
