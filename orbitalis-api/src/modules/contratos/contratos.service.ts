@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FeriadosService } from '../feriados/feriados.service';
-import { dataDoCiclo } from '../cron/geracao-preventiva';
+import { dataDoCiclo, visitasRestantes } from '../cron/geracao-preventiva';
 
 export type VisitaCalendario = {
   data: string;                 // YYYY-MM-DD
@@ -247,7 +247,8 @@ export class ContratosService {
           atual.equipamentos.push(c.equipamento.nome);
           porAmbiente.set(amb.id, atual);
         }
-        for (let n = 0; n < 400; n++) {
+        const restantes = visitasRestantes(plano);
+        for (let n = 0; n < Math.min(400, restantes); n++) {
           const d = dataDoCiclo(plano.proximaGeracao, plano.frequenciaDias, n);
           if (d > limite || d >= dia1) break;
           if (!dentro(d) || jaGeradas.has(`${plano.id}|${iso(d)}`)) continue;

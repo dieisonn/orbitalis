@@ -11,6 +11,7 @@ export async function editarPlano(
     tipoServicoId?: string
     contratoId?: string
     frequenciaDias: string
+    visitasPrevistas: string
     proximaGeracao: string
     dataFim?: string
     ativo: boolean
@@ -22,6 +23,7 @@ export async function editarPlano(
     tipoServicoId: data.tipoServicoId || null,
     contratoId: data.contratoId || null,
     frequenciaDias: Number(data.frequenciaDias),
+    visitasPrevistas: Number(data.visitasPrevistas),
     proximaGeracao: data.proximaGeracao,
     dataFim: data.dataFim || null,
     ativo: data.ativo,

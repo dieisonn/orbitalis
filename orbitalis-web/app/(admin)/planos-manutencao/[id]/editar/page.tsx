@@ -33,6 +33,8 @@ type EquipConfig = {
 type Plano = {
   id: string
   frequenciaDias: number
+  visitasPrevistas: number | null
+  visitasGeradas: number
   ativo: boolean
   proximaGeracao: string
   dataFim: string | null
@@ -96,6 +98,8 @@ export default async function EditarPlanoPage({ params }: Props) {
         tecnicoId={plano.tecnico?.id ?? null}
         tipoServicoId={plano.tipoServicoId ?? null}
         frequenciaDias={plano.frequenciaDias}
+        visitasPrevistas={plano.visitasPrevistas}
+        visitasGeradas={plano.visitasGeradas}
         proximaGeracao={plano.proximaGeracao}
         dataFim={plano.dataFim}
         ativo={plano.ativo}

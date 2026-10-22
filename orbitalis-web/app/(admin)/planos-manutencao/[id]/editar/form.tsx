@@ -3,6 +3,7 @@
 import { useTransition, useState, useMemo } from 'react'
 import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { editarPlano } from './actions'
+import { CampoVisitas } from '../../campo-visitas'
 import { Building2 } from 'lucide-react'
 import { textoSobre } from '@/lib/cor'
 
@@ -48,6 +49,8 @@ type Props = {
   tecnicoId: string | null
   tipoServicoId: string | null
   frequenciaDias: number
+  visitasPrevistas: number | null
+  visitasGeradas: number
   proximaGeracao: string
   dataFim: string | null
   ativo: boolean
@@ -67,6 +70,8 @@ export function EditarPlanoForm({
   tecnicoId,
   tipoServicoId: tipoServicoIdInicial,
   frequenciaDias,
+  visitasPrevistas,
+  visitasGeradas,
   proximaGeracao,
   dataFim,
   ativo,
@@ -84,6 +89,10 @@ export function EditarPlanoForm({
   const [isAtivo, setIsAtivo] = useState(ativo)
   const [tipoServicoId, setTipoServicoId] = useState(tipoServicoIdInicial ?? '')
   const [contratoId, setContratoId] = useState(contratoIdInicial ?? '')
+  const [visitas, setVisitas] = useState(visitasPrevistas != null ? String(visitasPrevistas) : '')
+  const [freq, setFreq] = useState(frequenciaDias)
+  const [prox, setProx] = useState(proximaGeracao ? proximaGeracao.split('T')[0] : '')
+  const [limite, setLimite] = useState(dataFim ? dataFim.split('T')[0] : '')
 
   // Inicializa com a config atual: { equipamentoId: checklistId | '' }
   const configInicial = useMemo(() => {
@@ -138,6 +147,7 @@ export function EditarPlanoForm({
           tipoServicoId,
           contratoId,
           frequenciaDias:    fd.get('frequenciaDias') as string,
+          visitasPrevistas:  visitas,
           proximaGeracao:    fd.get('proximaGeracao') as string,
           dataFim:           fd.get('dataFim') as string,
           ativo: isAtivo,
@@ -203,7 +213,7 @@ export function EditarPlanoForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Frequência <span className="text-destructive">*</span>
             </label>
-            <select name="frequenciaDias" required defaultValue={frequenciaDias}
+            <select name="frequenciaDias" required defaultValue={frequenciaDias} onChange={(e) => setFreq(Number(e.target.value))}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white">
               {FREQUENCIAS.map((f) => (
                 <option key={f.value} value={f.value}>{f.label}</option>
@@ -216,16 +226,19 @@ export function EditarPlanoForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Próxima Geração <span className="text-destructive">*</span>
             </label>
-            <input name="proximaGeracao" type="date" required defaultValue={proxDate}
+            <input name="proximaGeracao" type="date" required defaultValue={proxDate} onChange={(e) => setProx(e.target.value)}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
 
           {/* Data fim */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data Limite</label>
-            <input name="dataFim" type="date" defaultValue={fimDate}
+            <input name="dataFim" type="date" defaultValue={fimDate} onChange={(e) => setLimite(e.target.value)}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
+
+          {/* Visitas por equipamento */}
+          <CampoVisitas valor={visitas} onChange={setVisitas} primeira={prox} frequenciaDias={freq} dataLimite={limite} geradas={visitasGeradas} />
         </div>
 
         {/* Toggle ativo */}

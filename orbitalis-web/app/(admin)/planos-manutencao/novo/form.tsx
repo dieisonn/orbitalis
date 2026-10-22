@@ -3,6 +3,7 @@
 import { useTransition, useState, useMemo } from 'react'
 import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { criarPlano } from './actions'
+import { CampoVisitas } from '../campo-visitas'
 import { Building2, Cpu } from 'lucide-react'
 import { textoSobre } from '@/lib/cor'
 
@@ -54,6 +55,10 @@ export function NovoPlanoForm({
   const [clienteId, setClienteId] = useState('')
   const [tipoServicoId, setTipoServicoId] = useState('')
   const [contratoId, setContratoId] = useState('')
+  const [visitas, setVisitas] = useState('')
+  const [freq, setFreq] = useState(30)
+  const [prox, setProx] = useState(() => new Date().toISOString().split('T')[0])
+  const [limite, setLimite] = useState('')
   // { equipamentoId: modeloChecklistId | '' }
   const [checklistPorEquip, setChecklistPorEquip] = useState<Record<string, string>>({})
 
@@ -121,6 +126,7 @@ export function NovoPlanoForm({
           tipoServicoId,
           contratoId: contratoId || undefined,
           frequenciaDias: Number(fd.get('frequenciaDias')),
+          visitasPrevistas: Number(visitas),
           proximaGeracao: fd.get('proximaGeracao') as string,
           dataFim: fd.get('dataFim') as string,
           equipamentosConfig,
@@ -213,6 +219,7 @@ export function NovoPlanoForm({
               name="frequenciaDias"
               required
               defaultValue={30}
+              onChange={(e) => setFreq(Number(e.target.value))}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
             >
               {FREQUENCIAS.map((f) => (
@@ -231,6 +238,7 @@ export function NovoPlanoForm({
               type="date"
               required
               defaultValue={hoje}
+              onChange={(e) => setProx(e.target.value)}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
@@ -242,10 +250,14 @@ export function NovoPlanoForm({
               name="dataFim"
               type="date"
               min={hoje}
+              onChange={(e) => setLimite(e.target.value)}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
-            <p className="text-xs text-gray-400 mt-1">Opcional. Em branco = plano contínuo.</p>
+            <p className="text-xs text-gray-500 mt-1">Opcional. As O.S. param ao atingir as visitas do plano ou esta data, o que vier primeiro.</p>
           </div>
+
+          {/* Visitas por equipamento */}
+          <CampoVisitas valor={visitas} onChange={setVisitas} primeira={prox} frequenciaDias={freq} dataLimite={limite} />
         </div>
       </div>
 
