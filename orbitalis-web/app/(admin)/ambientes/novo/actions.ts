@@ -3,12 +3,14 @@
 import { redirect } from 'next/navigation'
 import { api } from '@/lib/api'
 
+// continuar = true: mantém a pessoa no formulário para cadastrar o próximo ambiente do mesmo cliente
 export async function criarAmbiente(
   clienteId: string,
   nome: string,
   metrosQuadrados: string,
   capacidadeTermica: string,
   localizacaoInterna: string,
+  continuar = false,
 ) {
   await api.post('/ambientes', {
     clienteId,
@@ -17,5 +19,5 @@ export async function criarAmbiente(
     capacidadeTermica,
     localizacaoInterna,
   })
-  redirect('/ambientes')
+  if (!continuar) redirect('/ambientes')
 }

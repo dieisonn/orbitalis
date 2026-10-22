@@ -1,7 +1,8 @@
 ﻿'use client'
 
 import { useState, useMemo } from 'react'
-import { Building2, Cpu, ChevronDown, Search, X } from 'lucide-react'
+import Link from 'next/link'
+import { Building2, Cpu, ChevronDown, Plus, Search, X } from 'lucide-react'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { deletarAmbiente } from './actions'
 
@@ -104,31 +105,45 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
 
             return (
               <div key={cliente.id} className="bg-white rounded-xl border border-border overflow-hidden">
-                {/* Cabeçalho clicável */}
-                <button
-                  type="button"
-                  onClick={() => toggle(cliente.id)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-primary/5 border-b border-border hover:bg-primary/10 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <ChevronDown
-                      size={14}
-                      className={`text-primary/60 transition-transform duration-200 shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}
-                    />
-                    <span className="font-bold text-primary text-sm truncate">
-                      {cliente.nomeFantasia ?? cliente.razaoSocial}
+                {/* Cabeçalho: recolher/expandir + novo ambiente direto neste cliente */}
+                <div className="flex items-center bg-primary/5 border-b border-border hover:bg-primary/10 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => toggle(cliente.id)}
+                    aria-expanded={!isCollapsed}
+                    className="flex-1 min-w-0 flex items-center justify-between px-4 py-3 text-left"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ChevronDown
+                        size={14}
+                        aria-hidden="true"
+                        className={`text-primary/60 transition-transform duration-200 shrink-0 ${isCollapsed ? '-rotate-90' : ''}`}
+                      />
+                      <span className="font-bold text-primary text-sm truncate">
+                        {cliente.nomeFantasia ?? cliente.razaoSocial}
+                      </span>
+                      {cliente.nomeFantasia && (
+                        <span className="hidden sm:inline text-xs text-gray-500 truncate">{cliente.razaoSocial}</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500 font-medium shrink-0 ml-2">
+                      {ambs.length} amb. · {totalEqs} eq.
                     </span>
-                    {cliente.nomeFantasia && (
-                      <span className="hidden sm:inline text-xs text-gray-400 truncate">{cliente.razaoSocial}</span>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-400 font-medium shrink-0 ml-2">
-                    {ambs.length} amb. · {totalEqs} eq.
-                  </span>
-                </button>
+                  </button>
+                  <Link
+                    href={`/ambientes/novo?clienteId=${cliente.id}`}
+                    aria-label={`Novo ambiente em ${cliente.nomeFantasia ?? cliente.razaoSocial}`}
+                    className="shrink-0 mr-3 ml-1 inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-action border border-action/40 rounded-lg hover:bg-action/10"
+                  >
+                    <Plus size={12} aria-hidden="true" /> Ambiente
+                  </Link>
+                </div>
 
                 {/* Tabela (ocultável) */}
-                {!isCollapsed && (
+                {!isCollapsed && ambs.length === 0 && (
+                  <p className="px-4 py-3 text-sm text-gray-500">Nenhum ambiente neste cliente ainda.</p>
+                )}
+                {!isCollapsed && ambs.length > 0 && (
                   <table className="w-full text-sm table-fixed">
                     <thead>
                       <tr className="border-b border-border bg-surface">
