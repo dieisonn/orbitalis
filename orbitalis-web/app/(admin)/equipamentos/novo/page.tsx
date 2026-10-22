@@ -8,7 +8,10 @@ type Ambiente = {
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
 }
 
-export default async function NovoEquipamentoPage() {
+type Props = { searchParams: Promise<{ ambienteId?: string }> }
+
+export default async function NovoEquipamentoPage({ searchParams }: Props) {
+  const { ambienteId } = await searchParams
   let ambientes: Ambiente[] = []
   try {
     const res = await api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000')
@@ -38,7 +41,7 @@ export default async function NovoEquipamentoPage() {
               </p>
             </div>
           ) : (
-            <NovoEquipamentoForm ambientes={ambientes} />
+            <NovoEquipamentoForm ambientes={ambientes} ambienteIdInicial={ambientes.some((a) => a.id === ambienteId) ? ambienteId : undefined} />
           )}
         </div>
       </div>

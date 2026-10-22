@@ -17,7 +17,8 @@ type CreateEquipamentoData = {
   valorAquisicao?: number
 }
 
-export async function criarEquipamento(data: CreateEquipamentoData) {
+// continuar = true: fica no formulário para cadastrar o próximo equipamento do mesmo ambiente
+export async function criarEquipamento(data: CreateEquipamentoData, continuar = false) {
   await api.post('/equipamentos', {
     ambienteId:          data.ambienteId,
     nome:                data.nome,
@@ -31,5 +32,5 @@ export async function criarEquipamento(data: CreateEquipamentoData) {
     diagnosticoInicial:  data.diagnosticoInicial || undefined,
     valorAquisicao:      data.valorAquisicao ?? undefined,
   })
-  redirect('/equipamentos')
+  if (!continuar) redirect('/equipamentos')
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition, useState } from 'react'
+import { useTransition, useState, useRef } from 'react'
 import { criarEquipamento } from './actions'
 
 type Ambiente = {
@@ -23,10 +23,19 @@ const TIPOS = [
   'Outro',
 ]
 
-export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
+export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambientes: Ambiente[]; ambienteIdInicial?: string }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [clienteId, setClienteId] = useState('')
+  const [clienteId, setClienteId] = useState(() => ambientes.find((a) => a.id === ambienteIdInicial)?.cliente?.id ?? '')
+  // Campos que se repetem ao cadastrar vários equipamentos seguidos no mesmo ambiente
+  const [ambienteId, setAmbienteId] = useState(ambienteIdInicial ?? '')
+  const [tipo, setTipo] = useState('')
+  const [marca, setMarca] = useState('')
+  const [modelo, setModelo] = useState('')
+  const [potencia, setPotencia] = useState('')
+  const [criados, setCriados] = useState<string[]>([])
+  const formRef = useRef<HTMLFormElement>(null)
+  const nomeRef = useRef<HTMLInputElement>(null)
 
   const clientes = Array.from(
     new Map(
@@ -42,6 +51,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    const continuar = ((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value === 'continuar'
     const fd = new FormData(e.currentTarget)
     const valorRaw = fd.get('valorAquisicao') as string
 
@@ -60,7 +70,12 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
           condicao:           fd.get('condicao') as string,
           diagnosticoInicial: fd.get('diagnosticoInicial') as string,
           valorAquisicao:     valorRaw ? Number(valorRaw) : undefined,
-        })
+        }, continuar)
+        if (continuar) {
+          setCriados((l) => [...l, fd.get('nome') as string])
+          formRef.current?.reset() // mantém ambiente, tipo, marca, modelo e potência (campos controlados)
+          nomeRef.current?.focus()
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar equipamento'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)
@@ -69,13 +84,13 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
       {/* Cliente */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <select
           value={clienteId}
-          onChange={(e) => setClienteId(e.target.value)}
+          onChange={(e) => { setClienteId(e.target.value); setAmbienteId('') }}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
           <option value="">Todos os clientes…</option>
@@ -93,6 +108,8 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         <select
           name="ambienteId"
           required
+          value={ambienteId}
+          onChange={(e) => setAmbienteId(e.target.value)}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
           <option value="">Selecione o ambiente…</option>
@@ -113,6 +130,7 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         </label>
         <input
           name="nome"
+          ref={nomeRef}
           required
           minLength={2}
           placeholder="Ex: AC Sala Reuniões 1"
@@ -129,6 +147,8 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
           <select
             name="tipoEquipamento"
             required
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value)}
             className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
           >
             <option value="">Selecione o tipo…</option>
@@ -144,6 +164,8 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
           <input
             name="potencia"
             required
+            value={potencia}
+            onChange={(e) => setPotencia(e.target.value)}
             placeholder="Ex: 12000 BTU/h, 3,5 kW"
             className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
@@ -159,6 +181,8 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
           <input
             name="marca"
             required
+            value={marca}
+            onChange={(e) => setMarca(e.target.value)}
             placeholder="Ex: Daikin"
             className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
@@ -167,6 +191,8 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
           <input
             name="modelo"
+            value={modelo}
+            onChange={(e) => setModelo(e.target.value)}
             placeholder="Ex: FTXS35LVMA (opcional)"
             className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
@@ -236,6 +262,13 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
         </div>
       </div>
 
+      {criados.length > 0 && (
+        <p role="status" className="text-sm text-green-800 bg-green-50 border border-green-200 px-3 py-2 rounded-lg">
+          Criado: {criados[criados.length - 1]}
+          {criados.length > 1 ? ` (${criados.length} equipamentos nesta sessão)` : ''}. Ambiente, tipo, marca, modelo e potência foram mantidos; preencha o próximo.
+        </p>
+      )}
+
       {error && (
         <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{error}</p>
       )}
@@ -245,10 +278,19 @@ export function NovoEquipamentoForm({ ambientes }: { ambientes: Ambiente[] }) {
           href="/equipamentos"
           className="flex-1 py-2.5 text-center border border-border text-gray-600 font-semibold rounded-lg text-sm hover:bg-surface transition-colors"
         >
-          Cancelar
+          {criados.length > 0 ? 'Concluir' : 'Cancelar'}
         </a>
         <button
           type="submit"
+          value="continuar"
+          disabled={isPending}
+          className="flex-1 py-2.5 border border-action text-action font-semibold rounded-lg text-sm hover:bg-action/5 disabled:opacity-60 transition-colors"
+        >
+          Criar e adicionar outro
+        </button>
+        <button
+          type="submit"
+          value="fim"
           disabled={isPending}
           className="flex-1 py-2.5 bg-action text-white font-semibold rounded-lg text-sm hover:bg-action/90 disabled:opacity-60 transition-colors"
         >
