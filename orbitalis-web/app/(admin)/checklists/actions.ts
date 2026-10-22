@@ -48,3 +48,8 @@ export async function importarAnvisa() {
   await api.post('/modelos-checklist/seed-anvisa', {})
   redirect('/checklists')
 }
+
+export async function importarLimpezaQuimica() {
+  await api.post('/modelos-checklist/seed-limpeza-quimica', {})
+  redirect('/checklists')
+}

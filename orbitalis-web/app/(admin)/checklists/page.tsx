@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ListPagination } from '@/components/ui/list-pagination'
-import { deletarChecklist, importarPmocSplitHiwall, importarAnvisa, importarCorretiva } from './actions'
+import { deletarChecklist, importarPmocSplitHiwall, importarAnvisa, importarCorretiva, importarLimpezaQuimica } from './actions'
 import { ClipboardCheck, Pencil, Download } from 'lucide-react'
 import { textoSobre } from '@/lib/cor'
 
@@ -55,6 +55,9 @@ export default async function ChecklistsPage({ searchParams }: Props) {
         <form action={importarCorretiva}>
           <button type="submit" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary font-medium rounded-md border border-border hover:bg-surface" title="Manutenção corretiva (diagnóstico e reparo)"><Download size={13} />Corretiva padrão</button>
         </form>
+        <form action={importarLimpezaQuimica}>
+          <button type="submit" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary font-medium rounded-md border border-border hover:bg-surface" title="Limpeza química de unidade evaporadora: limpeza e desinfecção"><Download size={13} />Limpeza química</button>
+        </form>
         <form action={importarAnvisa}>
           <button type="submit" className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary font-medium rounded-md border border-border hover:bg-surface" title="ANVISA — Climatização em Serviços de Saúde (RDC 09/2003)"><Download size={13} />ANVISA (RDC 09/2003)</button>
         </form>
@@ -64,7 +67,7 @@ export default async function ChecklistsPage({ searchParams }: Props) {
         <div className="bg-white rounded-xl p-12 text-center border border-border">
           <ClipboardCheck size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhum checklist criado ainda.</p>
-          <p className="text-xs text-gray-400 mt-1">Use os modelos prontos acima para importar um checklist padrão (PMOC, corretiva ou ANVISA) ou crie o seu.</p>
+          <p className="text-xs text-gray-400 mt-1">Use os modelos prontos acima para importar um checklist padrão (PMOC, corretiva, limpeza química ou ANVISA) ou crie o seu.</p>
         </div>
       ) : (
         <>

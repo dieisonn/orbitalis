@@ -45,6 +45,23 @@ const ANVISA_ITENS = [
   { id: 'anvisa-16', descricao: 'Registrar e assinar Relatório de Manutenção — RDC ANVISA 09/2003', obrigatorio: true,  tipo: 'texto' },
 ];
 
+// Limpeza química de unidade EVAPORADORA: foco em limpeza e desinfecção (remoção de carga orgânica e biológica)
+const LQ_RESULTADO = ['Realizada — sem resíduos', 'Realizada — sujidade residual', 'Não realizada'];
+const LIMPEZA_QUIMICA_ITENS = [
+  { id: 'lq-01', descricao: 'Filtros de ar: limpeza e desinfecção (remoção de poeira e carga orgânica/biológica)', obrigatorio: true,  tipo: 'escolha_unica', opcoes: ['Limpos e desinfetados', 'Limpos — substituição recomendada', 'Substituídos'] },
+  { id: 'lq-02', descricao: 'Serpentina evaporadora: limpeza química e desinfecção (remoção de carga orgânica e biológica das aletas)', obrigatorio: true,  tipo: 'escolha_unica', opcoes: LQ_RESULTADO },
+  { id: 'lq-03', descricao: 'Bandeja de dreno: limpeza e desinfecção (remoção de lodo, biofilme e carga orgânica)', obrigatorio: true,  tipo: 'escolha_unica', opcoes: LQ_RESULTADO },
+  { id: 'lq-04', descricao: 'Carcaça e gabinete interno: limpeza e desinfecção (remoção de sujidade, mofo e carga biológica)', obrigatorio: true,  tipo: 'escolha_unica', opcoes: LQ_RESULTADO },
+  { id: 'lq-05', descricao: 'Ventiladores e turbinas: limpeza e desinfecção (remoção de carga orgânica e biológica das pás/rotor)', obrigatorio: true,  tipo: 'escolha_unica', opcoes: LQ_RESULTADO },
+  { id: 'lq-06', descricao: 'Inspeção do dreno (obstrução, caimento, sifão e conexões)', obrigatorio: true,  tipo: 'escolha_unica', opcoes: ['Livre', 'Desobstruído', 'Obstrução persistente'] },
+  { id: 'lq-07', descricao: 'Teste de escoamento de condensado (verter água na bandeja e acompanhar o fluxo)', obrigatorio: true,  tipo: 'escolha_unica', opcoes: ['Escoamento normal', 'Escoamento lento — corrigido', 'Escoamento comprometido — pendente'] },
+  { id: 'lq-08', descricao: 'Produto(s) químico(s) utilizado(s): nome e princípio ativo (limpante e desinfetante)', obrigatorio: true,  tipo: 'texto' },
+  { id: 'lq-09', descricao: 'Fabricante, lote e registro/notificação do produto na ANVISA', obrigatorio: false, tipo: 'texto' },
+  { id: 'lq-10', descricao: 'Diluição aplicada e tempo de contato do produto', obrigatorio: true,  tipo: 'texto' },
+  { id: 'lq-11', descricao: 'Enxágue e remoção dos resíduos químicos', obrigatorio: true,  tipo: 'escolha_unica', opcoes: ['Enxaguado — sem resíduos', 'Enxaguado — resíduo visível', 'Não aplicável'] },
+  { id: 'lq-12', descricao: 'Observações e ocorrências', obrigatorio: false, tipo: 'texto' },
+];
+
 const CORRETIVA_PADRAO_ITENS = [
   { id: 'corr-01', descricao: 'Defeito relatado pelo cliente', obrigatorio: true,  tipo: 'texto' },
   { id: 'corr-02', descricao: 'Diagnóstico realizado — causa identificada', obrigatorio: true,  tipo: 'texto' },
@@ -90,6 +107,30 @@ export class ModelosChecklistService {
     if (existing) return existing;
     return this.prisma.modeloChecklist.create({
       data: { nome, tipo: 'preventiva', itens: ANVISA_ITENS as unknown as Prisma.InputJsonValue },
+    });
+  }
+
+  /**
+   * Limpeza química (unidade evaporadora). Se a empresa tem o tipo de serviço "LQ" e nenhum outro
+   * checklist já está ligado a ele, o modelo fica ligado ao LQ e passa a ser o padrão das O.S. de
+   * limpeza química; do contrário é criado sem vínculo (escolha manual no plano), sem competir
+   * com um checklist que a empresa já definiu para esse serviço.
+   */
+  async seedLimpezaQuimica() {
+    const nome = 'Limpeza Química — Unidade evaporadora (limpeza e desinfecção)';
+    const existing = await this.prisma.modeloChecklist.findFirst({ where: { nome } });
+    if (existing) return existing;
+    const lq = await this.prisma.tipoServico.findFirst({ where: { sigla: 'LQ' }, select: { id: true } });
+    const jaLigado = lq
+      ? await this.prisma.modeloChecklist.count({ where: { tipoServicoId: lq.id } })
+      : 1;
+    return this.prisma.modeloChecklist.create({
+      data: {
+        nome,
+        tipo: 'preventiva',
+        tipoServicoId: lq && jaLigado === 0 ? lq.id : null,
+        itens: LIMPEZA_QUIMICA_ITENS as unknown as Prisma.InputJsonValue,
+      },
     });
   }
 
