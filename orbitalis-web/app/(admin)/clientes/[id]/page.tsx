@@ -390,7 +390,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
         <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-border">
           <Building2 size={40} className="mx-auto text-primary/20 mb-3" />
           <p className="text-gray-400 text-sm">Nenhum ambiente vinculado.</p>
-          <a href="/ambientes/novo" className="mt-3 inline-block text-sm text-primary font-semibold hover:underline">Criar ambiente</a>
+          <a href={`/ambientes/novo?clienteId=${cliente.id}`} className="mt-3 inline-block text-sm text-primary font-semibold hover:underline">Criar ambiente</a>
         </div>
       ) : (
         <div className="space-y-4">

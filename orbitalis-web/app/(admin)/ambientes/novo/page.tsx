@@ -3,7 +3,10 @@ import { NovoAmbienteForm } from './form'
 
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 
-export default async function NovoAmbientePage() {
+type Props = { searchParams: Promise<{ clienteId?: string }> }
+
+export default async function NovoAmbientePage({ searchParams }: Props) {
+  const { clienteId } = await searchParams
   let clientes: Cliente[] = []
   try {
     const res = await api.get<{ data: Cliente[] }>('/clientes?perPage=1000')
@@ -33,7 +36,7 @@ export default async function NovoAmbientePage() {
               </p>
             </div>
           ) : (
-            <NovoAmbienteForm clientes={clientes} />
+            <NovoAmbienteForm clientes={clientes} clienteIdInicial={clientes.some((c) => c.id === clienteId) ? clienteId : undefined} />
           )}
         </div>
       </div>

@@ -35,6 +35,12 @@ export default async function AmbientesPage({ searchParams }: Props) {
 
   const ambientes = result.data
 
+  // Todos os clientes entram na lista (mesmo sem ambiente), para criar o primeiro direto no cliente
+  let clientes: { id: string; razaoSocial: string; nomeFantasia: string | null }[] = []
+  try {
+    clientes = (await api.get<{ data: typeof clientes }>('/clientes?perPage=1000')).data
+  } catch { /* sem a lista de clientes, mostra só os que já têm ambiente */ }
+
   // Agrupa por cliente
   const porCliente = new Map<string, { cliente: NonNullable<Ambiente['cliente']>; ambientes: Ambiente[] }>()
   for (const a of ambientes) {
@@ -43,6 +49,9 @@ export default async function AmbientesPage({ searchParams }: Props) {
       porCliente.set(a.cliente.id, { cliente: a.cliente, ambientes: [] })
     }
     porCliente.get(a.cliente.id)!.ambientes.push(a)
+  }
+  for (const c of clientes) {
+    if (!porCliente.has(c.id)) porCliente.set(c.id, { cliente: c, ambientes: [] })
   }
   const grupos = Array.from(porCliente.values()).sort((a, b) =>
     (a.cliente.nomeFantasia ?? a.cliente.razaoSocial).localeCompare(b.cliente.nomeFantasia ?? b.cliente.razaoSocial)
@@ -54,7 +63,7 @@ export default async function AmbientesPage({ searchParams }: Props) {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Ambientes</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {result.total} ambiente(s) em {grupos.length} cliente(s)
+            {result.total} ambiente(s) em {grupos.filter((g) => g.ambientes.length > 0).length} cliente(s)
           </p>
         </div>
         <a
