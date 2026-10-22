@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { ContratosService } from './contratos.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -14,6 +14,12 @@ export class ContratosController {
   @Get()
   findAll(@Query('clienteId') clienteId?: string) {
     return this.contratosService.findAll(clienteId);
+  }
+
+  // Calendário anual de visitas do contrato (base do PDF entregue ao cliente)
+  @Get(':id/calendario')
+  calendario(@Param('id', ParseUUIDPipe) id: string, @Query('ano') ano?: string) {
+    return this.contratosService.calendario(id, ano ? Number(ano) : undefined);
   }
 
   @Get(':id')

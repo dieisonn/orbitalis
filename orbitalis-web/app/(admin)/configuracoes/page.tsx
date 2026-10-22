@@ -11,6 +11,9 @@ type Config = {
   cnpj: string | null
   telefone: string | null
   endereco: string | null
+  cidade?: string | null
+  uf?: string | null
+  codigoIbge?: string | null
   responsavelTecnicoId?: string | null
   responsavelTecnico?: { id: string; nome: string | null; email: string; crea: string | null } | null
   mttrLimiteHoras?: number | null

@@ -2,6 +2,8 @@ import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import { FileText, AlertTriangle, CheckCircle } from 'lucide-react'
 import { ContratoActions } from './contrato-actions'
+import { CalendarDays } from 'lucide-react'
+import Link from 'next/link'
 
 type Consumo = {
   planos: number; osGeradas: number; osConcluidas: number; osEmAberto: number; osNoMes: number
@@ -98,7 +100,12 @@ export default async function ContratoPage({ params }: Props) {
         <div className="mt-5 pt-5 border-t border-border">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-gray-700">Consumo de O.S.</p>
-            <a href="/planos-manutencao/novo" className="text-xs text-primary font-semibold hover:underline">+ Plano preventivo</a>
+            <div className="flex items-center gap-4">
+              <Link href={`/contratos/${id}/calendario`} className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline">
+                <CalendarDays size={12} aria-hidden="true" /> Calendário (PDF)
+              </Link>
+              <a href="/planos-manutencao/novo" className="text-xs text-primary font-semibold hover:underline">+ Plano preventivo</a>
+            </div>
           </div>
           {contrato.consumo.planos === 0 ? (
             <p className="text-sm text-gray-400">

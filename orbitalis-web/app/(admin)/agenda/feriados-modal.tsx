@@ -1,33 +1,35 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { X, ChevronLeft, ChevronRight, Loader2, Search, Plus, Check, Flag } from 'lucide-react'
-import { type Dia, type EventoAgenda, chaveDia, instante, relogio, DIAS_SEMANA, diaDaSemana, dataBR } from '@/lib/agenda'
-import { type Feriado, type TipoFeriado, ROTULO_FERIADO, feriadosNacionais } from '@/lib/feriados'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { X, ChevronLeft, ChevronRight, Loader2, Plus, Check, Flag, Trash2, Repeat } from 'lucide-react'
+import { instante, DIAS_SEMANA, diaDaSemana, dataBR } from '@/lib/agenda'
+import { type Feriado, ROTULO_FERIADO, diaDeFeriado } from '@/lib/feriados'
 import { chamar, type TipoOpcao } from './evento-modal'
 
 const COR_FERIADO = '#616161' // Grafite, como no manual da agenda
-const CHAVE_IBGE = 'orbitalis-ibge'
 
-const ehFeriadoNaAgenda = (e: EventoAgenda) => e.tipoServico?.sigla === 'FE' || /^FE\s*-\s*/i.test(e.titulo)
-const nomeSemPrefixo = (t: string) => t.replace(/^FE\s*-\s*/i, '')
+const chaveDe = (f: Feriado) => `${f.data}|${f.nome}`
 
-export function FeriadosModal({ anoInicial, tipos, onFechar, onMudou }: {
-  anoInicial: number; tipos: TipoOpcao[]; onFechar: () => void; onMudou: () => void
+export function FeriadosModal({ anoInicial, tipos, cidade, uf, onFechar, onMudou, onFeriadosMudaram }: {
+  anoInicial: number; tipos: TipoOpcao[]; cidade: string | null; uf: string | null
+  onFechar: () => void
+  onMudou: () => void              // eventos da agenda mudaram (lançou FE)
+  onFeriadosMudaram: () => void    // lista de feriados mudou (cadastro/remoção)
 }) {
   const [ano, setAno] = useState(anoInicial)
-  const [extras, setExtras] = useState<Feriado[]>([])          // municipais/estaduais buscados ou cadastrados
-  const [naAgenda, setNaAgenda] = useState<Record<string, EventoAgenda>>({})  // data → evento FE já lançado
-  const [invertidos, setInvertidos] = useState<Set<string>>(new Set())   // escolhas da pessoa sobre o padrão
+  const [lista, setLista] = useState<Feriado[]>([])
+  const [invertidos, setInvertidos] = useState<Set<string>>(new Set())          // escolhas da pessoa sobre o padrão
   const [carregando, setCarregando] = useState(true)
-  const [buscando, setBuscando] = useState(false)
   const [lancando, setLancando] = useState(false)
+  const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState<{ tipo: 'erro' | 'ok'; texto: string } | null>(null)
-  const [ibge, setIbge] = useState(() => { try { return localStorage.getItem(CHAVE_IBGE) ?? '' } catch { return '' } })
+  const [recarga, setRecarga] = useState(0)
   const [novoData, setNovoData] = useState('')
   const [novoNome, setNovoNome] = useState('')
+  const [novoTipo, setNovoTipo] = useState<'municipal' | 'estadual' | 'personalizado'>('municipal')
+  const [novoRecorrente, setNovoRecorrente] = useState(true)
 
-  const mudarAno = (a: number) => { setAno(a); setInvertidos(new Set()) }
   const tipoFE = tipos.find((t) => t.sigla === 'FE' && t.ativo)
 
   useEffect(() => {
@@ -36,82 +38,70 @@ export function FeriadosModal({ anoInicial, tipos, onFechar, onMudou }: {
     return () => window.removeEventListener('keydown', h)
   }, [onFechar])
 
-  // Feriados já lançados na agenda neste ano
+  // Feriados do ano, já com a indicação de quais estão lançados na agenda (tudo vem da API)
   useEffect(() => {
     let vivo = true
     ;(async () => {
       setCarregando(true)
       try {
-        const q = `/agenda?inicio=${encodeURIComponent(instante(ano, 0, 1))}&fim=${encodeURIComponent(instante(ano + 1, 0, 1))}`
-        const lista: EventoAgenda[] = await chamar('GET', q)
-        const mapa: Record<string, EventoAgenda> = {}
-        for (const e of lista) if (ehFeriadoNaAgenda(e)) mapa[chaveDia(relogio(e.inicio))] = e
-        if (vivo) setNaAgenda(mapa)
+        const feriados = (await chamar('GET', `/feriados?ano=${ano}`)) as Feriado[]
+        if (!vivo) return
+        setLista(feriados); setMsg(null)
       } catch (e) {
-        if (vivo) setMsg({ tipo: 'erro', texto: e instanceof Error ? e.message : 'Não foi possível ler a agenda' })
+        if (vivo) setMsg({ tipo: 'erro', texto: e instanceof Error && !/404|Cannot GET/i.test(e.message) ? e.message : 'Os feriados ainda não estão disponíveis: o servidor precisa da atualização mais recente.' })
       } finally { if (vivo) setCarregando(false) }
     })()
     return () => { vivo = false }
-  }, [ano])
+  }, [ano, recarga])
 
-  // Lista do ano: nacionais + extras (sem repetir a mesma data/nome)
-  const lista = useMemo(() => {
-    const base = feriadosNacionais(ano)
-    const vistos = new Set(base.map((f) => `${chaveDia(f.data)}|${f.nome.toLowerCase()}`))
-    const adicionais = extras.filter((f) => f.data.y === ano && !vistos.has(`${chaveDia(f.data)}|${f.nome.toLowerCase()}`))
-    // feriados que já estão na agenda mas não vieram de nenhuma lista
-    const conhecidas = new Set([...base, ...adicionais].map((f) => chaveDia(f.data)))
-    const soAgenda: Feriado[] = Object.entries(naAgenda)
-      .filter(([k]) => !conhecidas.has(k))
-      .map(([, e]) => ({ data: relogio(e.inicio), nome: nomeSemPrefixo(e.titulo), tipo: 'municipal' as TipoFeriado }))
-    return [...base, ...adicionais, ...soAgenda].sort((a, b) => chaveDia(a.data).localeCompare(chaveDia(b.data)))
-  }, [ano, extras, naAgenda])
+  const linhas = lista
 
-  const chaveDe = (f: Feriado) => `${chaveDia(f.data)}|${f.nome}`
   // por padrão fica marcado o que ainda não está na agenda, exceto ponto facultativo
-  const padrao = (f: Feriado) => f.tipo !== 'facultativo' && !naAgenda[chaveDia(f.data)]
+  const padrao = (f: Feriado) => f.tipo !== 'facultativo' && !f.lancado
   const marcado = (f: Feriado) => padrao(f) !== invertidos.has(chaveDe(f))
   const alternar = (f: Feriado) => setInvertidos((s) => { const n = new Set(s); if (n.has(chaveDe(f))) n.delete(chaveDe(f)); else n.add(chaveDe(f)); return n })
-  const aLancar = lista.filter((f) => marcado(f) && !naAgenda[chaveDia(f.data)])
+  const aLancar = linhas.filter((f) => marcado(f) && !f.lancado)
+  const mudarAno = (a: number) => { setAno(a); setInvertidos(new Set()) }
 
-  async function buscar() {
+  async function adicionar() {
     setMsg(null)
-    if (!/^\d{7}$/.test(ibge.trim())) return setMsg({ tipo: 'erro', texto: 'O código IBGE tem 7 dígitos (ex.: 3550308 = São Paulo).' })
-    setBuscando(true)
+    if (!novoData || novoNome.trim().length < 2) return setMsg({ tipo: 'erro', texto: 'Informe a data e o nome do feriado.' })
+    setSalvando(true)
     try {
-      try { localStorage.setItem(CHAVE_IBGE, ibge.trim()) } catch { /* ok */ }
-      const res = await fetch(`/api/feriados?ibge=${ibge.trim()}&ano=${ano}`, { cache: 'no-store' })
-      const dados = await res.json().catch(() => null)
-      if (!res.ok) throw new Error(dados?.message ?? `Erro ${res.status}`)
-      const recebidos: Feriado[] = (dados as { data: string; nome: string; tipo: string }[])
-        .filter((x) => x.tipo === 'municipal' || x.tipo === 'estadual')
-        .map((x) => { const [y, m, d] = x.data.split('-').map(Number); return { data: { y, m: m - 1, d }, nome: x.nome, tipo: x.tipo as TipoFeriado } })
-      setExtras((atual) => [...atual.filter((a) => !recebidos.some((r) => chaveDia(r.data) === chaveDia(a.data) && r.nome === a.nome)), ...recebidos])
-      setMsg({ tipo: 'ok', texto: recebidos.length ? `${recebidos.length} feriado(s) municipal/estadual encontrado(s) para ${ano}.` : 'Nenhum feriado municipal ou estadual encontrado para essa cidade.' })
+      await chamar('POST', '/feriados', { data: novoData, nome: novoNome.trim(), tipo: novoTipo, recorrente: novoRecorrente })
+      const y = Number(novoData.slice(0, 4))
+      setNovoData(''); setNovoNome('')
+      onFeriadosMudaram()
+      if (y !== ano) mudarAno(y); else setRecarga((r) => r + 1)
     } catch (e) {
-      setMsg({ tipo: 'erro', texto: e instanceof Error ? e.message : 'Erro na busca' })
-    } finally { setBuscando(false) }
+      setMsg({ tipo: 'erro', texto: e instanceof Error ? e.message : 'Não foi possível cadastrar' })
+    } finally { setSalvando(false) }
   }
 
-  function adicionarManual() {
+  const remover = useCallback(async (f: Feriado) => {
+    if (!f.id) return
+    const aviso = f.recorrente ? `Remover "${f.nome}"? Ele deixa de aparecer em todos os anos.` : `Remover "${f.nome}"?`
+    if (!confirm(aviso)) return
     setMsg(null)
-    const [y, m, d] = novoData.split('-').map(Number)
-    if (!y || !novoNome.trim()) return setMsg({ tipo: 'erro', texto: 'Informe a data e o nome do feriado.' })
-    mudarAno(y)
-    setExtras((a) => [...a, { data: { y, m: m - 1, d }, nome: novoNome.trim(), tipo: 'municipal' }])
-    setNovoData(''); setNovoNome('')
-  }
+    try {
+      await chamar('DELETE', `/feriados/${f.id}`)
+      onFeriadosMudaram(); setRecarga((r) => r + 1)
+    } catch (e) {
+      setMsg({ tipo: 'erro', texto: e instanceof Error ? e.message : 'Não foi possível remover' })
+    }
+  }, [onFeriadosMudaram])
 
   async function lancar() {
     setMsg(null); setLancando(true)
     let criados = 0
     try {
       for (const f of aLancar) {
+        const d = diaDeFeriado(f)
         await chamar('POST', '/agenda', {
           titulo: `FE - ${f.nome}`,
           descricao: ROTULO_FERIADO[f.tipo],
-          inicio: instante(f.data.y, f.data.m, f.data.d, 0, 0),
-          fim: instante(f.data.y, f.data.m, f.data.d + 1, 0, 0),
+          inicio: instante(d.y, d.m, d.d, 0, 0),
+          fim: instante(d.y, d.m, d.d + 1, 0, 0),
           diaInteiro: true,
           tipoServicoId: tipoFE?.id ?? null,
           ...(tipoFE ? {} : { cor: COR_FERIADO }),
@@ -137,7 +127,9 @@ export function FeriadosModal({ anoInicial, tipos, onFechar, onMudou }: {
             <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900"><Flag size={17} /> Feriados</h2>
             <button onClick={onFechar} aria-label="Fechar" className="p-1 text-gray-500 hover:text-gray-800 rounded-full hover:bg-black/5"><X size={18} /></button>
           </div>
-          <p className="text-xs text-gray-700 mt-1">Os feriados nacionais já aparecem sinalizados na agenda. Aqui você lança na agenda os que a equipe não trabalha (tipo FE, em Grafite) e cadastra os municipais.</p>
+          <p className="text-xs text-gray-700 mt-1">
+            Os feriados já aparecem sinalizados na agenda. Aqui você cadastra os da sua cidade, estado ou da empresa e lança na agenda os dias em que a equipe não trabalha (tipo FE, em Grafite).
+          </p>
         </div>
 
         <div className="overflow-y-auto px-5 py-4 space-y-4">
@@ -149,45 +141,57 @@ export function FeriadosModal({ anoInicial, tipos, onFechar, onMudou }: {
           </div>
 
           <ul className="border border-border rounded-xl divide-y divide-border">
-            {lista.map((f) => {
-              const k = chaveDia(f.data)
-              const ja = !!naAgenda[k]
+            {linhas.length === 0 && !carregando && <li className="px-3 py-4 text-sm text-gray-600 text-center">Nenhum feriado para exibir.</li>}
+            {linhas.map((f) => {
+              const ja = !!f.lancado
+              const d = diaDeFeriado(f)
               return (
-                <li key={chaveDe(f)}>
-                  <label className={`flex items-center gap-3 px-3 py-2 text-sm ${ja ? 'bg-surface/60' : 'hover:bg-surface cursor-pointer'}`}>
-                    {ja
-                      ? <Check size={16} className="text-green-600 shrink-0" aria-label="Já está na agenda" />
-                      : <input type="checkbox" checked={marcado(f)} onChange={() => alternar(f)} className="accent-action w-4 h-4 shrink-0" />}
-                    <span className="w-20 shrink-0 tabular-nums text-gray-700">{dataBR(f.data).slice(0, 5)} <span className="text-gray-500 text-xs">{DIAS_SEMANA[diaDaSemana(f.data)]}</span></span>
-                    <span className="flex-1 min-w-0 text-gray-900">{f.nome}</span>
-                    <span className="text-[11px] text-gray-600 border border-border rounded-full px-2 py-0.5 shrink-0">{ja ? 'Na agenda' : ROTULO_FERIADO[f.tipo]}</span>
-                  </label>
+                <li key={chaveDe(f)} className={`flex items-center gap-3 px-3 py-2 text-sm ${ja ? 'bg-surface/60' : 'hover:bg-surface'}`}>
+                  {ja
+                    ? <Check size={16} className="text-green-600 shrink-0" aria-label="Já está na agenda" />
+                    : <input type="checkbox" checked={marcado(f)} onChange={() => alternar(f)} aria-label={`Lançar ${f.nome} na agenda`} className="accent-action w-4 h-4 shrink-0" />}
+                  <span className="w-20 shrink-0 tabular-nums text-gray-700">{dataBR(d).slice(0, 5)} <span className="text-gray-500 text-xs">{DIAS_SEMANA[diaDaSemana(d)]}</span></span>
+                  <span className="flex-1 min-w-0 text-gray-900">
+                    {f.nome}
+                    {f.recorrente && <Repeat size={12} className="inline ml-1.5 -mt-0.5 text-gray-500" aria-label="Repete todo ano" />}
+                  </span>
+                  <span className="text-[11px] text-gray-600 border border-border rounded-full px-2 py-0.5 shrink-0">{ja ? 'Na agenda' : ROTULO_FERIADO[f.tipo]}</span>
+                  {f.id && (
+                    <button onClick={() => remover(f)} aria-label={`Remover ${f.nome}`} title="Remover"
+                      className="p-1 text-gray-500 hover:text-red-600 rounded hover:bg-red-50 shrink-0"><Trash2 size={14} /></button>
+                  )}
                 </li>
               )
             })}
           </ul>
 
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-gray-800">Feriados municipais e estaduais</p>
-            <div className="flex flex-wrap gap-2 items-center">
-              <input value={ibge} onChange={(e) => setIbge(e.target.value.replace(/\D/g, '').slice(0, 7))} inputMode="numeric"
-                aria-label="Código IBGE da cidade" placeholder="Código IBGE da cidade" className={`${campo} w-48`} />
-              <button onClick={buscar} disabled={buscando}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-sm font-semibold text-gray-700 hover:bg-surface disabled:opacity-60">
-                {buscando ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />} Buscar da internet
-              </button>
-              <a href="https://www.ibge.gov.br/explica/codigos-dos-municipios.php" target="_blank" rel="noopener noreferrer" className="text-xs text-action underline">Qual é o código da minha cidade?</a>
-            </div>
+            <p className="text-sm font-semibold text-gray-800">Cadastrar feriado</p>
+            <p className="text-xs text-gray-600">
+              {cidade && uf
+                ? <>Município da empresa: <strong>{cidade}/{uf}</strong>. </>
+                : <>Informe a cidade e o estado da empresa em <Link href="/configuracoes" className="text-action underline">Configurações</Link>. </>}
+              Cada feriado é cadastrado uma vez; marcando “Repete todo ano”, ele vale para todos os anos.
+            </p>
             <div className="flex flex-wrap gap-2 items-center">
               <input type="date" value={novoData} onChange={(e) => setNovoData(e.target.value)} aria-label="Data do feriado" className={campo} />
-              <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} aria-label="Nome do feriado" placeholder="Ex.: Aniversário da cidade" className={`${campo} flex-1 min-w-[10rem]`}
-                onKeyDown={(e) => { if (e.key === 'Enter') adicionarManual() }} />
-              <button onClick={adicionarManual}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-sm font-semibold text-gray-700 hover:bg-surface">
-                <Plus size={14} /> Adicionar
+              <input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} aria-label="Nome do feriado" placeholder="Ex.: Aniversário da cidade" maxLength={150}
+                className={`${campo} flex-1 min-w-[10rem]`} onKeyDown={(e) => { if (e.key === 'Enter') adicionar() }} />
+              <select value={novoTipo} onChange={(e) => setNovoTipo(e.target.value as typeof novoTipo)} aria-label="Tipo do feriado" className={campo}>
+                <option value="municipal">Municipal</option>
+                <option value="estadual">Estadual</option>
+                <option value="personalizado">Recesso da empresa</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={novoRecorrente} onChange={(e) => setNovoRecorrente(e.target.checked)} className="accent-action w-4 h-4" /> Repete todo ano
+              </label>
+              <button onClick={adicionar} disabled={salvando}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-border rounded-lg text-sm font-semibold text-gray-700 hover:bg-surface disabled:opacity-60">
+                {salvando ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Cadastrar
               </button>
             </div>
-            <p className="text-[11px] text-gray-600">A busca usa a FeriadosAPI (o plano gratuito deles cobre as capitais). Se não achar sua cidade, cadastre à mão: vale para o ano inteiro que você escolher acima.</p>
           </div>
 
           {msg && (

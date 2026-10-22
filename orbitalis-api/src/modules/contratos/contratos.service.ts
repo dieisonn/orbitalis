@@ -1,5 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FeriadosService } from '../feriados/feriados.service';
+import { dataDoCiclo } from '../cron/geracao-preventiva';
+
+export type VisitaCalendario = {
+  data: string;                 // YYYY-MM-DD
+  situacao: 'prevista' | 'aberta' | 'agendada' | 'em_andamento' | 'concluida';
+  osId: string | null;          // null = ainda não gerada (prevista pelo plano)
+  osNumero: number | null;
+  tipoServico: { id: string; sigla: string; nome: string; corHex: string } | null;
+  tecnico: string | null;
+  ambientes: { nome: string; equipamentos: string[] }[];
+};
 
 export type Consumo = {
   planos: number;
@@ -17,7 +29,10 @@ export type Consumo = {
 
 @Injectable()
 export class ContratosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly feriados: FeriadosService,
+  ) {}
 
   /**
    * Consumo do contrato: O.S. geradas pelos planos preventivos vinculados a ele (canceladas
@@ -151,5 +166,119 @@ export class ContratosService {
   async remove(id: string) {
     await this.findOne(id);
     return this.prisma.contrato.delete({ where: { id } });
+  }
+
+  /**
+   * Calendário do contrato num ano: visitas (O.S. já geradas pelos planos preventivos vinculados +
+   * as previstas, ainda não geradas) e os feriados. Só existe para contratos — sem plano vinculado
+   * a lista de visitas vem vazia.
+   */
+  async calendario(id: string, anoParam?: number) {
+    const contrato = await this.prisma.contrato.findUnique({
+      where: { id },
+      include: { cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } } },
+    });
+    if (!contrato) throw new NotFoundException('Contrato não encontrado');
+
+    const anoIni = contrato.vigenciaInicio.getUTCFullYear();
+    const anoFim = contrato.vigenciaFim.getUTCFullYear();
+    const hoje = new Date().getUTCFullYear();
+    const ano = anoParam ?? Math.min(Math.max(hoje, anoIni), anoFim);
+    if (!Number.isInteger(ano) || ano < 1970 || ano > 2100) throw new BadRequestException('Ano inválido');
+
+    const dia0 = new Date(Date.UTC(ano, 0, 1));
+    const dia1 = new Date(Date.UTC(ano + 1, 0, 1));
+    const dentro = (d: Date) => d >= dia0 && d < dia1;
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    const planos = await this.prisma.planoManutencao.findMany({
+      where: { contratoId: id },
+      include: {
+        tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true } },
+        tecnico: { select: { nome: true } },
+        equipamentosConfig: {
+          where: { equipamento: { deletedAt: null, ambiente: { deletedAt: null } } },
+          select: { equipamento: { select: { nome: true, ambiente: { select: { id: true, nome: true } } } } },
+        },
+      },
+    });
+
+    const visitas: VisitaCalendario[] = [];
+    const jaGeradas = new Set<string>(); // plano|dia — evita duplicar a prevista de uma O.S. existente
+
+    if (planos.length) {
+      const ordens = await this.prisma.ordemServico.findMany({
+        where: {
+          planoId: { in: planos.map((p) => p.id) },
+          status: { not: 'cancelada' },
+          dataAgendamento: { gte: dia0, lt: dia1 },
+        },
+        include: {
+          tecnico: { select: { nome: true } },
+          ambiente: { select: { nome: true } },
+          itens: { select: { equipamento: { select: { nome: true } } } },
+        },
+        orderBy: { dataAgendamento: 'asc' },
+      });
+      const doPlano = new Map(planos.map((p) => [p.id, p]));
+      for (const o of ordens) {
+        const plano = doPlano.get(o.planoId as string)!;
+        const data = iso(o.dataAgendamento);
+        jaGeradas.add(`${plano.id}|${data}`);
+        visitas.push({
+          data,
+          situacao: o.status as VisitaCalendario['situacao'],
+          osId: o.id,
+          osNumero: o.numero,
+          tipoServico: plano.tipoServico,
+          tecnico: o.tecnico?.nome ?? plano.tecnico?.nome ?? null,
+          ambientes: [{ nome: o.ambiente.nome, equipamentos: o.itens.map((i) => i.equipamento.nome) }],
+        });
+      }
+
+      // Previstas: ciclos futuros do plano (ainda sem O.S.), até o fim do plano ou do contrato
+      for (const plano of planos) {
+        if (!plano.ativo) continue;
+        const limite = [plano.dataFim, contrato.vigenciaFim].filter((d): d is Date => !!d).reduce((a, b) => (a < b ? a : b));
+        const porAmbiente = new Map<string, { nome: string; equipamentos: string[] }>();
+        for (const c of plano.equipamentosConfig) {
+          const amb = c.equipamento.ambiente;
+          const atual = porAmbiente.get(amb.id) ?? { nome: amb.nome, equipamentos: [] };
+          atual.equipamentos.push(c.equipamento.nome);
+          porAmbiente.set(amb.id, atual);
+        }
+        for (let n = 0; n < 400; n++) {
+          const d = dataDoCiclo(plano.proximaGeracao, plano.frequenciaDias, n);
+          if (d > limite || d >= dia1) break;
+          if (!dentro(d) || jaGeradas.has(`${plano.id}|${iso(d)}`)) continue;
+          visitas.push({
+            data: iso(d),
+            situacao: 'prevista',
+            osId: null,
+            osNumero: null,
+            tipoServico: plano.tipoServico,
+            tecnico: plano.tecnico?.nome ?? null,
+            ambientes: [...porAmbiente.values()],
+          });
+        }
+      }
+    }
+    visitas.sort((a, b) => a.data.localeCompare(b.data));
+
+    const feriados = await this.feriados.listar(ano);
+    return {
+      contrato: {
+        id: contrato.id,
+        descricao: contrato.descricao,
+        vigenciaInicio: contrato.vigenciaInicio,
+        vigenciaFim: contrato.vigenciaFim,
+        numOsIncluidas: contrato.numOsIncluidas,
+        cliente: contrato.cliente,
+      },
+      ano,
+      anosDaVigencia: Array.from({ length: anoFim - anoIni + 1 }, (_, i) => anoIni + i),
+      visitas,
+      feriados: feriados.map(({ data, nome, tipo }) => ({ data, nome, tipo })),
+    };
   }
 }

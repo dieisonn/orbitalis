@@ -10,6 +10,9 @@ type Config = {
   cnpj: string | null
   telefone: string | null
   endereco: string | null
+  cidade?: string | null
+  uf?: string | null
+  codigoIbge?: string | null
 }
 
 export function ConfiguracaoForm({ config }: { config: Config }) {
@@ -18,6 +21,28 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
   const [success, setSuccess] = useState(false)
   const [logoPreview, setLogoPreview] = useState(config.logoUrl ?? '')
   const [cor, setCor] = useState(config.corPrimaria ?? '#0505ad')
+  // Localização: base para feriados estaduais/municipais. Pode ser preenchida pelo CEP (ViaCEP).
+  const [cidade, setCidade] = useState(config.cidade ?? '')
+  const [uf, setUf] = useState(config.uf ?? '')
+  const [ibge, setIbge] = useState(config.codigoIbge ?? '')
+  const [cep, setCep] = useState('')
+  const [buscandoCep, setBuscandoCep] = useState(false)
+  const [avisoCep, setAvisoCep] = useState<string | null>(null)
+
+  async function buscarCep() {
+    const digitos = cep.replace(/\D/g, '')
+    if (digitos.length !== 8) { setAvisoCep('O CEP tem 8 dígitos.'); return }
+    setBuscandoCep(true); setAvisoCep(null)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`)
+      const d = await res.json()
+      if (!res.ok || d?.erro) throw new Error('CEP não encontrado')
+      setCidade(d.localidade ?? ''); setUf((d.uf ?? '').toUpperCase()); setIbge(d.ibge ?? '')
+      setAvisoCep(`Preenchido: ${d.localidade}/${d.uf}. Confira e salve.`)
+    } catch {
+      setAvisoCep('Não foi possível consultar o CEP agora. Preencha a cidade e o estado manualmente.')
+    } finally { setBuscandoCep(false) }
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -32,6 +57,10 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
         fd.get('cnpj') as string,
         fd.get('telefone') as string,
         fd.get('endereco') as string,
+        // só envia a localização se mudou (mantém compatível com a versão anterior do servidor)
+        cidade !== (config.cidade ?? '') || uf !== (config.uf ?? '') || ibge !== (config.codigoIbge ?? '')
+          ? { cidade, uf, codigoIbge: ibge }
+          : undefined,
       )
       if (!result.ok) { setError(result.error ?? 'Erro ao salvar'); return }
       setSuccess(true)
@@ -93,6 +122,43 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
         </div>
+      </div>
+
+      {/* Localização */}
+      <div>
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-1">Localização</p>
+        <p className="text-xs text-gray-500 mb-3">Usada para os feriados do seu município e estado. Informe o CEP para preencher sozinho.</p>
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="md:col-span-3">
+            <label htmlFor="cep-busca" className="block text-sm font-medium text-gray-700 mb-1">CEP da empresa</label>
+            <div className="flex gap-2">
+              <input id="cep-busca" value={cep} onChange={(e) => setCep(e.target.value)} inputMode="numeric" placeholder="00000-000"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); buscarCep() } }}
+                className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              <button type="button" onClick={buscarCep} disabled={buscandoCep}
+                className="px-4 py-2.5 border border-border rounded-lg text-sm font-semibold text-gray-700 hover:bg-surface disabled:opacity-60 whitespace-nowrap">
+                {buscandoCep ? 'Buscando…' : 'Preencher'}
+              </button>
+            </div>
+          </div>
+          <div className="md:col-span-3" />
+          <div className="md:col-span-3">
+            <label htmlFor="cfg-cidade" className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
+            <input id="cfg-cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} maxLength={120} placeholder="Ex: Patos de Minas"
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+          <div className="md:col-span-1">
+            <label htmlFor="cfg-uf" className="block text-sm font-medium text-gray-700 mb-1">UF</label>
+            <input id="cfg-uf" value={uf} onChange={(e) => setUf(e.target.value.toUpperCase().slice(0, 2))} maxLength={2} placeholder="MG"
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+          <div className="md:col-span-2">
+            <label htmlFor="cfg-ibge" className="block text-sm font-medium text-gray-700 mb-1">Código IBGE</label>
+            <input id="cfg-ibge" value={ibge} onChange={(e) => setIbge(e.target.value.replace(/\D/g, '').slice(0, 7))} inputMode="numeric" placeholder="7 dígitos"
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+        </div>
+        {avisoCep && <p role="status" className="text-xs text-gray-600 mt-2">{avisoCep}</p>}
       </div>
 
       {/* Visual */}
