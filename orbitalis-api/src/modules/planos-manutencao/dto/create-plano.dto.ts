@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsUUID,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -39,6 +40,12 @@ export class CreatePlanoManutencaoDto {
   @IsInt()
   @Min(1)
   frequenciaDias: number;
+
+  // Limpezas/inspeções por equipamento incluídas no plano (obrigatório): a geração para ao atingir
+  @IsInt()
+  @Min(1)
+  @Max(120)
+  visitasPrevistas: number;
 
   @IsDateString()
   proximaGeracao: string;

@@ -45,6 +45,7 @@ export class PlanosManutencaoController {
       tecnicoId?: string | null;
       contratoId?: string | null;
       frequenciaDias?: number;
+      visitasPrevistas?: number;
       proximaGeracao?: string;
       dataFim?: string | null;
       ativo?: boolean;

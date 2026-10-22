@@ -57,11 +57,27 @@ export function dataDoCiclo(inicio: Date, frequenciaDias: number, n: number): Da
     : new Date(inicio.getTime() + frequenciaDias * n * 86_400_000);
 }
 
-/** Datas a gerar agora: todas as que cabem até dataFim; sem dataFim, só a próxima. */
-export function datasParaGerar(plano: { proximaGeracao: Date; dataFim: Date | null; frequenciaDias: number }): Date[] {
+/** Visitas que ainda cabem no plano (Infinity = plano antigo, sem limite de visitas). */
+export function visitasRestantes(plano: { visitasPrevistas?: number | null; visitasGeradas?: number | null }): number {
+  return plano.visitasPrevistas == null ? Infinity : Math.max(0, plano.visitasPrevistas - (plano.visitasGeradas ?? 0));
+}
+
+/**
+ * Datas a gerar agora: as que cabem até dataFim, sem passar das visitas incluídas no plano;
+ * sem dataFim, só a próxima.
+ */
+export function datasParaGerar(plano: {
+  proximaGeracao: Date;
+  dataFim: Date | null;
+  frequenciaDias: number;
+  visitasPrevistas?: number | null;
+  visitasGeradas?: number | null;
+}): Date[] {
+  const restantes = visitasRestantes(plano);
+  if (restantes <= 0) return [];
   if (!plano.dataFim) return [new Date(plano.proximaGeracao)];
   const datas: Date[] = [];
-  for (let n = 0; ; n++) {
+  for (let n = 0; n < restantes; n++) {
     const d = dataDoCiclo(plano.proximaGeracao, plano.frequenciaDias, n);
     if (d > plano.dataFim) break;
     datas.push(d);
@@ -169,13 +185,17 @@ export async function gerarOsDoPlano(
 
   const ultimaData = datas[datas.length - 1];
   const proximaGeracao = dataDoCiclo(ultimaData, plano.frequenciaDias, 1);
-  const esgotado = plano.dataFim ? proximaGeracao > plano.dataFim : false;
+  const geradasNoPlano = (plano.visitasGeradas ?? 0) + datas.length;
+  const esgotado =
+    (plano.dataFim ? proximaGeracao > plano.dataFim : false) ||
+    (plano.visitasPrevistas != null && geradasNoPlano >= plano.visitasPrevistas);
 
   await prisma.planoManutencao.update({
     where: { id: plano.id },
     data: {
       ultimaGeracao: ultimaData,
       proximaGeracao,
+      visitasGeradas: geradasNoPlano,
       ...(esgotado ? { ativo: false } : {}),
     },
   });

@@ -250,6 +250,10 @@ model PlanoManutencao {
   tipoServicoId  String?   @map("tipo_servico_id") @db.Uuid
   // Contrato que este plano atende (opcional): permite acompanhar o consumo de O.S. do contrato
   contratoId     String?   @map("contrato_id") @db.Uuid
+  // Visitas (limpezas/inspeções) por equipamento incluídas no plano: limita a geração de O.S.
+  // null = plano antigo, sem limite (só a data limite vale)
+  visitasPrevistas Int?    @map("visitas_previstas")
+  visitasGeradas   Int     @default(0) @map("visitas_geradas")
 
   cliente            Cliente                  @relation(fields: [clienteId], references: [id])
   contrato           Contrato?                @relation(fields: [contratoId], references: [id], onDelete: SetNull)

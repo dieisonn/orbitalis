@@ -11,6 +11,7 @@ export async function criarPlano(data: {
   tipoServicoId?: string
   contratoId?: string
   frequenciaDias: number
+  visitasPrevistas: number
   proximaGeracao: string
   dataFim?: string
   equipamentosConfig: EquipConfig[]
@@ -21,6 +22,7 @@ export async function criarPlano(data: {
     tipoServicoId: data.tipoServicoId || undefined,
     contratoId: data.contratoId || undefined,
     frequenciaDias: data.frequenciaDias,
+    visitasPrevistas: data.visitasPrevistas,
     proximaGeracao: data.proximaGeracao,
     dataFim: data.dataFim || undefined,
     ativo: true,

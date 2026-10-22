@@ -67,6 +67,7 @@ export class PlanosManutencaoService {
           tipoServicoId: dto.tipoServicoId || null,
           contratoId: dto.contratoId || null,
           frequenciaDias: dto.frequenciaDias,
+          visitasPrevistas: dto.visitasPrevistas,
           proximaGeracao: new Date(dto.proximaGeracao),
           dataFim: dto.dataFim ? new Date(dto.dataFim) : null,
           ativo: dto.ativo ?? true,
@@ -146,6 +147,7 @@ export class PlanosManutencaoService {
       tecnicoId?: string | null;
       tipoServicoId?: string | null;
       frequenciaDias?: number;
+      visitasPrevistas?: number;
       proximaGeracao?: string;
       dataFim?: string | null;
       ativo?: boolean;
@@ -156,6 +158,14 @@ export class PlanosManutencaoService {
     if (!plano) throw new NotFoundException('Plano não encontrado');
 
     const { proximaGeracao, dataFim, equipamentosConfig, ...rest } = data;
+
+    if (rest.visitasPrevistas !== undefined) {
+      const v = Number(rest.visitasPrevistas);
+      if (!Number.isInteger(v) || v < 1 || v > 120) {
+        throw new BadRequestException('Informe de 1 a 120 visitas por equipamento incluídas no plano');
+      }
+      rest.visitasPrevistas = v;
+    }
 
     const contratoPatch = (rest as { contratoId?: string | null }).contratoId;
     if (contratoPatch) {

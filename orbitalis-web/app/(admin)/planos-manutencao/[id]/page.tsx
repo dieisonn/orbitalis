@@ -33,6 +33,8 @@ type EquipConfig = {
 type Plano = {
   id: string
   frequenciaDias: number
+  visitasPrevistas: number | null
+  visitasGeradas: number
   ativo: boolean
   proximaGeracao: string
   ultimaGeracao: string | null
@@ -155,6 +157,14 @@ export default async function DetalhePlanoPage({ params }: Props) {
             <p className={`text-sm font-semibold ${elegivel ? 'text-action' : 'text-gray-800'}`}>
               {proxData.toLocaleDateString('pt-BR')}
               {elegivel && <span className="ml-1 text-[10px] bg-action/10 text-action px-1.5 py-0.5 rounded-full">pronta</span>}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 mb-0.5">Visitas por equipamento</p>
+            <p className="text-sm font-semibold text-gray-800">
+              {plano.visitasPrevistas != null
+                ? `${Math.min(plano.visitasGeradas, plano.visitasPrevistas)} de ${plano.visitasPrevistas} geradas`
+                : <span className="text-gray-400 font-normal italic">Não definido — edite o plano</span>}
             </p>
           </div>
           <div>
