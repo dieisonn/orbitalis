@@ -34,6 +34,7 @@ export class PadroesIniciaisService implements OnApplicationBootstrap {
           if ((await this.prisma.modeloChecklist.count()) === 0) {
             await this.checklists.seedPmocSplitHiwall();
             await this.checklists.seedAnvisa();
+            await this.checklists.seedLimpezaQuimica();
             await this.checklists.seedCorretiva();
             this.logger.log(`Checklists padrão criados para ${emp.slug}`);
           }

@@ -29,6 +29,12 @@ export class ModelosChecklistController {
     return this.service.seedAnvisa();
   }
 
+  @Post('seed-limpeza-quimica')
+  @Roles(UsuarioTipo.admin)
+  seedLimpezaQuimica() {
+    return this.service.seedLimpezaQuimica();
+  }
+
   @Post('seed-corretiva')
   @Roles(UsuarioTipo.admin)
   seedCorretiva() {

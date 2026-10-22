@@ -96,7 +96,7 @@ export class AuthService {
       },
     });
 
-    // Catálogo inicial da empresa: tipos de serviço e checklists padrão (PMOC, ANVISA e corretiva)
+    // Catálogo inicial da empresa: tipos de serviço e checklists padrão (PMOC, ANVISA, limpeza química e corretiva)
     await this.semearPadroes(empresa.id);
 
     const payload = {
@@ -122,6 +122,7 @@ export class AuthService {
       await runWithTenant(empresaId, async () => {
         await this.checklists.seedPmocSplitHiwall();
         await this.checklists.seedAnvisa();
+        await this.checklists.seedLimpezaQuimica();
         await this.checklists.seedCorretiva();
       });
     } catch (e) {
