@@ -26,7 +26,7 @@ export function ordenarClientes<T extends ClienteOpcao>(lista: T[]): T[] {
  */
 export function ClienteSelect({
   clientes, value, defaultValue = '', onChange, name, required, disabled, placeholder = 'Selecione o cliente…',
-  vazio, ariaLabel, id, className = '',
+  vazio, ariaLabel, id, className = '', onCriar,
 }: {
   clientes: ClienteOpcao[]
   value?: string
@@ -40,6 +40,7 @@ export function ClienteSelect({
   ariaLabel?: string
   id?: string
   className?: string
+  onCriar?: (busca: string) => void   // mostra "Cadastrar novo cliente" no fim da lista
 }) {
   const uid = useId()
   const [interno, setInterno] = useState(defaultValue)
@@ -142,6 +143,13 @@ export function ClienteSelect({
               </li>
             )
           })}
+          {onCriar && (
+            <li role="option" aria-selected={false} id={`${uid}-criar`}
+              onMouseDown={(e) => e.preventDefault()} onClick={() => { const b = busca.trim(); setAberto(false); setBusca(''); onCriar(b) }}
+              className="px-3 py-2 cursor-pointer text-sm font-semibold text-action border-t border-border hover:bg-gray-100">
+              + {busca.trim() ? <>Cadastrar “{busca.trim()}” como novo cliente</> : 'Cadastrar novo cliente'}
+            </li>
+          )}
         </ul>
       )}
     </div>

@@ -6,6 +6,7 @@ import { ChecklistSelect } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 import { textoSobre } from '@/lib/cor'
 import { ClienteSelect } from '@/components/ui/cliente-select'
+import { ClienteRapidoModal } from '@/components/ui/cliente-rapido-modal'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string }
 type Ambiente = {
@@ -20,7 +21,7 @@ type Tecnico = { id: string; email: string; nome: string | null }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string; ativo: boolean }
 
 export function NovaOsForm({
-  ambientes,
+  ambientes: ambientesIniciais,
   tecnicos,
   tiposServico,
   modelos,
@@ -38,6 +39,8 @@ export function NovaOsForm({
   const [tipoServicoId, setTipoServicoId] = useState('')
   const [tipo, setTipo]                   = useState<TipoOs>('corretiva')
   const [modeloChecklistId, setModeloChecklistId] = useState('')
+  const [ambientes, setAmbientes] = useState<Ambiente[]>(ambientesIniciais)   // cresce com o cadastro rápido
+  const [cadastrando, setCadastrando] = useState<string | null>(null)
 
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -158,7 +161,18 @@ export function NovaOsForm({
           Cliente <span className="text-destructive">*</span>
         </label>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
+          onCriar={(busca) => setCadastrando(busca)}
           onChange={(id) => { setClienteId(id); setAmbienteId(''); setEquipamentoId('') }} />
+        {cadastrando !== null && (
+          <ClienteRapidoModal nomeInicial={cadastrando} comAmbiente onFechar={() => setCadastrando(null)}
+            onCriado={({ cliente, ambiente }) => {
+              if (ambiente) {
+                setAmbientes((l) => [...l, { ...ambiente, cliente: { id: cliente.id, razaoSocial: cliente.razaoSocial, nomeFantasia: null }, equipamentos: [] }])
+                setAmbienteId(ambiente.id)
+              }
+              setClienteId(cliente.id); setEquipamentoId(''); setCadastrando(null)
+            }} />
+        )}
       </div>
 
       {/* Ambiente */}

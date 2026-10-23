@@ -1,6 +1,7 @@
 'use client'
 
 import { EnderecoInput } from '@/components/ui/endereco-input'
+import { ClienteRapidoModal } from '@/components/ui/cliente-rapido-modal'
 import { useEffect, useState } from 'react'
 import { X, MapPin, Loader2, User, Clock, Building2, Repeat, AlignLeft, Palette, Wrench } from 'lucide-react'
 import {
@@ -75,7 +76,7 @@ function Linha({ icone, children }: { icone: React.ReactNode; children: React.Re
   )
 }
 
-function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou, onCancelar }: Props & { onCancelar: () => void }) {
+function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos, clientes: clientesIniciais, tecnicos, onFechar, onMudou, onCancelar }: Props & { onCancelar: () => void }) {
   const ehOs = !!evento?.ordemServico
   const origem = evento ?? modelo   // de onde vêm os valores iniciais (editar ou duplicar)
   const h0 = hoje()
@@ -117,6 +118,9 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const tipo = tipos.find((t) => t.id === tipoId)
   const corPadrao = tipo?.corHex ?? COR_PADRAO
   const corEfetiva = corPropria ?? corPadrao
+  const [novos, setNovos] = useState<ClienteOpcao[]>([])       // cadastrados aqui mesmo, ainda fora da lista da página
+  const [cadastrando, setCadastrando] = useState<string | null>(null)
+  const clientes = [...clientesIniciais, ...novos]
   const cliente = clientes.find((c) => c.id === clienteId)
 
   function minutosDe(h: string) { const [a, b] = h.split(':').map(Number); return a * 60 + b }
@@ -258,8 +262,14 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         </Linha>
 
         <Linha icone={<Building2 size={16} />}>
-          <ClienteSelect ariaLabel="Cliente" value={clienteId} disabled={ehOs} clientes={clientes} vazio="Cliente (opcional)"
+          <ClienteSelect ariaLabel="Cliente" value={clienteId} disabled={ehOs} clientes={clientes} vazio="Cliente (opcional)" onCriar={(busca) => setCadastrando(busca)}
             onChange={(id) => { const c = clientes.find((x) => x.id === id); setClienteId(id); aplicar(tipo, c) }} />
+          {cadastrando !== null && (
+            <ClienteRapidoModal nomeInicial={cadastrando} onFechar={() => setCadastrando(null)}
+              onCriado={({ cliente: novo }) => {
+                setNovos((l) => [...l, novo]); setClienteId(novo.id); aplicar(tipo, novo); setCadastrando(null)
+              }} />
+          )}
         </Linha>
 
         <Linha icone={<Clock size={16} />}>
