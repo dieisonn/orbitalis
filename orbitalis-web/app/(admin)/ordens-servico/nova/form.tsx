@@ -5,6 +5,7 @@ import { criarOs } from './actions'
 import { ChecklistSelect } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 import { textoSobre } from '@/lib/cor'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string }
 type Ambiente = {
@@ -156,19 +157,8 @@ export function NovaOsForm({
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Cliente <span className="text-destructive">*</span>
         </label>
-        <select
-          value={clienteId}
-          onChange={(e) => { setClienteId(e.target.value); setAmbienteId(''); setEquipamentoId('') }}
-          required
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-        >
-          <option value="">Selecione o cliente…</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nomeFantasia ?? c.razaoSocial}
-            </option>
-          ))}
-        </select>
+        <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
+          onChange={(id) => { setClienteId(id); setAmbienteId(''); setEquipamentoId('') }} />
       </div>
 
       {/* Ambiente */}

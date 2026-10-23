@@ -331,9 +331,6 @@ export default async function ClienteDetalhePage({ params }: Props) {
                 {fmtDate(contratoAtivo.vigenciaInicio)} → {fmtDate(contratoAtivo.vigenciaFim)}
                 {contratoAtivo.valorMensal != null && ` · ${fmtBRL(Number(contratoAtivo.valorMensal))}/mês`}
               </p>
-              {contratoAtivo.numOsIncluidas != null && (
-                <p className="text-xs text-gray-400 mt-0.5">{contratoAtivo.numOsIncluidas} O.S. inclusas/mês</p>
-              )}
             </div>
           )}
         </div>

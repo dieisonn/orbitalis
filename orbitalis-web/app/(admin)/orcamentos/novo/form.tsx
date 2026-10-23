@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 import { ChecklistSelect } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 type Ambiente = { id: string; nome: string; clienteId: string }
@@ -105,15 +106,8 @@ export function NovoOrcamentoForm({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Cliente *</label>
-            <select
-              value={clienteId} onChange={(e) => { setClienteId(e.target.value); setAmbienteId('') }} required
-              className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">Selecione...</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nomeFantasia ?? c.razaoSocial}</option>
-              ))}
-            </select>
+            <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
+              onChange={(id) => { setClienteId(id); setAmbienteId('') }} />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Validade (dias)</label>

@@ -55,7 +55,6 @@ export default async function ContratosPage() {
                 <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Descrição</th>
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
                 <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor Total</th>
-                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="Ordens de Serviço incluídas mensalmente no contrato">O.S./mês</th>
                 <th className="hidden lg:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="O.S. dos planos preventivos vinculados: concluídas / geradas">Consumo</th>
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
                 <th className="px-4 py-3"><span className="sr-only">Ações</span></th>
@@ -104,15 +103,11 @@ export default async function ContratosPage() {
                         <div className="text-[10px] text-gray-400">{fmtBRL(c.valorMensal)}/mês × {meses}</div>
                       )}
                     </td>
-                    <td className="hidden md:table-cell px-4 py-3 text-gray-500 text-xs">{c.numOsIncluidas ?? '—'}</td>
                     <td className="hidden lg:table-cell px-4 py-3 text-xs whitespace-nowrap">
                       {c.consumo && c.consumo.planos > 0 ? (
                         <>
                           <span className="font-semibold text-gray-700">{c.consumo.osConcluidas}/{c.consumo.osGeradas}</span>
                           <span className="text-gray-400"> O.S.</span>
-                          {(c.consumo.excedeuMes || c.consumo.excedeuPeriodo) && (
-                            <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">acima do incluso</span>
-                          )}
                         </>
                       ) : (
                         <span className="text-gray-500" title="Vincule um plano preventivo a este contrato">sem plano</span>

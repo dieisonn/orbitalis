@@ -2,6 +2,7 @@
 import { criarContrato } from '../actions'
 import { FileText } from 'lucide-react'
 import { SubmitBtn } from './submit-btn'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 type Props = { searchParams: Promise<{ clienteId?: string }> }
@@ -31,13 +32,7 @@ export default async function NovoContratoPage({ searchParams }: Props) {
         <form action={criarContrato} className="space-y-4">
           <div>
             <label className="block text-xs text-gray-500 mb-1">Cliente *</label>
-            <select name="clienteId" required defaultValue={preCliente ?? ''}
-              className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-              <option value="">Selecione um cliente…</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nomeFantasia ?? c.razaoSocial}</option>
-              ))}
-            </select>
+            <ClienteSelect name="clienteId" required defaultValue={preCliente ?? ''} clientes={clientes} ariaLabel="Cliente" />
           </div>
 
           <div>
@@ -63,11 +58,6 @@ export default async function NovoContratoPage({ searchParams }: Props) {
             <div>
               <label className="block text-xs text-gray-500 mb-1">Valor mensal (R$)</label>
               <input name="valorMensal" type="number" step="0.01" min="0" placeholder="0,00"
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">O.S. inclusas/mês</label>
-              <input name="numOsIncluidas" type="number" min="0" placeholder="—"
                 className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30" />
             </div>
           </div>

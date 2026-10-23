@@ -9,6 +9,7 @@ import {
 } from '@/lib/agenda'
 import { textoSobre } from '@/lib/cor'
 import { PaletaCor } from './paleta-cor'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 export type TipoOpcao = { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number; ativo: boolean }
 export type ClienteOpcao = { id: string; razaoSocial: string; nomeFantasia: string | null; endereco: string; telefone: string | null }
@@ -256,11 +257,8 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         </Linha>
 
         <Linha icone={<Building2 size={16} />}>
-          <select aria-label="Cliente" value={clienteId} disabled={ehOs} className={campo}
-            onChange={(e) => { const c = clientes.find((x) => x.id === e.target.value); setClienteId(e.target.value); aplicar(tipo, c) }}>
-            <option value="">Cliente (opcional)</option>
-            {clientes.map((c) => <option key={c.id} value={c.id}>{nomeCliente(c)}</option>)}
-          </select>
+          <ClienteSelect ariaLabel="Cliente" value={clienteId} disabled={ehOs} clientes={clientes} vazio="Cliente (opcional)"
+            onChange={(id) => { const c = clientes.find((x) => x.id === id); setClienteId(id); aplicar(tipo, c) }} />
         </Linha>
 
         <Linha icone={<Clock size={16} />}>

@@ -9,7 +9,6 @@ export async function criarContrato(formData: FormData) {
     valorMensal:    formData.get('valorMensal') ? parseFloat(formData.get('valorMensal') as string) : undefined,
     vigenciaInicio: formData.get('vigenciaInicio') as string,
     vigenciaFim:    formData.get('vigenciaFim') as string,
-    numOsIncluidas: formData.get('numOsIncluidas') ? parseInt(formData.get('numOsIncluidas') as string) : undefined,
     observacoes:    (formData.get('observacoes') as string) || undefined,
   }
   await api.post('/contratos', data)

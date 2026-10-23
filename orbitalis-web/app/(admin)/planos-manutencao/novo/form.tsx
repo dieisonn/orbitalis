@@ -6,6 +6,9 @@ import { criarPlano } from './actions'
 import { CampoVisitas } from '../campo-visitas'
 import { Building2, Cpu } from 'lucide-react'
 import { textoSobre } from '@/lib/cor'
+import { CampoData } from '@/components/ui/campo-data'
+import { hojeISO, somarDiasISO, somarMesesISO, proximoDiaDaSemana } from '@/lib/datas'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Equipamento = {
   id: string
@@ -57,12 +60,13 @@ export function NovoPlanoForm({
   const [contratoId, setContratoId] = useState('')
   const [visitas, setVisitas] = useState('')
   const [freq, setFreq] = useState(30)
-  const [prox, setProx] = useState(() => new Date().toISOString().split('T')[0])
+  const [prox, setProx] = useState(() => hojeISO())
   const [limite, setLimite] = useState('')
   // { equipamentoId: modeloChecklistId | '' }
   const [checklistPorEquip, setChecklistPorEquip] = useState<Record<string, string>>({})
 
-  const hoje = new Date().toISOString().split('T')[0]
+  const hoje = hojeISO()
+  const base = prox || hoje
 
   const clientes = useMemo(() => {
     const map = new Map<string, NonNullable<Ambiente['cliente']>>()
@@ -149,20 +153,7 @@ export function NovoPlanoForm({
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Cliente <span className="text-destructive">*</span>
           </label>
-          <select
-            value={clienteId}
-            onChange={(e) => handleClienteChange(e.target.value)}
-            required
-            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-          >
-            <option value="">Selecione o cliente…</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nomeFantasia ?? c.razaoSocial}
-                {c.nomeFantasia ? ` — ${c.razaoSocial}` : ''}
-              </option>
-            ))}
-          </select>
+          <ClienteSelect clientes={clientes} value={clienteId} onChange={handleClienteChange} required ariaLabel="Cliente" />
         </div>
 
         <ContratoSelect contratos={contratos} clienteId={clienteId} value={contratoId} onChange={setContratoId} />
@@ -233,26 +224,26 @@ export function NovoPlanoForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Primeira Geração de O.S. <span className="text-destructive">*</span>
             </label>
-            <input
-              name="proximaGeracao"
-              type="date"
-              required
-              defaultValue={hoje}
-              onChange={(e) => setProx(e.target.value)}
-              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
+            <CampoData name="proximaGeracao" required value={prox} onChange={setProx} ariaLabel="Primeira geração de O.S."
+              atalhos={[
+                { rotulo: 'Hoje', iso: hoje },
+                { rotulo: 'Amanhã', iso: somarDiasISO(hoje, 1) },
+                { rotulo: 'Próxima segunda', iso: proximoDiaDaSemana(hoje, 1) },
+                { rotulo: 'Em 1 semana', iso: somarDiasISO(hoje, 7) },
+                { rotulo: 'Em 1 mês', iso: somarMesesISO(hoje, 1) },
+              ]} />
           </div>
 
           {/* Data fim */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data Limite</label>
-            <input
-              name="dataFim"
-              type="date"
-              min={hoje}
-              onChange={(e) => setLimite(e.target.value)}
-              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
+            <CampoData name="dataFim" value={limite} onChange={setLimite} min={base} ariaLabel="Data limite"
+              atalhos={[
+                { rotulo: '+ 6 meses', iso: somarMesesISO(base, 6) },
+                { rotulo: '+ 1 ano', iso: somarMesesISO(base, 12) },
+                { rotulo: '+ 2 anos', iso: somarMesesISO(base, 24) },
+                { rotulo: '+ 3 anos', iso: somarMesesISO(base, 36) },
+              ]} />
             <p className="text-xs text-gray-500 mt-1">Opcional. As O.S. param ao atingir as visitas do plano ou esta data, o que vier primeiro.</p>
           </div>
 

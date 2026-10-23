@@ -1,5 +1,7 @@
 ﻿'use client'
 
+import { contem } from '@/lib/busca'
+
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Building2, Cpu, ChevronDown, Plus, Search, X } from 'lucide-react'
@@ -43,17 +45,14 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
 
   const filtered = useMemo(() => {
     if (!query.trim()) return grupos
-    const q = query.toLowerCase()
+    const q = query.trim()
     return grupos.flatMap((g) => {
-      const clienteMatch = (g.cliente.nomeFantasia ?? g.cliente.razaoSocial)
-        .toLowerCase()
-        .includes(q)
+      const clienteMatch = contem(g.cliente.nomeFantasia, q) || contem(g.cliente.razaoSocial, q)
       const ambsFiltrados = clienteMatch
         ? g.ambientes
         : g.ambientes.filter(
             (a) =>
-              a.nome.toLowerCase().includes(q) ||
-              a.localizacaoInterna?.toLowerCase().includes(q),
+              contem(a.nome, q) || contem(a.localizacaoInterna, q),
           )
       if (ambsFiltrados.length === 0) return []
       return [{ ...g, ambientes: ambsFiltrados }]

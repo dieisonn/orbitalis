@@ -1,5 +1,7 @@
 ﻿'use client'
 
+import { contem, compararNomes } from '@/lib/busca'
+
 import { useState, useMemo } from 'react'
 import {
   Cpu, Search, X, Printer, History, Pencil,
@@ -87,23 +89,15 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
   )
 
   const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim()
+    const q = query.trim()
     return equipamentos.filter((e) => {
       if (tipoFilter && e.tipoEquipamento !== tipoFilter) return false
       if (condFilter && (e.condicao ?? '') !== condFilter) return false
       if (!q) return true
-      const clienteNome =
-        e.ambiente?.cliente?.nomeFantasia ?? e.ambiente?.cliente?.razaoSocial ?? ''
-      return (
-        e.nome.toLowerCase().includes(q) ||
-        e.marca.toLowerCase().includes(q) ||
-        (e.modelo ?? '').toLowerCase().includes(q) ||
-        e.tipoEquipamento.toLowerCase().includes(q) ||
-        (e.potencia ?? '').toLowerCase().includes(q) ||
-        (e.numeroSerie ?? '').toLowerCase().includes(q) ||
-        (e.ambiente?.nome ?? '').toLowerCase().includes(q) ||
-        clienteNome.toLowerCase().includes(q)
-      )
+      return [
+        e.nome, e.marca, e.modelo, e.tipoEquipamento, e.potencia, e.numeroSerie,
+        e.ambiente?.nome, e.ambiente?.cliente?.nomeFantasia, e.ambiente?.cliente?.razaoSocial,
+      ].some((campo) => contem(campo, q))
     })
   }, [equipamentos, query, tipoFilter, condFilter])
 
@@ -125,7 +119,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
       map.get(clienteId)!.items.push(eq)
     }
     return Array.from(map.values()).sort((a, b) =>
-      a.clienteNome.localeCompare(b.clienteNome),
+      compararNomes(a.clienteNome, b.clienteNome),
     )
   }, [filtered])
 

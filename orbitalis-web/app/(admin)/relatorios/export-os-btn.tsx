@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Download, Loader2 } from 'lucide-react'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 type Tecnico = { id: string; nome: string | null; email: string }
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 
@@ -93,11 +94,7 @@ export function ExportOsBtn({ tecnicos, clientes }: { tecnicos: Tecnico[]; clien
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">Cliente</label>
-          <select value={clienteId} onChange={(e) => setClienteId(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white">
-            <option value="">Todos os clientes</option>
-            {clientes.map((c) => <option key={c.id} value={c.id}>{c.nomeFantasia ?? c.razaoSocial}</option>)}
-          </select>
+          <ClienteSelect clientes={clientes} value={clienteId} onChange={setClienteId} vazio="Todos os clientes" ariaLabel="Cliente" />
         </div>
       </div>
 

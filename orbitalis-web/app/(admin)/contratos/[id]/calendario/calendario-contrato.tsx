@@ -180,7 +180,7 @@ export function CalendarioContrato({ dados, config }: { dados: DadosCalendario; 
         <section className="quebra" aria-label="Detalhamento das visitas" style={{ paddingTop: '4px' }}>
           <h2 style={{ margin: '0 0 2px', fontSize: '15pt', color: cor }}>O que será feito em {ano}</h2>
           <p style={{ margin: '0 0 8px', fontSize: '8.5pt', color: '#404040' }}>
-            {cliente} · {contrato.descricao}{contrato.numOsIncluidas != null ? ` · ${contrato.numOsIncluidas} O.S. incluídas por mês` : ''}
+            {cliente} · {contrato.descricao}
           </p>
           {visitas.length === 0 ? (
             <p style={{ fontSize: '10pt', color: '#404040' }}>

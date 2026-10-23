@@ -1,6 +1,8 @@
 'use client'
 
 import { useTransition, useState, useMemo } from 'react'
+import { CampoData } from '@/components/ui/campo-data'
+import { hojeISO, somarDiasISO, somarMesesISO, proximoDiaDaSemana } from '@/lib/datas'
 import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { editarPlano } from './actions'
 import { CampoVisitas } from '../../campo-visitas'
@@ -226,15 +228,25 @@ export function EditarPlanoForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Próxima Geração <span className="text-destructive">*</span>
             </label>
-            <input name="proximaGeracao" type="date" required defaultValue={proxDate} onChange={(e) => setProx(e.target.value)}
-              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <CampoData name="proximaGeracao" required value={prox} onChange={setProx} ariaLabel="Próxima geração"
+              atalhos={[
+                { rotulo: 'Hoje', iso: hojeISO() },
+                { rotulo: 'Amanhã', iso: somarDiasISO(hojeISO(), 1) },
+                { rotulo: 'Próxima segunda', iso: proximoDiaDaSemana(hojeISO(), 1) },
+                { rotulo: 'Em 1 mês', iso: somarMesesISO(hojeISO(), 1) },
+              ]} />
           </div>
 
           {/* Data fim */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Data Limite</label>
-            <input name="dataFim" type="date" defaultValue={fimDate} onChange={(e) => setLimite(e.target.value)}
-              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <CampoData name="dataFim" value={limite} onChange={setLimite} min={prox || undefined} ariaLabel="Data limite"
+              atalhos={[
+                { rotulo: '+ 6 meses', iso: somarMesesISO(prox || hojeISO(), 6) },
+                { rotulo: '+ 1 ano', iso: somarMesesISO(prox || hojeISO(), 12) },
+                { rotulo: '+ 2 anos', iso: somarMesesISO(prox || hojeISO(), 24) },
+                { rotulo: '+ 3 anos', iso: somarMesesISO(prox || hojeISO(), 36) },
+              ]} />
           </div>
 
           {/* Visitas por equipamento */}

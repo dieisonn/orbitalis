@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Search, X, AlertCircle } from 'lucide-react'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Tecnico  = { id: string; email: string; nome: string | null }
 type Cliente  = { id: string; razaoSocial: string; nomeFantasia: string | null }
@@ -157,17 +158,8 @@ export function OsFilterBar({
           ))}
         </select>
 
-        <select
-          aria-label="Filtrar por cliente"
-          value={currentClienteId ?? ''}
-          onChange={(e) => router.push(buildUrl({ clienteId: e.target.value || undefined }))}
-          className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white min-w-[180px]"
-        >
-          <option value="">Todos os clientes</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>{c.nomeFantasia ?? c.razaoSocial}</option>
-          ))}
-        </select>
+        <div className="min-w-[220px]"><ClienteSelect ariaLabel="Filtrar por cliente" clientes={clientes} value={currentClienteId ?? ''} vazio="Todos os clientes"
+          onChange={(id) => router.push(buildUrl({ clienteId: id || undefined }))} className="!py-1.5" /></div>
 
         <div className="flex items-center gap-1">
           <input

@@ -87,7 +87,6 @@ export default async function ContratoPage({ params }: Props) {
             { label: 'Início', value: fmtDate(contrato.vigenciaInicio) },
             { label: 'Vencimento', value: fmtDate(contrato.vigenciaFim) },
             { label: 'Valor Mensal', value: fmtBRL(contrato.valorMensal) },
-            { label: 'O.S. inclusas/mês', value: contrato.numOsIncluidas != null ? String(contrato.numOsIncluidas) : '—' },
           ].map(({ label, value }) => (
             <div key={label} className="bg-surface rounded-xl p-3">
               <p className="text-xs text-gray-400 mb-0.5">{label}</p>
@@ -126,12 +125,6 @@ export default async function ContratoPage({ params }: Props) {
                   </div>
                 ))}
               </div>
-              {contrato.consumo.osIncluidasMes != null && (
-                <p className={`text-xs mt-3 ${contrato.consumo.excedeuMes || contrato.consumo.excedeuPeriodo ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
-                  Este mês: {contrato.consumo.osNoMes} de {contrato.consumo.osIncluidasMes} O.S. incluídas
-                  {' · '}Vigência ({contrato.consumo.meses} meses): {contrato.consumo.osGeradas} de {contrato.consumo.osIncluidasPeriodo}
-                </p>
-              )}
               <p className="text-[11px] text-gray-400 mt-1">
                 {contrato.consumo.planos} plano(s) preventivo(s) vinculado(s) · canceladas não contam
               </p>

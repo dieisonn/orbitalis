@@ -2,6 +2,7 @@
 
 import { useTransition, useState, useRef } from 'react'
 import { criarEquipamento } from './actions'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Ambiente = {
   id: string
@@ -88,16 +89,8 @@ export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambiente
       {/* Cliente */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-        <select
-          value={clienteId}
-          onChange={(e) => { setClienteId(e.target.value); setAmbienteId('') }}
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-        >
-          <option value="">Todos os clientes…</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>{c.nomeFantasia ?? c.razaoSocial}</option>
-          ))}
-        </select>
+        <ClienteSelect clientes={clientes} value={clienteId} vazio="Todos os clientes…" ariaLabel="Cliente"
+          onChange={(id) => { setClienteId(id); setAmbienteId('') }} />
       </div>
 
       {/* Ambiente */}

@@ -2,6 +2,7 @@
 
 import { useTransition, useState, useRef } from 'react'
 import { criarAmbiente } from './actions'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 
@@ -45,20 +46,7 @@ export function NovoAmbienteForm({ clientes, clienteIdInicial }: { clientes: Cli
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Cliente <span className="text-destructive">*</span>
         </label>
-        <select
-          name="clienteId"
-          required
-          value={clienteSel}
-          onChange={(e) => setClienteSel(e.target.value)}
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-        >
-          <option value="">Selecione o cliente…</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nomeFantasia ?? c.razaoSocial}
-            </option>
-          ))}
-        </select>
+        <ClienteSelect name="clienteId" required clientes={clientes} value={clienteSel} onChange={setClienteSel} ariaLabel="Cliente" />
       </div>
 
       <div>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ArrowLeft, Download } from 'lucide-react'
 import { api } from '@/lib/api'
 import { buscarRelatorio, queryDoRelatorio, type Filtros } from './dados'
+import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Props = { searchParams: Promise<Filtros> }
 type Opcao = { id: string; nome: string | null; email?: string; razaoSocial?: string; nomeFantasia?: string | null }
@@ -104,10 +105,7 @@ export default async function RelatorioAgendaPage({ searchParams }: Props) {
             </select>
           </label>
           <label className="text-sm text-gray-600">Cliente
-            <select name="clienteId" defaultValue={f.clienteId ?? ''} className="block mt-1 px-3 py-1.5 border border-border rounded-md text-sm bg-white min-w-[180px] max-w-[260px]">
-              <option value="">Todos</option>
-              {clientesRes.data.map((c) => <option key={c.id} value={c.id}>{c.nomeFantasia || c.razaoSocial}</option>)}
-            </select>
+            <ClienteSelect name="clienteId" defaultValue={f.clienteId ?? ''} clientes={clientesRes.data.map((c) => ({ id: c.id, razaoSocial: c.razaoSocial ?? c.nomeFantasia ?? '', nomeFantasia: c.nomeFantasia }))} vazio="Todos" ariaLabel="Cliente" className="!py-1.5 min-w-[220px]" />
           </label>
           <button type="submit" className="px-4 py-1.5 text-sm font-semibold text-white bg-action rounded-md hover:bg-action/90">Aplicar</button>
         </div>

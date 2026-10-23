@@ -236,3 +236,48 @@ tbody tr { transition: background-color .12s; }
 :root.is-dark .text-primary\/80 { color: #a9b8ff !important; }
 :root.is-dark .text-action { color: #8fa2ff !important; }
 :root.is-dark thead th { color: #98a3b6; }
+
+/* ── Listas suspensas (<select>) com a cara do Orbitalis ──────
+   `appearance: base-select` libera o estilo da caixa E da lista que abre (Chrome/Edge 135+).
+   Onde o navegador não suporta (Safari/Firefox), continua o seletor nativo, sem quebrar nada. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]),
+  select:not([multiple]):not([size])::picker(select) {
+    appearance: base-select;
+  }
+  select:not([multiple]):not([size]) {
+    display: inline-flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+    cursor: pointer;
+  }
+  select:not([multiple]):not([size]):disabled { cursor: not-allowed; }
+  select:not([multiple]):not([size])::picker-icon {
+    content: ""; width: 0.5rem; height: 0.5rem; margin-right: 0.15rem;
+    border-right: 2px solid var(--color-gray-500); border-bottom: 2px solid var(--color-gray-500);
+    transform: translateY(-25%) rotate(45deg); transition: transform .15s ease;
+  }
+  select:not([multiple]):not([size]):open::picker-icon { transform: translateY(15%) rotate(-135deg); }
+
+  select:not([multiple]):not([size])::picker(select) {
+    margin-top: 4px; padding: 4px; max-height: min(20rem, 60vh); overflow-y: auto;
+    background: #fff; color: var(--color-gray-900);
+    border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+  }
+  select:not([multiple]):not([size]) option {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.75rem; border-radius: var(--radius-md);
+    font-size: 0.875rem; line-height: 1.3; cursor: pointer; background: transparent; color: inherit;
+  }
+  select:not([multiple]):not([size]) option:hover,
+  select:not([multiple]):not([size]) option:focus-visible { background: var(--color-gray-100); outline: none; }
+  select:not([multiple]):not([size]) option:checked { font-weight: 600; color: var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, white); }
+  select:not([multiple]):not([size]) option:checked::checkmark { content: "✓"; order: 2; margin-left: auto; color: var(--color-primary); }
+  select:not([multiple]):not([size]) option:disabled { opacity: .5; cursor: not-allowed; }
+  select:not([multiple]):not([size]) option:first-child:where([value=""]) { color: var(--color-gray-600); }
+
+  :root.is-dark select:not([multiple]):not([size])::picker(select) { background: #111827; color: #e2e8f4; border-color: var(--color-border); }
+  :root.is-dark select:not([multiple]):not([size]) option:hover,
+  :root.is-dark select:not([multiple]):not([size]) option:focus-visible { background: #1b2436; }
+  :root.is-dark select:not([multiple]):not([size]) option:checked { background: rgba(99,120,255,.16); color: #fff; }
+  :root.is-dark select:not([multiple]):not([size])::picker-icon { border-color: #98a3b6; }
+}
