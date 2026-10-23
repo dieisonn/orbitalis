@@ -1,10 +1,11 @@
 'use client'
 
+import { EnderecoInput } from '@/components/ui/endereco-input'
 import { useEffect, useState } from 'react'
-import { X, MapPin, Navigation, Loader2, User, Clock, Building2, Repeat, AlignLeft, Palette, Wrench } from 'lucide-react'
+import { X, MapPin, Loader2, User, Clock, Building2, Repeat, AlignLeft, Palette, Wrench } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, relogio, instante, hoje,
-  duracaoLegivel, mapaUrl, COR_PADRAO,
+  duracaoLegivel, COR_PADRAO,
   gerarOcorrencias, MAX_REPETICOES, DIAS_SEMANA, dataBR, diaDaSemana, type Regra, type Unidade,
 } from '@/lib/agenda'
 import { textoSobre } from '@/lib/cor'
@@ -359,14 +360,8 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         )}
 
         <Linha icone={<MapPin size={16} />}>
-          <input value={local} className={campo} aria-label="Local" placeholder="Endereço onde o serviço será executado"
-            onChange={(e) => { setLocal(e.target.value); setTocou((t) => ({ ...t, local: true })) }} />
-          {local.trim() && (
-            <a href={mapaUrl(local)} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] text-action mt-1 hover:underline">
-              <Navigation size={11} /> Conferir no mapa
-            </a>
-          )}
+          <EnderecoInput value={local} className={campo}
+            onChange={(v) => { setLocal(v); setTocou((t) => ({ ...t, local: true })) }} />
         </Linha>
 
         <Linha icone={<User size={16} />}>
