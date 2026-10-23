@@ -20,8 +20,8 @@ type AoMenu = (e: EventoAgenda, x: number, y: number) => void
 type Visao = 'mes' | 'semana' | 'dia'
 type Marca = { nome: string; tipo: TipoFeriado | 'agenda'; semEvento: boolean }  // 'semEvento': ainda não foi lançado como evento FE
 
-const HORA_INI = 6      // grade semanal/diária: 06:00 …
-const HORA_FIM = 21     // … até 21:00
+const HORA_INI = 0      // grade semanal/diária: 24 h (abre rolada para o expediente)
+const HORA_FIM = 24
 const PX_HORA = 52
 
 function intervalo(visao: Visao, cursor: Dia): { inicio: Dia; dias: number } {
