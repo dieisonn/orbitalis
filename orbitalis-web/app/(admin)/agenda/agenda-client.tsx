@@ -482,9 +482,13 @@ function BlocoEvento({ e, d, topo, altura, nivel, idx, de, esmaecido, onAbrir, o
         </>
       )}
       <span className="block w-full">
-        <span className="font-semibold">{hhmm(e.inicio)}</span> {e.titulo}
-        {altura > 44 && e.local && (
-          <span className="block opacity-90 truncate"><Navigation size={9} className="inline -mt-0.5 mr-0.5" />{e.local}</span>
+        <span className="block text-[13px] font-bold leading-tight">{hhmm(e.inicio)}</span>
+        <span className="block font-medium truncate">{e.titulo}</span>
+        {altura > 40 && e.cliente && (
+          <span className="block text-[10px] opacity-75 truncate">{e.cliente.nome}</span>
+        )}
+        {altura > 60 && e.local && (
+          <span className="block text-[10px] opacity-75 truncate"><Navigation size={9} className="inline -mt-0.5 mr-0.5" />{e.local}</span>
         )}
       </span>
     </button>
