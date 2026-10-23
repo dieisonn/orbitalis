@@ -36,8 +36,10 @@ function intervalo(visao: Visao, cursor: Dia): { inicio: Dia; dias: number } {
 
 const estiloStatus = (e: EventoAgenda) => {
   const st = e.ordemServico?.status
+  // Evento que já terminou fica desbotado; cancelado, mais ainda
+  const passado = new Date(e.fim).getTime() < Date.now()
   return {
-    opacity: st === 'cancelada' ? 0.5 : 1,
+    opacity: st === 'cancelada' ? 0.5 : passado ? 0.6 : 1,
     textDecoration: st === 'cancelada' ? 'line-through' : undefined,
   } as React.CSSProperties
 }
