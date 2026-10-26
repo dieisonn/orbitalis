@@ -52,6 +52,7 @@ enum AlertaSeveridade {
 enum OsTipo {
   preventiva
   corretiva
+  nao_se_aplica   // O.S. que não é manutenção (ex.: visita técnica, reunião)
 }
 
 enum OrcamentoStatus {
