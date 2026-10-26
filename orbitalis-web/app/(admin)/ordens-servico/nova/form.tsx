@@ -79,7 +79,7 @@ export function NovaOsForm({
           tecnicoId,
           dataAgendamento,
           observacoesGerais,
-          tipo: tipo ?? undefined,
+          tipo: tipo ?? 'nao_se_aplica',
           modeloChecklistId,
           tipoServicoId,
           equipamentoId,

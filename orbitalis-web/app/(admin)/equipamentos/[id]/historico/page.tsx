@@ -27,7 +27,7 @@ type Equipamento = {
 
 type OsResumo = {
   id: string
-  tipo: 'preventiva' | 'corretiva'
+  tipo: 'preventiva' | 'corretiva' | 'nao_se_aplica'
   status: string
   origem: string
   dataAgendamento: string
@@ -390,9 +390,11 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           os.tipo === 'corretiva'
                             ? 'bg-orange-100 text-orange-700'
-                            : 'bg-blue-100 text-blue-700'
+                            : os.tipo === 'nao_se_aplica'
+                              ? 'bg-gray-100 text-gray-700'
+                              : 'bg-blue-100 text-blue-700'
                         }`}>
-                          {os.tipo === 'corretiva' ? 'Corretiva' : 'Preventiva'}
+                          {os.tipo === 'corretiva' ? 'Corretiva' : os.tipo === 'nao_se_aplica' ? 'Não se aplica' : 'Preventiva'}
                         </span>
                       </td>
                       <td className="px-3 py-3">

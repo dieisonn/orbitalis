@@ -378,8 +378,8 @@ export default async function DashboardPage({ searchParams }: Props) {
                         <a href={`/ordens-servico/${os.id}`} className="text-sm font-medium text-gray-800 hover:text-primary">
                           {num}
                         </a>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${os.tipo === 'corretiva' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                          {os.tipo}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${os.tipo === 'corretiva' ? 'bg-red-50 text-red-600' : os.tipo === 'nao_se_aplica' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-600'}`}>
+                          {os.tipo === 'nao_se_aplica' ? 'não se aplica' : os.tipo}
                         </span>
                         {atrasada && <span className="text-[10px] text-red-500 font-semibold">atrasada</span>}
                       </div>

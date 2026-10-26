@@ -22,8 +22,8 @@ export function EditarOsForm({
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [tipo, setTipo] = useState<'corretiva' | 'preventiva'>(
-    initialValues.tipo === 'preventiva' ? 'preventiva' : 'corretiva',
+  const [tipo, setTipo] = useState<'corretiva' | 'preventiva' | 'nao_se_aplica'>(
+    initialValues.tipo === 'preventiva' ? 'preventiva' : initialValues.tipo === 'nao_se_aplica' ? 'nao_se_aplica' : 'corretiva',
   )
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -50,9 +50,9 @@ export function EditarOsForm({
       {/* Tipo */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tipo de Manutenção <span className="text-destructive">*</span>
+          Tipo de Manutenção
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setTipo('corretiva')}
@@ -76,6 +76,17 @@ export function EditarOsForm({
           >
             <ShieldCheck size={15} />
             Preventiva
+          </button>
+          <button
+            type="button"
+            onClick={() => setTipo('nao_se_aplica')}
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+              tipo === 'nao_se_aplica'
+                ? 'bg-gray-100 border-gray-400 text-gray-800'
+                : 'border-border text-gray-500 hover:bg-surface'
+            }`}
+          >
+            Não se aplica
           </button>
         </div>
       </div>

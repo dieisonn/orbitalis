@@ -9,6 +9,14 @@ export type ModeloResumo = {
   tipoServicoId: string | null
 }
 
+// Tipo gravado na O.S.: além de preventiva/corretiva, "não se aplica" (visita técnica, reunião...)
+export type TipoOsGravado = TipoOs | 'nao_se_aplica'
+export const TIPO_OS_GRAVADO_LABEL: Record<TipoOsGravado, string> = {
+  preventiva: 'Preventiva',
+  corretiva: 'Corretiva',
+  nao_se_aplica: 'Não se aplica',
+}
+
 export const TIPO_OS_LABEL: Record<TipoOs, string> = {
   preventiva: 'Preventiva',
   corretiva: 'Corretiva',
