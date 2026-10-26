@@ -317,7 +317,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
             <div className="bg-white rounded-xl border border-border p-4 shadow-sm">
               <p className="text-xs text-gray-400 mb-2 flex items-center gap-1"><CalendarClock size={11} /> Próxima Manutenção</p>
               <p className="font-bold text-gray-800">{fmtDate(dash.proximaOs.dataAgendamento)}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{dash.proximaOs.ambiente.nome} · {dash.proximaOs.tipo}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{dash.proximaOs.ambiente.nome} · {dash.proximaOs.tipo === 'nao_se_aplica' ? 'não se aplica' : dash.proximaOs.tipo}</p>
               <a href={`/ordens-servico/${dash.proximaOs.id}`} className="text-xs text-primary font-semibold hover:underline mt-1 block">
                 Ver O.S. →
               </a>
@@ -367,7 +367,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
                       <a href={`/ordens-servico/${os.id}`} className="font-mono text-primary font-semibold hover:underline">{num}</a>
                     </td>
                     <td className="px-3 py-2.5"><StatusBadge status={os.status as any} /></td>
-                    <td className="px-3 py-2.5 text-gray-500 capitalize">{os.tipo}</td>
+                    <td className="px-3 py-2.5 text-gray-500 capitalize">{os.tipo === 'nao_se_aplica' ? 'Não se aplica' : os.tipo}</td>
                     <td className="px-3 py-2.5 text-gray-600">{os.ambiente.nome}</td>
                     <td className="px-3 py-2.5 text-gray-500">{os.tecnico ? (os.tecnico.nome ?? os.tecnico.email) : '—'}</td>
                     <td className="px-3 py-2.5 text-gray-500">{fmtDate(os.dataAgendamento)}</td>
