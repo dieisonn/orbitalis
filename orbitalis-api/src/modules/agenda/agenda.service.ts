@@ -78,11 +78,11 @@ export class AgendaService implements OnApplicationBootstrap {
 
   private descricaoDaOs(os: OsCompleta, duracaoMin: number) {
     const cli = os.ambiente.cliente;
-    const tipoLabel = os.tipo === 'preventiva' ? 'Preventiva' : 'Corretiva';
+    const tipoLabel = os.tipo === 'preventiva' ? 'Preventiva' : os.tipo === 'corretiva' ? 'Corretiva' : null;
     const base = process.env.FRONTEND_URL?.replace(/\/$/, '');
     return [
       `O.S. ${numeroDaOs(os, os.tipoServico?.sigla)}`,
-      `Tipo: ${os.tipoServico?.nome ?? 'Ordem de Serviço'} (${tipoLabel})`,
+      `Tipo: ${os.tipoServico?.nome ?? 'Ordem de Serviço'}${tipoLabel ? ` (${tipoLabel})` : ''}`,
       `Duração prevista: ${duracaoLegivel(duracaoMin)}`,
       '',
       `Cliente: ${nomeDoCliente(cli)}`,
