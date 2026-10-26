@@ -37,7 +37,7 @@ export function NovaOsForm({
   const [ambienteId, setAmbienteId] = useState('')
   const [equipamentoId, setEquipamentoId] = useState('')
   const [tipoServicoId, setTipoServicoId] = useState('')
-  const [tipo, setTipo]                   = useState<TipoOs>('corretiva')
+  const [tipo, setTipo]                   = useState<TipoOs | null>(null)
   const [modeloChecklistId, setModeloChecklistId] = useState('')
   const [ambientes, setAmbientes] = useState<Ambiente[]>(ambientesIniciais)   // cresce com o cadastro rápido
   const [cadastrando, setCadastrando] = useState<string | null>(null)
@@ -79,7 +79,7 @@ export function NovaOsForm({
           tecnicoId,
           dataAgendamento,
           observacoesGerais,
-          tipo,
+          tipo: tipo ?? undefined,
           modeloChecklistId,
           tipoServicoId,
           equipamentoId,
@@ -99,14 +99,14 @@ export function NovaOsForm({
       {/* Tipo de manutenção */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tipo de manutenção <span className="text-destructive">*</span>
+          Tipo de manutenção <span className="ml-1 text-xs font-normal text-gray-500">(opcional — deixe em branco se não for manutenção)</span>
         </label>
         <div className="grid grid-cols-2 gap-2">
           {(Object.keys(TIPO_OS_LABEL) as TipoOs[]).map((t) => (
             <button
               key={t}
               type="button"
-              onClick={() => setTipo(t)}
+              onClick={() => setTipo(tipo === t ? null : t)}
               className={`px-3 py-2 rounded-lg border text-sm font-semibold transition-all ${
                 tipo === t
                   ? 'border-primary bg-primary text-white shadow-sm'
@@ -122,7 +122,7 @@ export function NovaOsForm({
       {/* Tipo de Serviço */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tipo de Serviço <span className="text-destructive">*</span>
+          Tipo de Serviço <span className="ml-1 text-xs font-normal text-gray-500">(opcional)</span>
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {tiposServico.map((ts) => (
