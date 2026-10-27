@@ -10,6 +10,7 @@ export type TipoServico = {
   valorPadrao: number | null
   ativo: boolean
   sistema: boolean
+  entraNoRelatorio: boolean
 }
 
 export default async function ServicosPage() {

@@ -12,9 +12,10 @@ type FormData = {
   horas: string
   minutos: string
   valorPadrao: string
+  entraNoRelatorio: boolean
 }
 
-const EMPTY: FormData = { sigla: '', nome: '', corHex: '#0B8043', horas: '1', minutos: '0', valorPadrao: '' }
+const EMPTY: FormData = { sigla: '', nome: '', corHex: '#0B8043', horas: '1', minutos: '0', valorPadrao: '', entraNoRelatorio: true }
 
 function duracaoLegivel(min: number): string {
   const h = Math.floor(min / 60), m = min % 60
@@ -58,6 +59,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
       horas:           String(Math.floor(ts.duracaoMinutos / 60)),
       minutos:         String(ts.duracaoMinutos % 60),
       valorPadrao:     ts.valorPadrao != null ? String(ts.valorPadrao) : '',
+      entraNoRelatorio: ts.entraNoRelatorio !== false,
     })
     setEditando(ts)
     setError(null)
@@ -81,6 +83,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
           corHex:          form.corHex,
           duracaoMinutos:  (parseInt(form.horas || '0', 10) * 60) + parseInt(form.minutos || '0', 10),
           valorPadrao:     form.valorPadrao ? parseFloat(form.valorPadrao) : null,
+          entraNoRelatorio: form.entraNoRelatorio,
         }
         if (modal === 'novo') {
           await apiCall('POST', '/tipos-servico', body)
@@ -90,6 +93,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
             corHex:          body.corHex,
             duracaoMinutos:  body.duracaoMinutos,
             valorPadrao:     body.valorPadrao,
+            entraNoRelatorio: body.entraNoRelatorio,
           })
         }
         await recarregar()
@@ -137,6 +141,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
               <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cor</th>
               <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Duração</th>
               <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Valor Padrão</th>
+              <th className="hidden lg:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">No relatório</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Ações</th>
             </tr>
           </thead>
@@ -246,6 +251,21 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
                   e eventos; se a O.S. já tiver horário de término, ele prevalece.
                 </p>
               </div>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox" checked={form.entraNoRelatorio}
+                  onChange={(e) => setForm({ ...form, entraNoRelatorio: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 rounded border-border accent-[var(--color-action)]"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-700">Entra no relatório de atendimentos</span>
+                  <span className="block text-xs text-gray-500">
+                    Desmarque para serviços que não são atendimentos (feriados, lembretes, reuniões): eles continuam na agenda,
+                    mas não entram nos números do relatório.
+                  </span>
+                </span>
+              </label>
             </div>
 
             {error && (
@@ -306,6 +326,11 @@ function TipoRow({
         {ts.valorPadrao != null
           ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(ts.valorPadrao))
           : <span className="text-gray-300">—</span>}
+      </td>
+      <td className="hidden lg:table-cell px-4 py-3 text-sm">
+        {ts.entraNoRelatorio === false
+          ? <span className="text-gray-600">Não</span>
+          : <span className="font-medium text-green-800">Sim</span>}
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
