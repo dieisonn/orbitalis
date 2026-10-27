@@ -143,10 +143,14 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
           )}
           {e.tipoServico && (
             <Linha icone={<Wrench size={16} />}>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-[11px] font-bold rounded px-1.5 py-0.5"
-                  style={{ backgroundColor: e.tipoServico.corHex, color: textoSobre(e.tipoServico.corHex) }}>{e.tipoServico.sigla}</span>
-                {e.tipoServico.nome}
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {(e.tiposServico?.length ? e.tiposServico : [e.tipoServico]).map((t) => (
+                  <span key={t.id} className="inline-flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold rounded px-1.5 py-0.5"
+                      style={{ backgroundColor: t.corHex, color: textoSobre(t.corHex) }}>{t.sigla}</span>
+                    {t.nome}
+                  </span>
+                ))}
               </span>
             </Linha>
           )}

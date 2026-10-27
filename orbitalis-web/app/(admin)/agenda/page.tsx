@@ -4,7 +4,8 @@ import { BarChart3, CalendarDays, Printer } from 'lucide-react'
 import { AgendaClient } from './agenda-client'
 import type { ClienteOpcao, TecnicoOpcao, TipoOpcao } from './evento-modal'
 
-export default async function AgendaPage() {
+export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ v?: string; d?: string }> }) {
+  const { v, d } = await searchParams
   const [tipos, clientesRes, tecnicosRes, config] = await Promise.all([
     api.get<TipoOpcao[]>('/tipos-servico').catch(() => [] as TipoOpcao[]),
     api.get<{ data: ClienteOpcao[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as ClienteOpcao[] })),
@@ -33,7 +34,7 @@ export default async function AgendaPage() {
           Toda O.S. agendada aparece aqui com título, endereço e descrição. Clique num dia para criar um evento.
         </p>
       </div>
-      <AgendaClient tipos={tipos} clientes={clientesRes.data} tecnicos={tecnicosRes.data} cidade={config.cidade ?? null} uf={config.uf ?? null} />
+      <AgendaClient tipos={tipos} clientes={clientesRes.data} tecnicos={tecnicosRes.data} cidade={config.cidade ?? null} uf={config.uf ?? null} visaoInicial={v} dataInicial={d} />
     </div>
   )
 }

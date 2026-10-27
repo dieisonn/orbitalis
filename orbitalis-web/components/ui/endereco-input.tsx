@@ -8,8 +8,9 @@ import { mapaUrl } from '@/lib/agenda'
  * Campo de endereço com sugestões enquanto digita e mapa dentro da própria tela (sem abrir outra aba).
  * O mapa mostra o que está escrito no campo; ao escolher uma sugestão ele abre sozinho.
  */
-export function EnderecoInput({ value, onChange, className = '', placeholder = 'Endereço onde o serviço será executado', ariaLabel = 'Local' }: {
+export function EnderecoInput({ value, onChange, className = '', placeholder = 'Endereço onde o serviço será executado', ariaLabel = 'Local', cidade, uf }: {
   value: string; onChange: (v: string) => void; className?: string; placeholder?: string; ariaLabel?: string
+  cidade?: string | null; uf?: string | null   // cidade da empresa: as sugestões dela vêm primeiro
 }) {
   const uid = useId()
   const [sugestoes, setSugestoes] = useState<string[]>([])
@@ -28,13 +29,13 @@ export function EnderecoInput({ value, onChange, className = '', placeholder = '
     const t = setTimeout(async () => {
       setBuscando(true)
       try {
-        const r = await fetch(`/api/enderecos?q=${encodeURIComponent(q)}`, { signal: ctl.signal })
+        const r = await fetch(`/api/enderecos?q=${encodeURIComponent(q)}&cidade=${encodeURIComponent(cidade ?? '')}&uf=${encodeURIComponent(uf ?? '')}`, { signal: ctl.signal })
         const lista: { rotulo: string }[] = r.ok ? await r.json() : []
         setSugestoes(lista.map((l) => l.rotulo)); setAtivo(-1)
       } catch { /* cancelado ou sem rede */ } finally { if (!ctl.signal.aborted) setBuscando(false) }
     }, 400)
     return () => { clearTimeout(t); ctl.abort() }
-  }, [value])
+  }, [value, cidade, uf])
 
   useEffect(() => {
     if (!mapa) return

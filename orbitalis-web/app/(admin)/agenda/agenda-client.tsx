@@ -44,11 +44,34 @@ const estiloStatus = (e: EventoAgenda) => {
   } as React.CSSProperties
 }
 
-export function AgendaClient({ tipos, clientes, tecnicos, cidade, uf }: {
+// Visão e data ficam na URL (?v=semana&d=2026-08-12): recarregar a página volta para o mesmo lugar
+const VISOES: Visao[] = ['mes', 'semana', 'dia']
+function lerDia(s?: string): Dia | null {
+  const m = s?.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  const dia = { y: +m[1], m: +m[2] - 1, d: +m[3] }
+  const t = new Date(Date.UTC(dia.y, dia.m, dia.d))
+  return t.getUTCFullYear() === dia.y && t.getUTCMonth() === dia.m && t.getUTCDate() === dia.d ? dia : null
+}
+
+export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cidade, uf, visaoInicial, dataInicial }: {
   tipos: TipoOpcao[]; clientes: ClienteOpcao[]; tecnicos: TecnicoOpcao[]; cidade: string | null; uf: string | null
+  visaoInicial?: string; dataInicial?: string
 }) {
-  const [visao, setVisao] = useState<Visao>('mes')
-  const [cursor, setCursor] = useState<Dia>(hoje())
+  const [visao, setVisao] = useState<Visao>(VISOES.find((v) => v === visaoInicial) ?? 'mes')
+  const [cursor, setCursor] = useState<Dia>(() => lerDia(dataInicial) ?? hoje())
+  // clientes cadastrados pelo modal entram na lista na hora (a página só os traz no próximo carregamento)
+  const [clientesNovos, setClientesNovos] = useState<ClienteOpcao[]>([])
+  const clientes = useMemo(
+    () => [...clientesDaPagina, ...clientesNovos.filter((n) => !clientesDaPagina.some((c) => c.id === n.id))],
+    [clientesDaPagina, clientesNovos],
+  )
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('v', visao)
+    url.searchParams.set('d', chaveDia(cursor))
+    window.history.replaceState(window.history.state, '', url)
+  }, [visao, cursor])
   const [eventos, setEventos] = useState<EventoAgenda[]>([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
@@ -331,9 +354,10 @@ export function AgendaClient({ tipos, clientes, tecnicos, cidade, uf }: {
           modelo={modal.modelo}
           inicioSugerido={modal.inicio}
           fimSugerido={modal.fim}
-          tipos={tipos} clientes={clientes} tecnicos={tecnicos}
+          tipos={tipos} clientes={clientes} tecnicos={tecnicos} cidade={cidade} uf={uf}
           onFechar={() => setModal(null)}
           onMudou={carregar}
+          onClienteCriado={(c) => setClientesNovos((l) => [...l, c])}
         />
       )}
     </div>
