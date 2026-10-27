@@ -260,6 +260,8 @@ export class AgendaService implements OnApplicationBootstrap {
     const eventos = await this.prisma.eventoAgenda.findMany({
       where: {
         inicio: { gte: desde, lt: ateExcl },
+        // tipos marcados como "fora do relatório" (feriados, lembretes...) não entram nos números
+        NOT: { tipoServico: { entraNoRelatorio: false } },
         ...(q.tecnicoId ? { tecnicoId: q.tecnicoId } : {}),
         ...(q.clienteId ? { clienteId: q.clienteId } : {}),
       },

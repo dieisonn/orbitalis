@@ -360,6 +360,8 @@ model TipoServico {
   valorPadrao     Decimal? @map("valor_padrao") @db.Decimal(10, 2)
   ativo           Boolean  @default(true)
   sistema         Boolean  @default(false)
+  // Conta no relatório de atendimentos da agenda? Desmarcado para feriados, lembretes etc.
+  entraNoRelatorio Boolean @default(true) @map("entra_no_relatorio")
   empresaId       String?  @map("empresa_id") @db.Uuid
 
   ordensServico    OrdemServico[]
