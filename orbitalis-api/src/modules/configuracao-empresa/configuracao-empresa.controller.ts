@@ -19,7 +19,7 @@ export class ConfiguracaoEmpresaController {
   @Patch()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UsuarioTipo.admin)
-  upsert(@Body() body: { nomeEmpresa?: string; nomeFantasia?: string; logoUrl?: string; corPrimaria?: string; cnpj?: string; telefone?: string; endereco?: string; cidade?: string | null; uf?: string | null; codigoIbge?: string | null; responsavelTecnicoId?: string | null; mttrLimiteHoras?: number | null; mtbfLimiteDias?: number | null; custoHoraParada?: number | null }) {
+  upsert(@Body() body: { nomeEmpresa?: string; nomeFantasia?: string; logoUrl?: string; corPrimaria?: string; cnpj?: string; telefone?: string; endereco?: string; email?: string | null; site?: string | null; instrucoesOs?: string | null; cidade?: string | null; uf?: string | null; codigoIbge?: string | null; responsavelTecnicoId?: string | null; mttrLimiteHoras?: number | null; mtbfLimiteDias?: number | null; custoHoraParada?: number | null }) {
     return this.service.upsert(body);
   }
 }

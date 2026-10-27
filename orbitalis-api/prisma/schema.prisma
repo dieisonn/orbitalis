@@ -386,6 +386,10 @@ model ConfiguracaoEmpresa {
   cnpj         String?  @db.VarChar(18)
   telefone     String?  @db.VarChar(30)
   endereco     String?  @db.VarChar(255)
+  // Contato exibido nos documentos (O.S., laudos) e instruções fixas impressas na O.S. para o técnico
+  email        String?  @db.VarChar(255)
+  site         String?  @db.VarChar(255)
+  instrucoesOs String?  @map("instrucoes_os") @db.Text
   // Localização da empresa (base para feriados estaduais/municipais e documentos)
   cidade       String?  @db.VarChar(120)
   uf           String?  @db.VarChar(2)

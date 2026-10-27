@@ -11,6 +11,9 @@ type UpsertDto = {
   cnpj?: string;
   telefone?: string;
   endereco?: string;
+  email?: string | null;
+  site?: string | null;
+  instrucoesOs?: string | null;
   cidade?: string | null;
   uf?: string | null;
   codigoIbge?: string | null;
@@ -65,6 +68,9 @@ export class ConfiguracaoEmpresaService {
       cnpj: null,
       telefone: null,
       endereco: null,
+      email: null,
+      site: null,
+      instrucoesOs: null,
       cidade: null,
       uf: null,
       codigoIbge: null,
@@ -78,11 +84,16 @@ export class ConfiguracaoEmpresaService {
   }
 
   async upsert(data: UpsertDto) {
-    const { responsavelTecnicoId, cidade, uf, codigoIbge, ...rest } = data;
+    const { responsavelTecnicoId, cidade, uf, codigoIbge, email, site, instrucoesOs, ...rest } = data;
+    // campos de texto opcionais: vazio limpa
+    const textos: { email?: string | null; site?: string | null; instrucoesOs?: string | null } = {};
+    if (email !== undefined) textos.email = (email ?? '').trim().slice(0, 255) || null;
+    if (site !== undefined) textos.site = (site ?? '').trim().slice(0, 255) || null;
+    if (instrucoesOs !== undefined) textos.instrucoesOs = (instrucoesOs ?? '').trim().slice(0, 2000) || null;
     const local = normalizarLocalizacao({ cidade, uf, codigoIbge });
     const existing = await this.prisma.configuracaoEmpresa.findFirst();
 
-    const updateData: any = { ...rest, ...local };
+    const updateData: any = { ...rest, ...local, ...textos };
     if (responsavelTecnicoId !== undefined) {
       updateData.responsavelTecnicoId = responsavelTecnicoId || null;
     }
@@ -104,6 +115,9 @@ export class ConfiguracaoEmpresaService {
         cnpj: data.cnpj ?? null,
         telefone: data.telefone ?? null,
         endereco: data.endereco ?? null,
+        email: textos.email ?? null,
+        site: textos.site ?? null,
+        instrucoesOs: textos.instrucoesOs ?? null,
         cidade: local.cidade ?? null,
         uf: local.uf ?? null,
         codigoIbge: local.codigoIbge ?? null,
