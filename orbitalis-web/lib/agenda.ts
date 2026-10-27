@@ -12,6 +12,7 @@ export type EventoAgenda = {
   corHex: string
   personalizado: boolean
   tipoServico: { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number } | null
+  tiposServico?: { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number }[]   // principal + adicionais
   tecnico: { id: string; nome: string } | null
   cliente: { id: string; nome: string; telefone: string | null; endereco: string } | null
   ordemServico: { id: string; numero: string; status: string } | null

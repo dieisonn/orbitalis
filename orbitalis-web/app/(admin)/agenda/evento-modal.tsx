@@ -27,6 +27,8 @@ type Props = {
   tecnicos: TecnicoOpcao[]
   onFechar: () => void
   onMudou: () => void                  // recarrega a agenda
+  cidade?: string | null; uf?: string | null
+  onClienteCriado?: (c: ClienteOpcao) => void   // cliente cadastrado dentro do modal: a agenda guarda para os próximos eventos
 }
 
 export async function chamar(method: string, path: string, body?: object) {
@@ -46,7 +48,7 @@ export async function chamar(method: string, path: string, body?: object) {
 const nomeCliente = (c: ClienteOpcao) => c.nomeFantasia?.trim() || c.razaoSocial
 const dataInput = (d: Dia) => `${d.y}-${String(d.m + 1).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`
 
-export function EventoModal({ evento, modelo, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }: Props) {
+export function EventoModal({ evento, modelo, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, cidade, uf, onFechar, onMudou, onClienteCriado }: Props) {
   // Esc fecha, como no Google Agenda
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar() }
@@ -61,7 +63,7 @@ export function EventoModal({ evento, modelo, inicioSugerido, fimSugerido, tipos
         className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[94vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <Formulario {...{ evento, modelo, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, onFechar, onMudou }} onCancelar={onFechar} />
+        <Formulario {...{ evento, modelo, inicioSugerido, fimSugerido, tipos, clientes, tecnicos, cidade, uf, onFechar, onMudou, onClienteCriado }} onCancelar={onFechar} />
       </div>
     </div>
   )
@@ -76,7 +78,7 @@ function Linha({ icone, children }: { icone: React.ReactNode; children: React.Re
   )
 }
 
-function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos, clientes: clientesIniciais, tecnicos, onFechar, onMudou, onCancelar }: Props & { onCancelar: () => void }) {
+function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos, clientes: clientesIniciais, tecnicos, cidade, uf, onFechar, onMudou, onClienteCriado, onCancelar }: Props & { onCancelar: () => void }) {
   const ehOs = !!evento?.ordemServico
   const origem = evento ?? modelo   // de onde vêm os valores iniciais (editar ou duplicar)
   const h0 = hoje()
@@ -84,7 +86,8 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const rIni = relogio(base)
   const rFim = relogio(origem ? origem.fim : base)
 
-  const [tipoId, setTipoId] = useState(origem?.tipoServico?.id ?? '')
+  // Tipos de serviço do evento: o primeiro é o principal (cor/relatórios); dá para somar outros (ex.: VT + MC)
+  const [tipoIds, setTipoIds] = useState<string[]>(() => (origem?.tiposServico?.length ? origem.tiposServico.map((t) => t.id) : origem?.tipoServico ? [origem.tipoServico.id] : []))
   const [clienteId, setClienteId] = useState(origem?.cliente?.id ?? '')
   const [titulo, setTitulo] = useState(origem?.titulo ?? '')
   const [local, setLocal] = useState(origem?.local ?? '')
@@ -115,12 +118,14 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const [ate, setAte] = useState('')
   const [erro, setErro] = useState<string | null>(null)
 
-  const tipo = tipos.find((t) => t.id === tipoId)
+  const tiposSel = tipoIds.map((id) => tipos.find((t) => t.id === id)).filter((t): t is TipoOpcao => !!t)
+  const tipo = tiposSel[0]
+  const duracaoTipos = tiposSel.length ? Math.max(...tiposSel.map((t) => t.duracaoMinutos)) : 60
   const corPadrao = tipo?.corHex ?? COR_PADRAO
   const corEfetiva = corPropria ?? corPadrao
   const [novos, setNovos] = useState<ClienteOpcao[]>([])       // cadastrados aqui mesmo, ainda fora da lista da página
   const [cadastrando, setCadastrando] = useState<string | null>(null)
-  const clientes = [...clientesIniciais, ...novos]
+  const clientes = [...clientesIniciais, ...novos.filter((n) => !clientesIniciais.some((c) => c.id === n.id))]
   const cliente = clientes.find((c) => c.id === clienteId)
 
   function minutosDe(h: string) { const [a, b] = h.split(':').map(Number); return a * 60 + b }
@@ -131,12 +136,21 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
 
   // Preenchimento automático: tipo → duração; tipo + cliente → título; cliente → endereço.
   // Só preenche o que a pessoa ainda não mexeu.
-  function aplicar(novoTipo: typeof tipo, novoCliente: typeof cliente, hIni = horaIni) {
-    if (!tocou.titulo) {
-      setTitulo([novoTipo?.sigla, novoCliente ? nomeCliente(novoCliente) : null].filter(Boolean).join(' - '))
+  const siglasDe = (ts: TipoOpcao[]) => ts.map((t) => t.sigla).join('+')
+  const tituloAuto = (ts: TipoOpcao[], c?: ClienteOpcao) => [siglasDe(ts) || null, c ? nomeCliente(c) : null].filter(Boolean).join(' - ')
+  function aplicar(novosTipos: TipoOpcao[], novoCliente: ClienteOpcao | undefined, hIni = horaIni) {
+    // O título acompanha as trocas: se ainda é o automático, é refeito; se a pessoa o editou mas ele
+    // começa com a sigla antiga ("VT - ..."), só a sigla é trocada.
+    const antes = siglasDe(tiposSel)
+    if (!tocou.titulo || titulo.trim() === tituloAuto(tiposSel, cliente)) {
+      setTitulo(tituloAuto(novosTipos, novoCliente))
+    } else if (antes && titulo.startsWith(`${antes} - `)) {
+      const depois = siglasDe(novosTipos)
+      setTitulo(depois ? `${depois} - ${titulo.slice(antes.length + 3)}` : titulo.slice(antes.length + 3))
     }
     if (!tocou.local && novoCliente) setLocal(novoCliente.endereco)
-    if (!tocou.fim && !diaInteiro) setHoraFim(somar(hIni, novoTipo?.duracaoMinutos ?? 60))
+    const dur = novosTipos.length ? Math.max(...novosTipos.map((t) => t.duracaoMinutos)) : 60
+    if (!tocou.fim && !diaInteiro) setHoraFim(somar(hIni, dur))
   }
 
   const diaBase: Dia | null = (() => { const [y, m, d] = data.split('-').map(Number); return y ? { y, m: m - 1, d } : null })()
@@ -155,7 +169,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const ocorrencias: Dia[] = regra && (termino === 'vezes' || ate) ? gerarOcorrencias(diaBase!, regra) : (diaBase ? [diaBase] : [])
 
   // Sem fim preenchido (novo evento), mostra a duração padrão
-  const fimEfetivo = horaFim || somar(horaIni, tipo?.duracaoMinutos ?? 60)
+  const fimEfetivo = horaFim || somar(horaIni, duracaoTipos)
 
   async function salvar() {
     setErro(null)
@@ -176,7 +190,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
           local: local.trim() || null,
           inicio, fim,
           tecnicoId: tecnicoId || null,
-          ...(ehOs ? {} : { diaInteiro, tipoServicoId: tipoId || null, clienteId: clienteId || null }),
+          ...(ehOs ? {} : { diaInteiro, tipoServicoId: tipoIds[0] || null, tiposExtrasIds: tipoIds.slice(1), clienteId: clienteId || null }),
           cor: corPropria,
         })
       } else {
@@ -196,7 +210,8 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
               fim: diaInteiro ? instante(o.y, o.m, o.d + 1, 0, 0) : instante(o.y, o.m, o.d, hf, mf),
               diaInteiro,
               tecnicoId: tecnicoId || null,
-              tipoServicoId: tipoId || null,
+              tipoServicoId: tipoIds[0] || null,
+              tiposExtrasIds: tipoIds.slice(1),
               clienteId: clienteId || null,
               ...(corPropria ? { cor: corPropria } : {}),
             })
@@ -241,11 +256,16 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
       <div className="px-5 py-4 space-y-4">
         <Linha icone={<Wrench size={16} />}>
           <div className="flex flex-wrap gap-1.5 pt-0.5" role="group" aria-label="Tipo de serviço">
-            {[{ id: '', sigla: '', nome: 'Sem tipo', corHex: '#6b7280', duracaoMinutos: 60, ativo: true } as TipoOpcao, ...tipos.filter((t) => t.ativo || t.id === tipoId)].map((t) => {
-              const sel = tipoId === t.id
+            {[{ id: '', sigla: '', nome: 'Sem tipo', corHex: '#6b7280', duracaoMinutos: 60, ativo: true } as TipoOpcao, ...tipos.filter((t) => t.ativo || tipoIds.includes(t.id))].map((t) => {
+              const sel = t.id ? tipoIds.includes(t.id) : tipoIds.length === 0
               return (
                 <button key={t.id || 'nenhum'} type="button" disabled={ehOs} aria-pressed={sel} title={t.nome}
-                  onClick={() => { setTipoId(t.id); aplicar(tipos.find((x) => x.id === t.id), cliente) }}
+                  onClick={() => {
+                    // clicar soma ou tira o tipo (até 4); "Sem tipo" limpa tudo
+                    const novos = !t.id ? [] : tipoIds.includes(t.id) ? tipoIds.filter((i) => i !== t.id) : tipoIds.length >= 4 ? tipoIds : [...tipoIds, t.id]
+                    setTipoIds(novos)
+                    aplicar(novos.map((i) => tipos.find((x) => x.id === i)).filter((x): x is TipoOpcao => !!x), cliente)
+                  }}
                   style={sel && t.id ? { backgroundColor: t.corHex, borderColor: t.corHex, color: textoSobre(t.corHex) } : undefined}
                   className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-sm font-medium transition-colors disabled:opacity-60 ${
                     sel ? (t.id ? '' : 'bg-gray-800 border-gray-800 text-white') : 'bg-white border-border text-gray-700 hover:bg-surface'}`}>
@@ -256,18 +276,19 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
               )
             })}
           </div>
+          {tiposSel.length > 1 && <p className="text-[11px] text-gray-600 mt-1.5">Vários tipos: o primeiro ({tipo?.sigla}) define a cor; os demais entram no título.</p>}
           {tipo && !diaInteiro && (
-            <p className="text-[11px] text-gray-600 mt-1.5">Duração padrão de {tipo.nome}: {duracaoLegivel(tipo.duracaoMinutos)} (ajustável em Tipos de Serviço).</p>
+            <p className="text-[11px] text-gray-600 mt-1.5">Duração padrão de {tiposSel.map((t) => t.nome).join(' + ')}: {duracaoLegivel(duracaoTipos)} (ajustável em Tipos de Serviço).</p>
           )}
         </Linha>
 
         <Linha icone={<Building2 size={16} />}>
           <ClienteSelect ariaLabel="Cliente" value={clienteId} disabled={ehOs} clientes={clientes} vazio="Cliente (opcional)" onCriar={(busca) => setCadastrando(busca)}
-            onChange={(id) => { const c = clientes.find((x) => x.id === id); setClienteId(id); aplicar(tipo, c) }} />
+            onChange={(id) => { const c = clientes.find((x) => x.id === id); setClienteId(id); aplicar(tiposSel, c) }} />
           {cadastrando !== null && (
             <ClienteRapidoModal nomeInicial={cadastrando} onFechar={() => setCadastrando(null)}
               onCriado={({ cliente: novo }) => {
-                setNovos((l) => [...l, novo]); setClienteId(novo.id); aplicar(tipo, novo); setCadastrando(null)
+                setNovos((l) => [...l, novo]); onClienteCriado?.(novo); setClienteId(novo.id); aplicar(tiposSel, novo); setCadastrando(null)
               }} />
           )}
         </Linha>
@@ -281,7 +302,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
             <div>
               <label className={rot} htmlFor="ev-ini">Início</label>
               <input id="ev-ini" type="time" value={horaIni} disabled={diaInteiro} className={campo}
-                onChange={(e) => { setHoraIni(e.target.value); if (!tocou.fim) setHoraFim(somar(e.target.value, tipo?.duracaoMinutos ?? 60)) }} />
+                onChange={(e) => { setHoraIni(e.target.value); if (!tocou.fim) setHoraFim(somar(e.target.value, duracaoTipos)) }} />
             </div>
             <div>
               <label className={rot} htmlFor="ev-fim">Fim</label>
@@ -370,7 +391,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         )}
 
         <Linha icone={<MapPin size={16} />}>
-          <EnderecoInput value={local} className={campo}
+          <EnderecoInput value={local} className={campo} cidade={cidade} uf={uf}
             onChange={(v) => { setLocal(v); setTocou((t) => ({ ...t, local: true })) }} />
         </Linha>
 
