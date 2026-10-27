@@ -1,4 +1,4 @@
-import { IsBoolean, IsDateString, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 
 export class CreateEventoDto {
   @IsOptional() @IsString() @MaxLength(200)
@@ -30,6 +30,10 @@ export class CreateEventoDto {
 
   @IsOptional() @IsUUID()
   tipoServicoId?: string | null;
+
+  // Tipos adicionais (além do principal), no máximo 3
+  @IsOptional() @IsArray() @ArrayMaxSize(3) @IsUUID('all', { each: true })
+  tiposExtrasIds?: string[];
 }
 
 export class UpdateEventoDto {
@@ -62,4 +66,8 @@ export class UpdateEventoDto {
 
   @IsOptional() @IsUUID()
   tipoServicoId?: string | null;
+
+  // Tipos adicionais (além do principal), no máximo 3
+  @IsOptional() @IsArray() @ArrayMaxSize(3) @IsUUID('all', { each: true })
+  tiposExtrasIds?: string[];
 }

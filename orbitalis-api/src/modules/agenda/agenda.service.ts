@@ -20,6 +20,8 @@ const INCLUDE_EVENTO = {
   cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true, telefone: true, endereco: true } },
 } satisfies Prisma.EventoAgendaInclude;
 
+type TipoResumo = { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number };
+
 type EventoCompleto = Prisma.EventoAgendaGetPayload<{ include: typeof INCLUDE_EVENTO }>;
 
 const INCLUDE_OS = {
@@ -145,7 +147,7 @@ export class AgendaService implements OnApplicationBootstrap {
 
   // ─── Leitura ────────────────────────────────────────────────────────────────
 
-  private paraResposta(e: EventoCompleto) {
+  private paraResposta(e: EventoCompleto, extras: TipoResumo[] = []) {
     return {
       id: e.id,
       titulo: e.titulo,
@@ -157,6 +159,8 @@ export class AgendaService implements OnApplicationBootstrap {
       corHex: e.cor ?? e.tipoServico?.corHex ?? COR_PADRAO,
       personalizado: e.personalizado,
       tipoServico: e.tipoServico,
+      // principal primeiro, depois os adicionais (ex.: VT + MC)
+      tiposServico: [...(e.tipoServico ? [e.tipoServico] : []), ...extras],
       tecnico: e.tecnico ? { id: e.tecnico.id, nome: e.tecnico.nome ?? e.tecnico.email } : null,
       cliente: e.cliente
         ? { id: e.cliente.id, nome: nomeDoCliente(e.cliente), telefone: e.cliente.telefone, endereco: e.cliente.endereco }
@@ -169,6 +173,35 @@ export class AgendaService implements OnApplicationBootstrap {
           }
         : null,
     };
+  }
+
+  // Resolve os tipos adicionais de todos os eventos de uma vez (uma consulta só)
+  private async respostas(lista: EventoCompleto[]) {
+    const ids = [...new Set(lista.flatMap((e) => e.tiposExtrasIds))];
+    const tipos = ids.length
+      ? await this.prisma.tipoServico.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, sigla: true, nome: true, corHex: true, duracaoMinutos: true },
+        })
+      : [];
+    const porId = new Map(tipos.map((t) => [t.id, t]));
+    return lista.map((e) => this.paraResposta(e, e.tiposExtrasIds.map((i) => porId.get(i)).filter((t): t is TipoResumo => !!t)));
+  }
+
+  private async uma(e: EventoCompleto) {
+    return (await this.respostas([e]))[0];
+  }
+
+  /** Confere os tipos adicionais (existem, sem repetir o principal) e devolve os registros na ordem pedida. */
+  private async validarExtras(ids: string[] | undefined, principalId: string | null | undefined) {
+    const unicos = [...new Set(ids ?? [])].filter((i) => i !== principalId);
+    if (!unicos.length) return [] as TipoResumo[];
+    const tipos = await this.prisma.tipoServico.findMany({
+      where: { id: { in: unicos } },
+      select: { id: true, sigla: true, nome: true, corHex: true, duracaoMinutos: true },
+    });
+    if (tipos.length !== unicos.length) throw new NotFoundException('Tipo de serviço não encontrado');
+    return unicos.map((i) => tipos.find((t) => t.id === i)!);
   }
 
   async avisos(usuarioId: string) {
@@ -198,7 +231,7 @@ export class AgendaService implements OnApplicationBootstrap {
     const eventos = await this.prisma.eventoAgenda.findMany({
       where, include: INCLUDE_EVENTO, orderBy: { inicio: 'asc' }, take: MAX_EVENTOS,
     });
-    return eventos.map((e) => this.paraResposta(e));
+    return this.respostas(eventos);
   }
 
   /**
@@ -318,7 +351,7 @@ export class AgendaService implements OnApplicationBootstrap {
   }
 
   async buscar(id: string, user: AuthUser) {
-    return this.paraResposta(await this.carregar(id, user));
+    return this.uma(await this.carregar(id, user));
   }
 
   // ─── Escrita ────────────────────────────────────────────────────────────────
@@ -335,15 +368,17 @@ export class AgendaService implements OnApplicationBootstrap {
     ]);
     if (dto.tipoServicoId && !tipo) throw new NotFoundException('Tipo de serviço não encontrado');
     if (dto.clienteId && !cliente) throw new NotFoundException('Cliente não encontrado');
+    const extras = await this.validarExtras(dto.tiposExtrasIds, dto.tipoServicoId);
+    const todosTipos = [...(tipo ? [tipo] : []), ...extras];
 
     const titulo = dto.titulo?.trim()
-      || [tipo?.sigla, cliente ? nomeDoCliente(cliente) : null].filter(Boolean).join(' - ');
+      || [todosTipos.map((t) => t.sigla).join('+') || null, cliente ? nomeDoCliente(cliente) : null].filter(Boolean).join(' - ');
     if (!titulo) throw new BadRequestException('Informe o título (ou escolha um tipo de serviço / cliente)');
 
     const inicio = new Date(dto.inicio);
     const fim = dto.fim
       ? new Date(dto.fim)
-      : new Date(inicio.getTime() + (tipo?.duracaoMinutos ?? DURACAO_PADRAO_MIN) * 60_000);
+      : new Date(inicio.getTime() + (todosTipos.length ? Math.max(...todosTipos.map((t) => t.duracaoMinutos)) : DURACAO_PADRAO_MIN) * 60_000);
     this.validarJanela(inicio, fim);
 
     const descricao = dto.descricao !== undefined
@@ -364,10 +399,11 @@ export class AgendaService implements OnApplicationBootstrap {
         tecnicoId: dto.tecnicoId ?? null,
         clienteId: dto.clienteId ?? null,
         tipoServicoId: dto.tipoServicoId ?? null,
+        tiposExtrasIds: extras.map((t) => t.id),
       },
       include: INCLUDE_EVENTO,
     });
-    return this.paraResposta(criado);
+    return this.uma(criado);
   }
 
   async atualizar(id: string, dto: UpdateEventoDto) {
@@ -396,6 +432,10 @@ export class AgendaService implements OnApplicationBootstrap {
         const tipo = await this.prisma.tipoServico.findFirst({ where: { id: dto.tipoServicoId } });
         if (!tipo) throw new NotFoundException('Tipo de serviço não encontrado');
       }
+      const principalFinal = dto.tipoServicoId !== undefined ? dto.tipoServicoId : atual.tipoServicoId;
+      const extras = dto.tiposExtrasIds !== undefined || dto.tipoServicoId !== undefined
+        ? await this.validarExtras(dto.tiposExtrasIds ?? atual.tiposExtrasIds, principalFinal)
+        : null;
       const salvo = await this.prisma.eventoAgenda.update({
         where: { id },
         data: {
@@ -406,10 +446,11 @@ export class AgendaService implements OnApplicationBootstrap {
           ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId } : {}),
           ...(dto.clienteId !== undefined ? { clienteId: dto.clienteId } : {}),
           ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId } : {}),
+          ...(extras ? { tiposExtrasIds: extras.map((t) => t.id) } : {}),
         },
         include: INCLUDE_EVENTO,
       });
-      return this.paraResposta(salvo);
+      return this.uma(salvo);
     }
 
     // Evento de O.S.: horário e técnico voltam para a O.S. (ela é a fonte); cliente e tipo vêm dela
@@ -440,7 +481,7 @@ export class AgendaService implements OnApplicationBootstrap {
       await this.prisma.ordemServico.update({ where: { id: os.id }, data: osData });
     }
     await this.sincronizar(os.id);
-    return this.paraResposta(await this.carregar(id));
+    return this.uma(await this.carregar(id));
   }
 
   /** Volta título, descrição e local de um evento de O.S. para o texto gerado pela O.S. */
@@ -449,7 +490,7 @@ export class AgendaService implements OnApplicationBootstrap {
     if (!e.ordemServico) throw new BadRequestException('Só eventos de O.S. podem ser restaurados');
     await this.prisma.eventoAgenda.update({ where: { id }, data: { personalizado: false, cor: null } });
     await this.sincronizar(e.ordemServico.id);
-    return this.paraResposta(await this.carregar(id));
+    return this.uma(await this.carregar(id));
   }
 
   async remover(id: string) {
