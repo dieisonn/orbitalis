@@ -16,6 +16,8 @@ import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 
+const AMBIENTE_PADRAO = 'Sem local definido';
+
 @Injectable()
 export class OrdensServicoService {
   constructor(
@@ -30,13 +32,42 @@ export class OrdensServicoService {
     return `${sigla}-${num}`;
   }
 
+  // Ambiente padrão do cliente para O.S. abertas sem local específico (visita técnica, orçamento...).
+  // Criado na primeira vez e reaproveitado depois; o usuário pode renomear/completar em Ambientes.
+  private async ambientePadrao(clienteId: string): Promise<string> {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { id: clienteId, deletedAt: null },
+      select: { id: true, endereco: true },
+    });
+    if (!cliente) throw new NotFoundException('Cliente não encontrado');
+    const existente = await this.prisma.ambiente.findFirst({
+      where: { clienteId, nome: AMBIENTE_PADRAO, deletedAt: null },
+      select: { id: true },
+    });
+    if (existente) return existente.id;
+    const novo = await this.prisma.ambiente.create({
+      data: {
+        clienteId,
+        nome: AMBIENTE_PADRAO,
+        localizacaoInterna: cliente.endereco || AMBIENTE_PADRAO,
+        metrosQuadrados: 0,
+        capacidadeTermica: 'A definir',
+      },
+      select: { id: true },
+    });
+    return novo.id;
+  }
+
   // POST /ordens-servico (§6.1 + §6.2)
   // 1. Cria a O.S. pai para o ambiente
   // 2. Varre os equipamentos do ambiente e cria os itens filhos
   // 3. Faz deep copy do checklist ativo para cada item (snapshot)
   async create(dto: CreateOrdemServicoDto, user?: { id: string; role: string }) {
+    // Portal do cliente sempre escolhe um ambiente seu (evita criar ambiente em cliente alheio)
+    if (user?.role === 'cliente' && !dto.ambienteId) throw new NotFoundException('Ambiente não encontrado');
+    const ambienteId = dto.ambienteId ?? (await this.ambientePadrao(dto.clienteId!));
     const ambiente = await this.prisma.ambiente.findUnique({
-      where: { id: dto.ambienteId },
+      where: { id: ambienteId },
       include: { equipamentos: { where: { deletedAt: null } } },
     });
     if (!ambiente) throw new NotFoundException('Ambiente não encontrado');
@@ -71,7 +102,7 @@ export class OrdensServicoService {
     const result = await this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.create({
         data: {
-          ambienteId:        dto.ambienteId,
+          ambienteId:        ambiente.id,
           tecnicoId:         dto.tecnicoId,
           status:            statusInicial,
           tipo:              dto.tipo ?? 'corretiva',

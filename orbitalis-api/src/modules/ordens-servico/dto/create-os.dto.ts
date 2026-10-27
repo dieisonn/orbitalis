@@ -6,11 +6,19 @@ import {
   IsString,
   IsUUID,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateOrdemServicoDto {
+  // Ambiente é opcional: sem ele, a O.S. usa o ambiente padrão "Sem local definido" do cliente
+  @IsOptional()
   @IsUUID()
-  ambienteId: string;
+  ambienteId?: string;
+
+  // Obrigatório quando não há ambienteId
+  @ValidateIf((o: CreateOrdemServicoDto) => !o.ambienteId)
+  @IsUUID()
+  clienteId?: string;
 
   @IsOptional()
   @IsUUID()
