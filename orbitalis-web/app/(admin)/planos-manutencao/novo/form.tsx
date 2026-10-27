@@ -41,12 +41,14 @@ const FREQUENCIAS = [
 ]
 
 export function NovoPlanoForm({
+  clientes: clientesCadastro,
   ambientes,
   tecnicos,
   checklists,
   tiposServico,
   contratos,
 }: {
+  clientes: { id: string; razaoSocial: string; nomeFantasia: string | null }[]
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
   checklists: Checklist[]
@@ -68,15 +70,11 @@ export function NovoPlanoForm({
   const hoje = hojeISO()
   const base = prox || hoje
 
-  const clientes = useMemo(() => {
-    const map = new Map<string, NonNullable<Ambiente['cliente']>>()
-    for (const a of ambientes) {
-      if (a.cliente && !map.has(a.cliente.id)) map.set(a.cliente.id, a.cliente)
-    }
-    return Array.from(map.values()).sort((a, b) =>
-      (a.nomeFantasia ?? a.razaoSocial).localeCompare(b.nomeFantasia ?? b.razaoSocial)
-    )
-  }, [ambientes])
+  const clientes = useMemo(
+    () => [...clientesCadastro].sort((a, b) =>
+      (a.nomeFantasia ?? a.razaoSocial).localeCompare(b.nomeFantasia ?? b.razaoSocial)),
+    [clientesCadastro],
+  )
 
   // Ambientes do cliente selecionado que têm equipamentos
   const ambientesDoCliente = useMemo(
@@ -273,7 +271,7 @@ export function NovoPlanoForm({
             <Cpu size={20} className="shrink-0" />
             <p className="text-sm">
               Este cliente não tem equipamentos cadastrados ainda.{' '}
-              <a href="/ambientes/novo" className="text-primary hover:underline font-semibold">
+              <a href={`/ambientes/novo?clienteId=${clienteId}`} className="text-primary hover:underline font-semibold">
                 Cadastre um ambiente com equipamentos.
               </a>
             </p>

@@ -20,12 +20,14 @@ type Ambiente = {
   equipamentos: Equipamento[]
 }
 
+type ClienteOpcao = { id: string; razaoSocial: string; nomeFantasia: string | null }
 type Tecnico     = { id: string; email: string; nome: string | null }
 type Checklist   = { id: string; nome: string }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
 export default async function NovoPlanoPage() {
-  const [ambientesRes, tecnicosRes, checklistsRes, tiposRes, contratosRes] = await Promise.all([
+  const [clientesRes, ambientesRes, tecnicosRes, checklistsRes, tiposRes, contratosRes] = await Promise.all([
+    api.get<{ data: ClienteOpcao[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as ClienteOpcao[] })),
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
     api.get<{ data: Checklist[] }>('/modelos-checklist?perPage=1000').catch(() => ({ data: [] as Checklist[] })),
@@ -39,7 +41,7 @@ export default async function NovoPlanoPage() {
   const tiposServico = Array.isArray(tiposRes) ? tiposRes : []
   const contratos    = Array.isArray(contratosRes) ? contratosRes : []
 
-  const temCliente = ambientes.some((a) => a.cliente)
+  const temCliente = clientesRes.data.length > 0
 
   return (
     <div>
@@ -54,14 +56,14 @@ export default async function NovoPlanoPage() {
       {!temCliente ? (
         <div className="bg-white rounded-xl p-12 text-center border border-border max-w-lg">
           <p className="text-sm text-gray-500">
-            Nenhum ambiente cadastrado.{' '}
-            <a href="/ambientes/novo" className="text-primary font-semibold hover:underline">
-              Crie um ambiente primeiro.
+            Nenhum cliente cadastrado.{' '}
+            <a href="/clientes/novo" className="text-primary font-semibold hover:underline">
+              Crie um cliente primeiro.
             </a>
           </p>
         </div>
       ) : (
-        <NovoPlanoForm ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} tiposServico={tiposServico} contratos={contratos} />
+        <NovoPlanoForm clientes={clientesRes.data} ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} tiposServico={tiposServico} contratos={contratos} />
       )}
     </div>
   )

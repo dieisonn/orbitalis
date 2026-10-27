@@ -21,11 +21,13 @@ type Tecnico = { id: string; email: string; nome: string | null }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string; ativo: boolean }
 
 export function NovaOsForm({
+  clientes: clientesIniciais,
   ambientes: ambientesIniciais,
   tecnicos,
   tiposServico,
   modelos,
 }: {
+  clientes: { id: string; razaoSocial: string; nomeFantasia: string | null }[]
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
   tiposServico: TipoServico[]
@@ -40,16 +42,14 @@ export function NovaOsForm({
   const [tipo, setTipo]                   = useState<TipoOs | null>(null)
   const [modeloChecklistId, setModeloChecklistId] = useState('')
   const [ambientes, setAmbientes] = useState<Ambiente[]>(ambientesIniciais)   // cresce com o cadastro rápido
+  const [clientesExtras, setClientesExtras] = useState<{ id: string; razaoSocial: string; nomeFantasia: string | null }[]>([])
   const [cadastrando, setCadastrando] = useState<string | null>(null)
 
   const hoje = new Date().toISOString().split('T')[0]
 
+  // Lista vem do cadastro de clientes (e não dos ambientes): cliente novo, sem ambiente, também aparece.
   const clientes = Array.from(
-    new Map(
-      ambientes
-        .filter((a) => a.cliente)
-        .map((a) => [a.cliente!.id, a.cliente!])
-    ).values(),
+    new Map([...clientesIniciais, ...clientesExtras].map((c) => [c.id, c])).values(),
   ).sort((a, b) =>
     (a.nomeFantasia ?? a.razaoSocial).localeCompare(b.nomeFantasia ?? b.razaoSocial),
   )
@@ -170,6 +170,7 @@ export function NovaOsForm({
                 setAmbientes((l) => [...l, { ...ambiente, cliente: { id: cliente.id, razaoSocial: cliente.razaoSocial, nomeFantasia: null }, equipamentos: [] }])
                 setAmbienteId(ambiente.id)
               }
+              setClientesExtras((l) => [...l, { id: cliente.id, razaoSocial: cliente.razaoSocial, nomeFantasia: null }])
               setClienteId(cliente.id); setEquipamentoId(''); setCadastrando(null)
             }} />
         )}
@@ -196,6 +197,13 @@ export function NovaOsForm({
             </option>
           ))}
         </select>
+        {clienteId && ambientesFiltrados.length === 0 && (
+          <p className="text-xs text-amber-700 mt-1">
+            Este cliente ainda não tem ambiente.{' '}
+            <a href={`/ambientes/novo?clienteId=${clienteId}`} className="underline font-semibold">Cadastre um ambiente</a>
+            {' '}e volte para abrir a O.S.
+          </p>
+        )}
       </div>
 
       {/* Equipamento */}

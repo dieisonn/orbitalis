@@ -10,11 +10,13 @@ type Ambiente = {
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null } | null
   equipamentos: { id: string; nome: string; tipoEquipamento: string }[]
 }
+type ClienteOpcao = { id: string; razaoSocial: string; nomeFantasia: string | null }
 type Tecnico = { id: string; email: string; nome: string | null }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string; ativo: boolean }
 
 export default async function NovaOsPage() {
-  const [ambientesRes, tecnicosRes, tiposServico, modelosRes] = await Promise.all([
+  const [clientesRes, ambientesRes, tecnicosRes, tiposServico, modelosRes] = await Promise.all([
+    api.get<{ data: ClienteOpcao[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as ClienteOpcao[] })),
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
     api.get<TipoServico[]>('/tipos-servico').catch(() => [] as TipoServico[]),
@@ -34,17 +36,18 @@ export default async function NovaOsPage() {
       </div>
       <div className="max-w-xl">
         <div className="bg-white rounded-xl border border-border p-6">
-          {ambientes.length === 0 ? (
+          {clientesRes.data.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-sm text-gray-500">
-                Nenhum ambiente cadastrado.{' '}
-                <a href="/ambientes/novo" className="text-primary font-semibold hover:underline">
-                  Crie um ambiente primeiro.
+                Nenhum cliente cadastrado.{' '}
+                <a href="/clientes/novo" className="text-primary font-semibold hover:underline">
+                  Crie um cliente primeiro.
                 </a>
               </p>
             </div>
           ) : (
             <NovaOsForm
+              clientes={clientesRes.data}
               ambientes={ambientes}
               tecnicos={tecnicos}
               tiposServico={tiposServico.filter((t) => t.ativo)}
