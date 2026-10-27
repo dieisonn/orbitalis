@@ -11,6 +11,9 @@ type Config = {
   cnpj: string | null
   telefone: string | null
   endereco: string | null
+  email?: string | null
+  site?: string | null
+  instrucoesOs?: string | null
   cidade?: string | null
   uf?: string | null
   codigoIbge?: string | null

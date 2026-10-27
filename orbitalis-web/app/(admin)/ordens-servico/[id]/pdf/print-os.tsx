@@ -18,23 +18,28 @@ type Item = {
 export type OS = {
   id: string; numero: number | null; status: string; origem: string
   dataAgendamento: string; horaInicio?: string | null; horaFim?: string | null; dataInicio: string | null; dataConclusao: string | null
+  tipo?: string | null
   observacoesGerais: string | null
   assinaturaBase64: string | null
   tipoGas: string | null
   quantidadeGasGramas: number | null
   ambiente: {
     nome: string; localizacaoInterna: string; capacidadeTermica: string
-    cliente: { razaoSocial: string; nomeFantasia: string | null; documento: string | null; endereco: string; telefone?: string | null; celular?: string | null }
+    cliente: { razaoSocial: string; nomeFantasia: string | null; documento: string | null; endereco: string; telefone?: string | null; celular?: string | null; email?: string | null; cidade?: string | null; uf?: string | null }
   }
   tecnico: { email: string; nome: string | null } | null
-  tipoServico?: { sigla: string; nome: string } | null
+  tipoServico?: { id?: string; sigla: string; nome: string } | null
   itens: Item[]
 }
 
 export type Config = {
   nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null
   corPrimaria: string | null; cnpj: string | null; telefone: string | null; endereco: string | null
+  email?: string | null; site?: string | null; instrucoesOs?: string | null; cidade?: string | null; uf?: string | null
 } | null
+
+/** Tipos de serviço cadastrados pela empresa (viram caixas de marcar na folha impressa). */
+export type TipoServicoOpcao = { id: string; sigla: string; nome: string }
 
 const ORIGEM_LABEL: Record<string, string> = {
   manual_admin: 'Manual',
@@ -74,7 +79,7 @@ export const PRINT_CSS = `
         * { box-sizing: border-box; }
       `
 
-export function PrintOS({ os, config }: { os: OS; config?: Config }) {
+export function PrintOS({ os, config, tipos }: { os: OS; config?: Config; tipos?: TipoServicoOpcao[] }) {
   const numero = os.numero != null
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
@@ -101,256 +106,252 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
       </div>
       <div className="no-print h-14" />
 
-      <DocumentoOS os={os} config={config} />
+      <DocumentoOS os={os} config={config} tipos={tipos} />
     </>
   )
 }
 
-/** O documento da O.S. (sem a barra de ações). `modoDia` = folha do técnico: horário, telefone e espaço para anotações. */
-export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: Config; modoDia?: boolean }) {
+/** O documento da O.S. (sem a barra de ações). `modoDia` = folha do técnico, com mais espaço para anotações. */
+export function DocumentoOS({ os, config, tipos = [], modoDia = false }: { os: OS; config?: Config; tipos?: TipoServicoOpcao[]; modoDia?: boolean }) {
   const numero = os.numero != null
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
   const nomeEmpresa = config?.nomeFantasia ?? config?.nomeEmpresa ?? 'Orbitalis'
   const logoUrl = config?.logoUrl ?? null
-  const cor = config?.corPrimaria ?? '#0505ad'
   const tecnicoLabel = os.tecnico ? (os.tecnico.nome ?? os.tecnico.email) : 'Não atribuído'
+  const c = os.ambiente.cliente
+  const fone = [c.telefone, c.celular].filter(Boolean).join(' · ')
+  const dia = fmtDia(os.dataAgendamento)
   // dataAgendamento guarda só a DATA (meia-noite UTC); o horário fica em horaInicio/horaFim
-  const horario = os.horaInicio ? `${os.horaInicio}${os.horaFim ? ` – ${os.horaFim}` : ''}` : null
+  const entrada = `${dia}${os.horaInicio ? ` - ${os.horaInicio}` : ''}`
+  const saida = `${dia}${os.horaFim ? ` - ${os.horaFim}` : ''}`
   const dataLonga = new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
-  const fone = [os.ambiente.cliente.telefone, os.ambiente.cliente.celular].filter(Boolean).join(' · ')
+  const cidadeEmpresa = [config?.cidade, config?.uf].filter(Boolean).join('/')
+  // tipos cadastrados; se o da O.S. não estiver na lista (ex.: tipo desativado), entra para aparecer marcado
+  const listaTipos = os.tipoServico && !tipos.some((t) => t.id === os.tipoServico?.id || t.sigla === os.tipoServico?.sigla)
+    ? [...tipos, { id: os.tipoServico.id ?? 'os', sigla: os.tipoServico.sigla, nome: os.tipoServico.nome }]
+    : tipos
+  const tipoMarcado = (t: TipoServicoOpcao) => !!os.tipoServico && (t.id === os.tipoServico.id || t.sigla === os.tipoServico.sigla)
+  const linhasObs = modoDia ? 6 : 4
 
   return (
-    <>
-      {/* ── DOCUMENTO ── */}
-      <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '9.5pt', color: '#111', background: '#fff', maxWidth: '210mm', margin: '0 auto' }}>
+    <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '9pt', color: '#111', background: '#fff', maxWidth: '210mm', margin: '0 auto' }}>
 
-        {/* Faixa de cor no topo — identidade da empresa */}
-        <div style={{ height: '5px', backgroundColor: cor, width: '100%' }} />
-
-        {/* CABEÇALHO */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '16px 0 12px 0', borderBottom: '1.5px solid #111' }}>
-          {/* Empresa */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {logoUrl ? (
-              <img src={logoUrl} alt={nomeEmpresa}
-                style={{ height: '44px', width: 'auto', objectFit: 'contain' }} />
-            ) : (
-              <span style={{ fontWeight: 900, fontSize: '14pt', letterSpacing: '-0.5px' }}>{nomeEmpresa.toUpperCase()}</span>
-            )}
-            <div style={{ borderLeft: '1px solid #ccc', paddingLeft: '12px', lineHeight: 1.5 }}>
-              {logoUrl && <p style={{ fontWeight: 700, fontSize: '10pt', margin: 0 }}>{nomeEmpresa}</p>}
-              {config?.cnpj    && <p style={{ fontSize: '7.5pt', color: '#555', margin: 0 }}>CNPJ: {config.cnpj}</p>}
-              {config?.telefone && <p style={{ fontSize: '7.5pt', color: '#555', margin: 0 }}>{config.telefone}</p>}
-              {config?.endereco && <p style={{ fontSize: '7.5pt', color: '#555', margin: 0 }}>{config.endereco}</p>}
-            </div>
-          </div>
-
-          {/* Número da O.S. */}
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '7pt', textTransform: 'uppercase', letterSpacing: '1px', color: '#666', margin: '0 0 2px 0' }}>Ordem de Serviço</p>
-            <p style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '20pt', margin: 0, color: '#111' }}>{numero}</p>
-            <p style={{ fontSize: '7.5pt', color: '#666', margin: '2px 0 0 0' }}>
-              {os.tipoServico ? `${os.tipoServico.sigla} · ${os.tipoServico.nome} · ` : ''}{ORIGEM_LABEL[os.origem] ?? os.origem}
-            </p>
+      {/* CABEÇALHO — identificação da empresa */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', padding: '4px 0 10px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt={nomeEmpresa} style={{ height: '46px', width: 'auto', objectFit: 'contain' }} />
+          )}
+          <div style={{ lineHeight: 1.45 }}>
+            <p style={{ fontWeight: 700, fontSize: '11pt', margin: 0 }}>{nomeEmpresa.toUpperCase()}</p>
+            {config?.cnpj && <p style={{ fontSize: '8pt', color: '#444', margin: 0 }}>CNPJ: {config.cnpj}</p>}
+            {config?.endereco && <p style={{ fontSize: '8pt', color: '#444', margin: 0 }}>{config.endereco}</p>}
+            {cidadeEmpresa && <p style={{ fontSize: '8pt', color: '#444', margin: 0 }}>{cidadeEmpresa}</p>}
           </div>
         </div>
-
-        {/* INFORMAÇÕES PRINCIPAIS */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px', padding: '14px 0', borderBottom: '1px solid #ddd' }}>
-          <Cell label="Cliente">
-            <strong>{os.ambiente.cliente.razaoSocial}</strong>
-            {os.ambiente.cliente.nomeFantasia && (
-              <><br /><span style={{ color: '#555' }}>{os.ambiente.cliente.nomeFantasia}</span></>
-            )}
-            <br />
-            {os.ambiente.cliente.documento && <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.documento}</span>}
-            <br />
-            <span style={{ color: '#888', fontSize: '8pt' }}>{os.ambiente.cliente.endereco}</span>
-            {modoDia && fone && <><br /><span style={{ fontSize: '8.5pt' }}>Tel.: {fone}</span></>}
-          </Cell>
-
-          <Cell label="Ambiente / Local">
-            <strong>{os.ambiente.nome}</strong>
-            <br />
-            <span style={{ color: '#555' }}>{os.ambiente.localizacaoInterna}</span>
-            <br />
-            <span style={{ color: '#888', fontSize: '8pt' }}>Cap. Térmica: {os.ambiente.capacidadeTermica}</span>
-          </Cell>
-
-          <Cell label="Técnico Responsável">
-            <strong>{tecnicoLabel}</strong>
-            {os.tecnico?.nome && (
-              <><br /><span style={{ color: '#888', fontSize: '8pt' }}>{os.tecnico.email}</span></>
-            )}
-          </Cell>
-
-          <Cell label="Datas">
-            <Row k="Agendamento" v={modoDia && horario ? `${fmtDia(os.dataAgendamento)} às ${horario}` : fmtDia(os.dataAgendamento)} />
-            {os.dataInicio    && <Row k="Início"     v={fmt(os.dataInicio)} />}
-            {os.dataConclusao && <Row k="Conclusão"  v={fmt(os.dataConclusao)} />}
-          </Cell>
+        <div style={{ textAlign: 'right', lineHeight: 1.45, fontSize: '8pt', color: '#333', flexShrink: 0 }}>
+          {config?.telefone && <p style={{ margin: 0, fontWeight: 700 }}>{config.telefone}</p>}
+          {config?.email && <p style={{ margin: 0 }}>{config.email}</p>}
+          {config?.site && <p style={{ margin: 0 }}>{config.site}</p>}
         </div>
-
-        {/* OBSERVAÇÕES GERAIS */}
-        {os.observacoesGerais && (
-          <div style={{ padding: '10px 0', borderBottom: '1px solid #ddd' }}>
-            <SectionLabel>Observações Gerais</SectionLabel>
-            <p style={{ margin: 0, fontSize: '9pt' }}>{os.observacoesGerais}</p>
-          </div>
-        )}
-
-        {/* CARGA DE GÁS */}
-        {os.tipoGas && (
-          <div style={{ padding: '10px 0', borderBottom: '1px solid #ddd' }}>
-            <SectionLabel>Carga de Gás Refrigerante</SectionLabel>
-            <p style={{ margin: 0 }}>
-              <strong>{os.tipoGas}</strong>
-              {os.quantidadeGasGramas != null && (
-                <span style={{ color: '#555', marginLeft: '8px' }}>{Number(os.quantidadeGasGramas).toFixed(1)} g</span>
-              )}
-            </p>
-          </div>
-        )}
-
-        {/* EQUIPAMENTOS */}
-        <div style={{ padding: '12px 0' }}>
-          <SectionLabel>Equipamentos e Serviços ({os.itens.length})</SectionLabel>
-
-          {os.itens.map((item, idx) => {
-            const checklistItems = parseSnapshot(item.checklistSnapshot)
-            return (
-              <div key={item.id} style={{ border: '1px solid #ccc', borderRadius: '4px', marginBottom: '10px', overflow: 'hidden' }}>
-
-                {/* Cabeçalho do equipamento */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f5f5f5', padding: '6px 10px', borderBottom: '1px solid #ccc' }}>
-                  <div>
-                    <span style={{ color: '#999', marginRight: '4px', fontSize: '8pt' }}>{idx + 1}.</span>
-                    <strong style={{ fontSize: '9.5pt' }}>{item.equipamento.nome}</strong>
-                    <span style={{ color: '#666', fontSize: '8pt', marginLeft: '8px' }}>
-                      {item.equipamento.marca}
-                      {item.equipamento.modelo ? ` ${item.equipamento.modelo}` : ''}
-                      {' · '}{item.equipamento.tipoEquipamento}
-                    </span>
-                    {item.equipamento.numeroSerie && (
-                      <span style={{ color: '#999', fontFamily: 'monospace', fontSize: '7.5pt', marginLeft: '8px' }}>
-                        S/N: {item.equipamento.numeroSerie}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ padding: '8px 10px' }}>
-                  {/* Checklist */}
-                  {checklistItems.length > 0 && (
-                    <div style={{ marginBottom: '8px' }}>
-                      <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#888', margin: '0 0 6px 0' }}>
-                        Checklist de Serviços
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px' }}>
-                        {checklistItems.map((ci) => (
-                          <div key={ci.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px' }}>
-                            <div style={{ width: '10px', height: '10px', border: '1px solid #999', borderRadius: '2px', marginTop: '1px', flexShrink: 0 }} />
-                            <span style={{ fontSize: '8.5pt', lineHeight: 1.4 }}>
-                              {ci.descricao}
-                              {ci.obrigatorio && <span style={{ color: '#999', fontSize: '7pt' }}> *</span>}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Observações técnicas */}
-                  <div>
-                    <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#888', margin: '0 0 4px 0' }}>
-                      Observações Técnicas
-                    </p>
-                    {item.observacoesTecnicas ? (
-                      <p style={{ fontSize: '9pt', margin: 0 }}>{item.observacoesTecnicas}</p>
-                    ) : (
-                      <div style={{ height: '28px', borderBottom: '1px dashed #bbb' }} />
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* ANOTAÇÕES DO TÉCNICO — só na folha do dia */}
-        {modoDia && (
-          <div style={{ breakInside: 'avoid', marginTop: '8px' }}>
-            <SectionLabel>Anotações do técnico</SectionLabel>
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} style={{ height: '24px', borderBottom: '1px solid #bbb' }} />
-            ))}
-          </div>
-        )}
-
-        {/* ASSINATURAS */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginTop: '16px', paddingTop: '16px', borderTop: '1.5px solid #111' }}>
-          <div>
-            {os.assinaturaBase64 ? (
-              <div style={{ height: '52px', marginBottom: '4px', display: 'flex', alignItems: 'flex-end' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={os.assinaturaBase64} alt="Assinatura do técnico" style={{ maxHeight: '48px', width: 'auto' }} />
-              </div>
-            ) : (
-              <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '4px' }} />
-            )}
-            <p style={{ fontSize: '8pt', textAlign: 'center', margin: '0 0 1px 0', color: '#444' }}>Assinatura do Técnico</p>
-            <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{tecnicoLabel}</p>
-          </div>
-
-          <div>
-            <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '4px' }} />
-            <p style={{ fontSize: '8pt', textAlign: 'center', margin: '0 0 1px 0', color: '#444' }}>Assinatura / Carimbo do Responsável</p>
-            <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{os.ambiente.cliente.razaoSocial}</p>
-          </div>
-        </div>
-
-        {/* RODAPÉ */}
-        <div style={{ marginTop: '14px', paddingTop: '6px', borderTop: '1px solid #ddd', display: 'flex', justifyContent: 'space-between' }}>
-          <p style={{ fontSize: '7pt', color: '#aaa', margin: 0 }}>
-            {numero} · {nomeEmpresa}
-            {config?.cnpj ? ` · CNPJ ${config.cnpj}` : ''}
-            {config?.telefone ? ` · ${config.telefone}` : ''}
-          </p>
-          <p style={{ fontSize: '7pt', color: '#aaa', margin: 0 }}>
-            {modoDia ? dataLonga : new Date().toLocaleString('pt-BR')}
-          </p>
-        </div>
-
       </div>
-    </>
-  )
-}
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#777', margin: '0 0 6px 0' }}>
-      {children}
-    </p>
-  )
-}
+      {/* TÍTULO */}
+      <div style={{ ...barra, display: 'flex', justifyContent: 'space-between', fontSize: '11pt', padding: '5px 8px' }}>
+        <span style={{ fontWeight: 700 }}>ORDEM DE SERVIÇO Nº {os.numero != null ? String(os.numero).padStart(4, '0') : numero}</span>
+        <span style={{ fontWeight: 700 }}>{dia}</span>
+      </div>
 
-function Cell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#777', margin: '0 0 3px 0' }}>
-        {label}
-      </p>
-      <div style={{ fontSize: '9.5pt', lineHeight: 1.6 }}>{children}</div>
+      {/* PERÍODO DE EXECUÇÃO */}
+      <Secao titulo="Período de execução">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+          <Campo rotulo="Entrada" valor={entrada} />
+          <Campo rotulo="Saída" valor={saida} esquerda />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: borda }}>
+          <Campo rotulo="Chegada (técnico)" valor={<span style={{ color: '#777' }}>____/____/______  ____:____</span>} />
+          <Campo rotulo="Saída (técnico)" valor={<span style={{ color: '#777' }}>____/____/______  ____:____</span>} esquerda />
+        </div>
+      </Secao>
+
+      {/* TIPO DE SERVIÇO */}
+      <div style={{ border: borda, borderTop: 'none', display: 'grid', gridTemplateColumns: '1.6fr 1fr' }}>
+        <div style={{ padding: '6px 8px' }}>
+          <p style={rotulo}>Tipo de serviço</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 10px', marginTop: '4px' }}>
+            {listaTipos.length === 0 && <span style={{ color: '#888' }}>—</span>}
+            {listaTipos.map((t) => <Caixa key={t.id} marcada={tipoMarcado(t)}>{t.nome}</Caixa>)}
+          </div>
+          <div style={{ display: 'flex', gap: '14px', marginTop: '6px', paddingTop: '5px', borderTop: '1px dotted #bbb' }}>
+            <span style={{ ...rotulo, alignSelf: 'center' }}>Manutenção:</span>
+            <Caixa marcada={os.tipo === 'preventiva'}>Preventiva</Caixa>
+            <Caixa marcada={os.tipo === 'corretiva'}>Corretiva</Caixa>
+          </div>
+        </div>
+        <div style={{ borderLeft: borda, padding: '6px 8px', lineHeight: 1.5 }}>
+          <p style={rotulo}>Técnico responsável</p>
+          <p style={{ margin: '2px 0 6px 0', fontWeight: 700 }}>{tecnicoLabel}</p>
+          <p style={rotulo}>Origem</p>
+          <p style={{ margin: '2px 0 0 0' }}>{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
+        </div>
+      </div>
+
+      {/* DADOS DO CLIENTE */}
+      <Secao titulo="Dados do cliente">
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', borderBottom: borda }}>
+          <Campo rotulo="Cliente" valor={<strong>{c.razaoSocial}{c.nomeFantasia && c.nomeFantasia !== c.razaoSocial ? ` (${c.nomeFantasia})` : ''}</strong>} />
+          <Campo rotulo="CNPJ/CPF" valor={c.documento ?? ''} esquerda />
+        </div>
+        <div style={{ borderBottom: borda }}>
+          <Campo rotulo="Endereço" valor={c.endereco} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', borderBottom: borda }}>
+          <Campo rotulo="Cidade" valor={c.cidade ?? ''} />
+          <Campo rotulo="Estado" valor={c.uf ?? ''} esquerda />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+          <Campo rotulo="Telefone" valor={fone} />
+          <Campo rotulo="E-mail" valor={c.email ?? ''} esquerda />
+        </div>
+      </Secao>
+
+      {/* LOCAL E EQUIPAMENTOS */}
+      <Secao titulo="Local e equipamentos">
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 1fr', borderBottom: os.itens.length ? borda : 'none' }}>
+          <Campo rotulo="Ambiente" valor={<strong>{os.ambiente.nome}</strong>} />
+          <Campo rotulo="Localização" valor={os.ambiente.localizacaoInterna} esquerda />
+          <Campo rotulo="Cap. térmica" valor={os.ambiente.capacidadeTermica} esquerda />
+        </div>
+
+        {os.itens.map((item, idx) => {
+          const checklistItems = parseSnapshot(item.checklistSnapshot)
+          return (
+            <div key={item.id} style={{ borderBottom: idx < os.itens.length - 1 ? borda : 'none', breakInside: 'avoid' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', background: '#f7f7f7', borderBottom: borda }}>
+                <Campo rotulo={`Equipamento ${idx + 1}`} valor={<strong>{item.equipamento.nome}</strong>} />
+                <Campo rotulo="Marca" valor={item.equipamento.marca} esquerda />
+                <Campo rotulo="Modelo" valor={item.equipamento.modelo ?? ''} esquerda />
+                <Campo rotulo="Série" valor={item.equipamento.numeroSerie ?? ''} esquerda />
+              </div>
+              <div style={{ padding: '6px 8px' }}>
+                {checklistItems.length > 0 && (
+                  <div style={{ marginBottom: '6px' }}>
+                    <p style={rotulo}>Checklist de serviços</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px', marginTop: '4px' }}>
+                      {checklistItems.map((ci) => (
+                        <Caixa key={ci.id} marcada={false}>{ci.descricao}{ci.obrigatorio ? ' *' : ''}</Caixa>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p style={rotulo}>Observações técnicas</p>
+                {item.observacoesTecnicas
+                  ? <p style={{ margin: '3px 0 0 0' }}>{item.observacoesTecnicas}</p>
+                  : <div style={{ height: '24px', borderBottom: '1px dashed #bbb' }} />}
+              </div>
+            </div>
+          )
+        })}
+        {os.itens.length === 0 && (
+          <p style={{ margin: 0, padding: '6px 8px', color: '#666' }}>Sem equipamento vinculado a esta O.S.</p>
+        )}
+      </Secao>
+
+      {/* OBSERVAÇÕES DA O.S. / GÁS */}
+      {(os.observacoesGerais || os.tipoGas) && (
+        <Secao titulo="Observações">
+          <div style={{ padding: '6px 8px', lineHeight: 1.5 }}>
+            {os.observacoesGerais && <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{os.observacoesGerais}</p>}
+            {os.tipoGas && (
+              <p style={{ margin: os.observacoesGerais ? '6px 0 0 0' : 0 }}>
+                <span style={{ color: '#555' }}>Gás refrigerante: </span><strong>{os.tipoGas}</strong>
+                {os.quantidadeGasGramas != null && <span> · {Number(os.quantidadeGasGramas).toFixed(1)} g</span>}
+              </p>
+            )}
+          </div>
+        </Secao>
+      )}
+
+      {/* INSTRUÇÕES DA EMPRESA PARA O TÉCNICO */}
+      {config?.instrucoesOs && (
+        <Secao titulo="Instruções">
+          <p style={{ margin: 0, padding: '6px 8px', lineHeight: 1.5, whiteSpace: 'pre-wrap', fontSize: '8.5pt' }}>{config.instrucoesOs}</p>
+        </Secao>
+      )}
+
+      {/* OBSERVAÇÕES DO TÉCNICO */}
+      <Secao titulo="Observações do técnico">
+        <div style={{ padding: '0 8px 4px 8px' }}>
+          {Array.from({ length: linhasObs }).map((_, i) => (
+            <div key={i} style={{ height: '22px', borderBottom: '1px solid #ccc' }} />
+          ))}
+        </div>
+      </Secao>
+
+      {/* ASSINATURAS */}
+      <div style={{ border: borda, borderTop: 'none', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', padding: '10px 16px 8px 16px', breakInside: 'avoid' }}>
+        <div>
+          {os.assinaturaBase64 ? (
+            <div style={{ height: '52px', display: 'flex', alignItems: 'flex-end', marginBottom: '3px' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={os.assinaturaBase64} alt="Assinatura do técnico" style={{ maxHeight: '48px', width: 'auto' }} />
+            </div>
+          ) : (
+            <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '3px' }} />
+          )}
+          <p style={{ fontSize: '8pt', textAlign: 'center', margin: 0, color: '#333' }}>Assinatura do técnico</p>
+          <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{tecnicoLabel}</p>
+        </div>
+        <div>
+          <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '3px' }} />
+          <p style={{ fontSize: '8pt', textAlign: 'center', margin: 0, color: '#333' }}>Assinatura do cliente</p>
+          <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{c.razaoSocial}</p>
+        </div>
+      </div>
+
+      {/* RODAPÉ */}
+      <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
+        <p style={{ fontSize: '7pt', color: '#999', margin: 0 }}>{numero} · {nomeEmpresa}{config?.cnpj ? ` · CNPJ ${config.cnpj}` : ''}</p>
+        <p style={{ fontSize: '7pt', color: '#999', margin: 0 }}>{modoDia ? dataLonga : new Date().toLocaleString('pt-BR')}</p>
+      </div>
     </div>
   )
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+const borda = '1px solid #c8c8c8'
+const barra: React.CSSProperties = { background: '#e6e6e6', border: borda, padding: '3px 8px' }
+const rotulo: React.CSSProperties = { fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#666', margin: 0 }
+
+/** Bloco com barra cinza de título e corpo com borda. */
+function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <p style={{ margin: '0 0 1px 0', fontSize: '9pt' }}>
-      <span style={{ color: '#666' }}>{k}: </span>
-      <strong>{v}</strong>
-    </p>
+    <div style={{ marginTop: '8px' }}>
+      <div style={{ ...barra, fontWeight: 700, fontSize: '8.5pt', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{titulo}</div>
+      <div style={{ border: borda, borderTop: 'none' }}>{children}</div>
+    </div>
+  )
+}
+
+/** Campo com rótulo pequeno e valor; `esquerda` desenha a divisória lateral. */
+function Campo({ rotulo: r, valor, esquerda = false }: { rotulo: string; valor: React.ReactNode; esquerda?: boolean }) {
+  return (
+    <div style={{ padding: '4px 8px', minHeight: '30px', borderLeft: esquerda ? borda : 'none', minWidth: 0, overflowWrap: 'anywhere' }}>
+      <p style={rotulo}>{r}</p>
+      <div style={{ fontSize: '9pt', lineHeight: 1.4, marginTop: '1px' }}>{valor || ' '}</div>
+    </div>
+  )
+}
+
+/** Caixa de marcar para folha impressa. */
+function Caixa({ marcada, children }: { marcada: boolean; children: React.ReactNode }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '5px', fontSize: '8.5pt', lineHeight: 1.35 }}>
+      <span style={{ width: '10px', height: '10px', border: '1px solid #444', borderRadius: '2px', marginTop: '1px', flexShrink: 0, fontSize: '9px', lineHeight: '9px', textAlign: 'center', fontWeight: 900 }}>
+        {marcada ? '✓' : ''}
+      </span>
+      <span style={marcada ? { fontWeight: 700 } : undefined}>{children}</span>
+    </span>
   )
 }

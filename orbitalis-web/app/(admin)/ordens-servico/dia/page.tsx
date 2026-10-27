@@ -33,10 +33,11 @@ export default async function OsDoDiaPage({ searchParams }: Props) {
   if (sp.tecnicoId) qs.set('tecnicoId', sp.tecnicoId)
 
   let erro = ''
-  const [lista, tecnicosRes, config] = await Promise.all([
+  const [lista, tecnicosRes, config, tiposRes] = await Promise.all([
     api.get<{ data: Linha[] }>(`/ordens-servico?${qs}`).catch((e: unknown) => { erro = e instanceof Error ? e.message : 'erro'; return null }),
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
     api.get<Config>('/configuracao').catch(() => null),
+    api.get<{ id: string; sigla: string; nome: string; ativo?: boolean; entraNoRelatorio?: boolean }[]>('/tipos-servico').catch(() => []),
   ])
 
   const doDia = (lista?.data ?? [])
@@ -104,7 +105,7 @@ export default async function OsDoDiaPage({ searchParams }: Props) {
         {excedeu && <p className="mt-3 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-md px-3 py-2">Há mais de {MAX_OS} O.S. neste dia; mostrando as primeiras {MAX_OS}. Filtre por técnico para ver o restante.</p>}
       </div>
 
-      <DiaClient resumos={resumos} completas={completas} config={config} diaLongo={diaLongo} />
+      <DiaClient resumos={resumos} completas={completas} config={config} tipos={(Array.isArray(tiposRes) ? tiposRes : []).filter((t) => t.ativo !== false && t.entraNoRelatorio !== false)} diaLongo={diaLongo} />
     </div>
   )
 }

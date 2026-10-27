@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Printer } from 'lucide-react'
-import { DocumentoOS, PRINT_CSS, type OS, type Config } from '../[id]/pdf/print-os'
+import { DocumentoOS, PRINT_CSS, type OS, type Config, type TipoServicoOpcao } from '../[id]/pdf/print-os'
 
 export type ResumoOS = {
   id: string; numero: number | null; status: string; hora: string
@@ -16,8 +16,8 @@ const STATUS: Record<string, string> = {
 
 const rotulo = (n: number | null, id: string) => n != null ? `OS-${String(n).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`
 
-export function DiaClient({ resumos, completas, config, diaLongo }: {
-  resumos: ResumoOS[]; completas: OS[]; config: Config | null; diaLongo: string
+export function DiaClient({ resumos, completas, config, tipos, diaLongo }: {
+  resumos: ResumoOS[]; completas: OS[]; config: Config | null; tipos: TipoServicoOpcao[]; diaLongo: string
 }) {
   const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set(resumos.map((r) => r.id)))
 
@@ -108,7 +108,7 @@ export function DiaClient({ resumos, completas, config, diaLongo }: {
       <div className="hidden print:block">
         {paraImprimir.map((os, i) => (
           <div key={os.id} style={i > 0 ? { breakBefore: 'page' } : undefined}>
-            <DocumentoOS os={os} config={config} modoDia />
+            <DocumentoOS os={os} config={config} tipos={tipos} modoDia />
           </div>
         ))}
       </div>
