@@ -17,7 +17,7 @@ type Item = {
 
 export type OS = {
   id: string; numero: number | null; status: string; origem: string
-  dataAgendamento: string; dataInicio: string | null; dataConclusao: string | null
+  dataAgendamento: string; horaInicio?: string | null; horaFim?: string | null; dataInicio: string | null; dataConclusao: string | null
   observacoesGerais: string | null
   assinaturaBase64: string | null
   tipoGas: string | null
@@ -46,6 +46,11 @@ const ORIGEM_LABEL: Record<string, string> = {
 function fmt(d: string | null) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('pt-BR')
+}
+
+// Data de agendamento é só a data (meia-noite UTC): formata em UTC para não recuar um dia
+function fmtDia(d: string) {
+  return new Date(d).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
 }
 
 function parseSnapshot(snapshot: unknown): ChecklistItem[] {
@@ -110,8 +115,9 @@ export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: 
   const logoUrl = config?.logoUrl ?? null
   const cor = config?.corPrimaria ?? '#0505ad'
   const tecnicoLabel = os.tecnico ? (os.tecnico.nome ?? os.tecnico.email) : 'Não atribuído'
-  const horario = new Date(os.dataAgendamento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
-  const dataLonga = new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' })
+  // dataAgendamento guarda só a DATA (meia-noite UTC); o horário fica em horaInicio/horaFim
+  const horario = os.horaInicio ? `${os.horaInicio}${os.horaFim ? ` – ${os.horaFim}` : ''}` : null
+  const dataLonga = new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
   const fone = [os.ambiente.cliente.telefone, os.ambiente.cliente.celular].filter(Boolean).join(' · ')
 
   return (
@@ -180,7 +186,7 @@ export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: 
           </Cell>
 
           <Cell label="Datas">
-            <Row k="Agendamento" v={modoDia ? `${fmt(os.dataAgendamento)} às ${horario}` : fmt(os.dataAgendamento)} />
+            <Row k="Agendamento" v={modoDia && horario ? `${fmtDia(os.dataAgendamento)} às ${horario}` : fmtDia(os.dataAgendamento)} />
             {os.dataInicio    && <Row k="Início"     v={fmt(os.dataInicio)} />}
             {os.dataConclusao && <Row k="Conclusão"  v={fmt(os.dataConclusao)} />}
           </Cell>

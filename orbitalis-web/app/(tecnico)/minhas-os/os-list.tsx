@@ -160,7 +160,7 @@ export function OsList({ ordens }: { ordens: OrdemServico[] }) {
                       {ORIGEM_LABEL[os.origem] ?? os.origem}
                     </p>
                     <p className="text-xs font-medium text-gray-600 mt-0.5">
-                      {new Date(os.dataAgendamento).toLocaleDateString('pt-BR')}
+                      {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                     </p>
                     <p className="text-[10px] text-gray-400 mt-0.5">
                       {os.itens.length} equip.

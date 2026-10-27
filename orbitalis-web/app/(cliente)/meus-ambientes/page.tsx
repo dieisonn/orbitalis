@@ -108,7 +108,7 @@ export default async function MeusAmbientesPage() {
                     {amb.ordensServico.map((os) => (
                       <li key={os.id} className="flex items-center justify-between gap-2">
                         <span className="text-xs text-gray-500">
-                          {new Date(os.dataAgendamento).toLocaleDateString('pt-BR')}
+                          {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                         </span>
                         <StatusBadge status={os.status} />
                       </li>

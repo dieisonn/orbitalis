@@ -11,6 +11,8 @@ type Linha = { id: string; status: string; dataAgendamento: string }
 const DIA_MS = 86_400_000
 // O sistema trabalha no horário de Brasília (UTC-3, sem horário de verão)
 const diaBR = (d: Date | string) => new Date(new Date(d).getTime() - 3 * 3_600_000).toISOString().slice(0, 10)
+// dataAgendamento da O.S. é só a data (meia-noite UTC): o dia é o próprio dia UTC, sem conversão de fuso
+const diaOs = (d: string) => new Date(d).toISOString().slice(0, 10)
 const somaDias = (dia: string, n: number) => new Date(new Date(`${dia}T12:00:00Z`).getTime() + n * DIA_MS).toISOString().slice(0, 10)
 const dataValida = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(new Date(`${s}T12:00:00Z`).getTime())
 
@@ -21,8 +23,7 @@ export default async function OsDoDiaPage({ searchParams }: Props) {
   const dia = dataValida(sp.data) ? sp.data! : somaDias(diaBR(new Date()), 1) // padrão: amanhã
   const incluirTodas = sp.todas === '1'
 
-  // Busca com folga de um dia para cada lado e filtra pelo dia de Brasília aqui,
-  // porque o filtro de datas da API não considera o fuso.
+  // Busca com folga de um dia para cada lado e filtra pelo dia exato aqui.
   const qs = new URLSearchParams({
     dataInicio: `${somaDias(dia, -1)}T00:00:00Z`,
     dataFim: somaDias(dia, 1),
@@ -39,7 +40,7 @@ export default async function OsDoDiaPage({ searchParams }: Props) {
   ])
 
   const doDia = (lista?.data ?? [])
-    .filter((o) => diaBR(o.dataAgendamento) === dia)
+    .filter((o) => diaOs(o.dataAgendamento) === dia)
     .filter((o) => incluirTodas || (o.status !== 'cancelada' && o.status !== 'concluida'))
   const excedeu = doDia.length > MAX_OS
   const ids = doDia.slice(0, MAX_OS).map((o) => o.id)
@@ -55,7 +56,7 @@ export default async function OsDoDiaPage({ searchParams }: Props) {
     id: o.id,
     numero: o.numero,
     status: o.status,
-    hora: new Date(o.dataAgendamento).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }),
+    hora: o.horaInicio ?? '—',
     cliente: o.ambiente.cliente.nomeFantasia || o.ambiente.cliente.razaoSocial,
     ambiente: o.ambiente.nome,
     tecnico: o.tecnico ? (o.tecnico.nome ?? o.tecnico.email) : null,

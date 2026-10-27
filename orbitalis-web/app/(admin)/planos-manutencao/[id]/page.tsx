@@ -388,7 +388,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
                   return (
                     <tr key={o.id} className="hover:bg-surface transition-colors">
                       <td className="px-5 py-3 text-gray-700">
-                        {new Date(o.dataAgendamento).toLocaleDateString('pt-BR')}
+                        {new Date(o.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                       </td>
                       <td className="px-5 py-3 text-gray-500 text-xs">{amb?.nome ?? '—'}</td>
                       <td className="px-5 py-3">
