@@ -565,6 +565,8 @@ model EventoAgenda {
   personalizado  Boolean  @default(false)
   ordemServicoId String?  @unique @map("ordem_servico_id") @db.Uuid
   tipoServicoId  String?  @map("tipo_servico_id") @db.Uuid
+  // Outros tipos de serviço do mesmo evento (ex.: VT + MC); o principal acima define cor e relatórios
+  tiposExtrasIds String[] @default([]) @map("tipos_extras_ids") @db.Uuid
   tecnicoId      String?  @map("tecnico_id") @db.Uuid
   clienteId      String?  @map("cliente_id") @db.Uuid
   criadoEm       DateTime @default(now()) @map("criado_em")
