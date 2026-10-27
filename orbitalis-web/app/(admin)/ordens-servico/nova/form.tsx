@@ -7,6 +7,7 @@ import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 import { textoSobre } from '@/lib/cor'
 import { ClienteSelect } from '@/components/ui/cliente-select'
 import { ClienteRapidoModal } from '@/components/ui/cliente-rapido-modal'
+import { AmbienteRapidoModal } from '@/components/ui/ambiente-rapido-modal'
 
 type Equipamento = { id: string; nome: string; tipoEquipamento: string }
 type Ambiente = {
@@ -44,6 +45,7 @@ export function NovaOsForm({
   const [ambientes, setAmbientes] = useState<Ambiente[]>(ambientesIniciais)   // cresce com o cadastro rápido
   const [clientesExtras, setClientesExtras] = useState<{ id: string; razaoSocial: string; nomeFantasia: string | null }[]>([])
   const [cadastrando, setCadastrando] = useState<string | null>(null)
+  const [cadastrandoAmb, setCadastrandoAmb] = useState(false)
 
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -63,7 +65,7 @@ export function NovaOsForm({
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!ambienteId) return
+    if (!clienteId) return
     const fd = new FormData(e.currentTarget)
     const tecnicoId         = fd.get('tecnicoId')         as string
     const dataAgendamento   = fd.get('dataAgendamento')   as string
@@ -75,6 +77,7 @@ export function NovaOsForm({
     startTransition(async () => {
       try {
         await criarOs({
+          clienteId,
           ambienteId,
           tecnicoId,
           dataAgendamento,
@@ -179,17 +182,16 @@ export function NovaOsForm({
       {/* Ambiente */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Ambiente / Local <span className="text-destructive">*</span>
+          Ambiente / Local <span className="ml-1 text-xs font-normal text-gray-500">(opcional)</span>
         </label>
         <select
           value={ambienteId}
           onChange={(e) => { setAmbienteId(e.target.value); setEquipamentoId('') }}
-          required
           disabled={!clienteId}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white disabled:opacity-50"
         >
           <option value="">
-            {clienteId ? 'Selecione o ambiente…' : 'Selecione o cliente primeiro…'}
+            {clienteId ? 'Sem local definido (usar o cliente)' : 'Selecione o cliente primeiro…'}
           </option>
           {ambientesFiltrados.map((a) => (
             <option key={a.id} value={a.id}>
@@ -197,12 +199,24 @@ export function NovaOsForm({
             </option>
           ))}
         </select>
-        {clienteId && ambientesFiltrados.length === 0 && (
-          <p className="text-xs text-amber-700 mt-1">
-            Este cliente ainda não tem ambiente.{' '}
-            <a href={`/ambientes/novo?clienteId=${clienteId}`} className="underline font-semibold">Cadastre um ambiente</a>
-            {' '}e volte para abrir a O.S.
+        {clienteId && (
+          <p className="text-xs text-gray-600 mt-1">
+            {ambientesFiltrados.length === 0 ? 'Este cliente ainda não tem ambiente — a O.S. pode ser aberta assim mesmo. ' : ''}
+            <button type="button" onClick={() => setCadastrandoAmb(true)} className="text-primary underline font-semibold">
+              + Cadastrar novo ambiente
+            </button>
           </p>
+        )}
+        {cadastrandoAmb && clienteId && (
+          <AmbienteRapidoModal
+            clienteId={clienteId}
+            clienteNome={clientes.find((c) => c.id === clienteId)?.nomeFantasia ?? clientes.find((c) => c.id === clienteId)?.razaoSocial ?? ''}
+            onFechar={() => setCadastrandoAmb(false)}
+            onCriado={(a) => {
+              const c = clientes.find((x) => x.id === clienteId) ?? null
+              setAmbientes((l) => [...l, { ...a, cliente: c, equipamentos: [] }])
+              setAmbienteId(a.id); setEquipamentoId(''); setCadastrandoAmb(false)
+            }} />
         )}
       </div>
 
@@ -314,7 +328,7 @@ export function NovaOsForm({
         </a>
         <button
           type="submit"
-          disabled={isPending || !ambienteId}
+          disabled={isPending || !clienteId}
           style={tipoSelecionado ? { backgroundColor: tipoSelecionado.corHex, color: textoSobre(tipoSelecionado.corHex) } : {}}
           className={`flex-1 py-2.5 text-white font-semibold rounded-lg text-sm disabled:opacity-60 transition-colors ${
             !tipoSelecionado ? 'bg-action hover:bg-action/90' : 'hover:opacity-90'

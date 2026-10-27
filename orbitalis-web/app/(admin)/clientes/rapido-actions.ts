@@ -34,3 +34,17 @@ export async function criarClienteRapido(
   })
   return { cliente, ambiente: { id: amb.id, nome, localizacaoInterna, clienteId: cliente.id } }
 }
+
+/** Cadastro rápido de um ambiente para um cliente já existente (sem sair da tela de O.S.). */
+export async function criarAmbienteRapido(
+  clienteId: string,
+  d: { nome: string; localizacaoInterna: string },
+): Promise<AmbienteCriado> {
+  const nome = d.nome.trim() || 'Principal'
+  const localizacaoInterna = d.localizacaoInterna.trim() || nome
+  const amb = await api.post<{ id: string }>('/ambientes', {
+    clienteId, nome, localizacaoInterna,
+    metrosQuadrados: '0', capacidadeTermica: 'A definir',   // completar depois em Ambientes
+  })
+  return { id: amb.id, nome, localizacaoInterna, clienteId }
+}

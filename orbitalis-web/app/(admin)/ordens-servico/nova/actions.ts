@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { api } from '@/lib/api'
 
 export async function criarOs(params: {
+  clienteId: string
   ambienteId: string
   tecnicoId: string
   dataAgendamento: string
@@ -16,7 +17,8 @@ export async function criarOs(params: {
   horaFim: string
 }) {
   await api.post('/ordens-servico', {
-    ambienteId:        params.ambienteId,
+    // sem ambiente escolhido, a API usa o ambiente padrão "Sem local definido" do cliente
+    ...(params.ambienteId ? { ambienteId: params.ambienteId } : { clienteId: params.clienteId }),
     tecnicoId:         params.tecnicoId        || undefined,
     tipo:              params.tipo             || undefined,
     modeloChecklistId: params.modeloChecklistId || undefined,
