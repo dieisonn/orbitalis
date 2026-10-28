@@ -41,6 +41,18 @@ export class ModelosChecklistController {
     return this.service.seedCorretiva();
   }
 
+  @Post('seed-instalacao-nova')
+  @Roles(UsuarioTipo.admin)
+  seedInstalacaoNova() {
+    return this.service.seedInstalacaoNova();
+  }
+
+  @Post('seed-visita-tecnica')
+  @Roles(UsuarioTipo.admin)
+  seedVisitaTecnica() {
+    return this.service.seedVisitaTecnica();
+  }
+
   @Get(':id')
   @Roles(UsuarioTipo.admin)
   findOne(@Param('id') id: string) {

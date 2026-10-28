@@ -124,6 +124,8 @@ export class AuthService {
         await this.checklists.seedAnvisa();
         await this.checklists.seedLimpezaQuimica();
         await this.checklists.seedCorretiva();
+        await this.checklists.seedInstalacaoNova();
+        await this.checklists.seedVisitaTecnica();
       });
     } catch (e) {
       // Não bloqueia o cadastro; o admin pode importar os padrões depois

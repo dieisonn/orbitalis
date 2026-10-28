@@ -36,6 +36,8 @@ export class PadroesIniciaisService implements OnApplicationBootstrap {
             await this.checklists.seedAnvisa();
             await this.checklists.seedLimpezaQuimica();
             await this.checklists.seedCorretiva();
+            await this.checklists.seedInstalacaoNova();
+            await this.checklists.seedVisitaTecnica();
             this.logger.log(`Checklists padrão criados para ${emp.slug}`);
           }
         });

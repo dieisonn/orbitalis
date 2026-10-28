@@ -2,6 +2,9 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateModeloChecklistDto } from './dto/create-modelo-checklist.dto';
+import {
+  INSTALACAO_NOVA_ITENS, INSTALACAO_NOVA_NOME, VISITA_TECNICA_ITENS, VISITA_TECNICA_NOME,
+} from './checklists-instalacao-visita';
 
 const PMOC_SPLIT_HIWALL_ITENS = [
   { id: 'pmoc-01', descricao: 'Verificar e limpar filtros de ar da unidade interna', obrigatorio: true,  tipo: 'texto' },
@@ -132,6 +135,30 @@ export class ModelosChecklistService {
         itens: LIMPEZA_QUIMICA_ITENS as unknown as Prisma.InputJsonValue,
       },
     });
+  }
+
+  /** Cria o modelo ligado ao tipo de serviço da sigla, se esse tipo existe e ainda não tem checklist próprio. */
+  private async seedPorServico(nome: string, sigla: string, itens: unknown[]) {
+    const existing = await this.prisma.modeloChecklist.findFirst({ where: { nome } });
+    if (existing) return existing;
+    const ts = await this.prisma.tipoServico.findFirst({ where: { sigla }, select: { id: true } });
+    const jaLigado = ts ? await this.prisma.modeloChecklist.count({ where: { tipoServicoId: ts.id } }) : 1;
+    return this.prisma.modeloChecklist.create({
+      data: {
+        nome,
+        tipo: null, // serve para qualquer tipo de manutenção (inclusive "não se aplica")
+        tipoServicoId: ts && jaLigado === 0 ? ts.id : null,
+        itens: itens as unknown as Prisma.InputJsonValue,
+      },
+    });
+  }
+
+  seedInstalacaoNova() {
+    return this.seedPorServico(INSTALACAO_NOVA_NOME, 'IN', INSTALACAO_NOVA_ITENS);
+  }
+
+  seedVisitaTecnica() {
+    return this.seedPorServico(VISITA_TECNICA_NOME, 'VT', VISITA_TECNICA_ITENS);
   }
 
   async seedCorretiva() {
