@@ -166,9 +166,18 @@ export class OrdensServicoController {
       tipoServicoId?: string | null;
       horaInicio?: string | null;
       horaFim?: string | null;
+      ambienteId?: string;
+      clienteId?: string;
     },
   ) {
     return this.ordensServicoService.update(id, body);
+  }
+
+  // POST /api/v1/ordens-servico/excluir-lote — Admin, exclusão definitiva de várias O.S. com senha
+  @Post('excluir-lote')
+  @Roles(UsuarioTipo.admin)
+  excluirLote(@Body() body: { ids: string[]; senha: string }, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.excluirLote(body.ids, body.senha, user.id);
   }
 
   // PATCH /api/v1/ordens-servico/:id/sincronizar — Técnico (§6.3 §6.4)

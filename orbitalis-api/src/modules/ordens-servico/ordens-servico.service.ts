@@ -814,21 +814,46 @@ export class OrdensServicoService {
 
   // DELETE /ordens-servico/:id — exclusão definitiva com confirmação de senha
   async excluir(id: string, senha: string, adminId: string) {
-    const admin = await this.prisma.usuario.findUnique({ where: { id: adminId } });
-    if (!admin) throw new UnauthorizedException('Admin não encontrado');
-    const senhaOk = await bcrypt.compare(senha, admin.senhaHash);
-    if (!senhaOk) throw new UnauthorizedException('Senha incorreta');
+    await this.confirmarSenha(adminId, senha);
 
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
 
-    // conflitos não têm cascade, precisam ser deletados antes
-    await this.prisma.auditoriaConflitoSincronizacao.deleteMany({ where: { ordemServicoId: id } });
-    // itens têm onDelete: Cascade, mas deleta explicitamente para segurança
-    await this.prisma.ordemServicoItem.deleteMany({ where: { ordemServicoId: id } });
-    await this.prisma.ordemServico.delete({ where: { id } });
-
+    await this.apagarOs([id]);
     return { message: 'O.S. excluída permanentemente' };
+  }
+
+  // POST /ordens-servico/excluir-lote — exclusão definitiva de várias O.S., com a senha do admin
+  async excluirLote(ids: string[], senha: string, adminId: string) {
+    const lista = Array.from(new Set((ids ?? []).filter((i) => typeof i === 'string')));
+    if (lista.length === 0) throw new BadRequestException('Selecione ao menos uma O.S.');
+    if (lista.length > 200) throw new BadRequestException('Máximo de 200 O.S. por vez');
+    await this.confirmarSenha(adminId, senha);
+
+    // só considera O.S. do próprio tenant (o filtro automático cuida disso); ids inexistentes são ignorados
+    const existentes = await this.prisma.ordemServico.findMany({ where: { id: { in: lista } }, select: { id: true } });
+    const alvo = existentes.map((o) => o.id);
+    await this.apagarOs(alvo);
+    return { excluidas: alvo.length, ignoradas: lista.length - alvo.length };
+  }
+
+  private async confirmarSenha(adminId: string, senha: string) {
+    if (!senha) throw new UnauthorizedException('Informe a sua senha para confirmar');
+    const admin = await this.prisma.usuario.findUnique({ where: { id: adminId } });
+    if (!admin) throw new UnauthorizedException('Admin não encontrado');
+    const senhaOk = await bcrypt.compare(senha, admin.senhaHash);
+    if (!senhaOk) throw new UnauthorizedException('Senha incorreta');
+  }
+
+  private async apagarOs(ids: string[]) {
+    if (ids.length === 0) return;
+    await this.prisma.$transaction(async (tx) => {
+      // conflitos não têm cascade, precisam ser deletados antes
+      await tx.auditoriaConflitoSincronizacao.deleteMany({ where: { ordemServicoId: { in: ids } } });
+      // itens têm onDelete: Cascade, mas deleta explicitamente para segurança
+      await tx.ordemServicoItem.deleteMany({ where: { ordemServicoId: { in: ids } } });
+      await tx.ordemServico.deleteMany({ where: { id: { in: ids } } });
+    });
   }
 
   // PATCH /ordens-servico/:id — Admin, edição geral de campos básicos
@@ -840,15 +865,53 @@ export class OrdensServicoService {
     tipoServicoId?: string | null;
     horaInicio?: string | null;
     horaFim?: string | null;
+    ambienteId?: string;
+    clienteId?: string;
   }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
-    if (os.status === 'concluida' || os.status === 'cancelada') {
-      throw new BadRequestException('Não é possível editar uma O.S. encerrada');
+
+    // Troca de cliente/ambiente: os itens (equipamentos) acompanham o ambiente, então só dá para
+    // trocar enquanto nada foi executado; depois disso a troca apagaria o trabalho do técnico.
+    let novoAmbienteId: string | null = null;
+    if (dto.ambienteId || dto.clienteId) {
+      const alvo = dto.ambienteId ?? (await this.ambientePadrao(dto.clienteId!));
+      if (alvo !== os.ambienteId) novoAmbienteId = alvo;
     }
-    const updated = await this.prisma.ordemServico.update({
+    let novoAmbiente: { equipamentos: { id: string }[] } | null = null;
+    let snapshotAtual: any = null;
+    if (novoAmbienteId) {
+      novoAmbiente = await this.prisma.ambiente.findFirst({
+        where: { id: novoAmbienteId, deletedAt: null },
+        include: { equipamentos: { where: { deletedAt: null }, select: { id: true } } },
+      });
+      if (!novoAmbiente) throw new NotFoundException('Ambiente não encontrado');
+      const itensAtuais = await this.prisma.ordemServicoItem.findMany({ where: { ordemServicoId: id } });
+      if (itensAtuais.some((i) => i.statusItem !== 'pendente' || i.observacoesTecnicas)) {
+        throw new BadRequestException('Esta O.S. já tem itens executados ou com observações; não é possível trocar o ambiente. Crie uma nova O.S.');
+      }
+      snapshotAtual = itensAtuais[0]?.checklistSnapshot ?? null;
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (novoAmbienteId && novoAmbiente) {
+        await tx.ordemServicoItem.deleteMany({ where: { ordemServicoId: id } });
+        if (novoAmbiente.equipamentos.length > 0) {
+          const snapshot = snapshotAtual ?? (await resolverChecklistItens(this.prisma, {
+            tipo: (dto.tipo as any) ?? os.tipo,
+            tipoServicoId: dto.tipoServicoId === undefined ? os.tipoServicoId ?? undefined : dto.tipoServicoId || undefined,
+          }));
+          await tx.ordemServicoItem.createMany({
+            data: novoAmbiente.equipamentos.map((eq) => ({
+              ordemServicoId: id, equipamentoId: eq.id, statusItem: 'pendente' as const, checklistSnapshot: snapshot,
+            })),
+          });
+        }
+      }
+      return tx.ordemServico.update({
       where: { id },
       data: {
+        ...(novoAmbienteId ? { ambienteId: novoAmbienteId } : {}),
         ...(dto.dataAgendamento ? { dataAgendamento: new Date(dto.dataAgendamento) } : {}),
         ...(dto.observacoesGerais !== undefined ? { observacoesGerais: dto.observacoesGerais || null } : {}),
         ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
@@ -863,6 +926,7 @@ export class OrdensServicoService {
         tecnico:     { select: { nome: true } },
         tipoServico: { select: { sigla: true } },
       },
+      });
     });
 
     await this.agenda.sincronizarOs(id);
