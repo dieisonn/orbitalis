@@ -11,3 +11,14 @@ export async function excluirOs(osId: string, senha: string) {
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao excluir' }
   }
 }
+
+/** Exclusão definitiva de várias O.S., confirmada com a senha do admin logado. */
+export async function excluirOsLote(ids: string[], senha: string) {
+  try {
+    const r = await api.post<{ excluidas: number; ignoradas: number }>('/ordens-servico/excluir-lote', { ids, senha })
+    revalidatePath('/ordens-servico')
+    return { ok: true as const, excluidas: r.excluidas }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao excluir' }
+  }
+}

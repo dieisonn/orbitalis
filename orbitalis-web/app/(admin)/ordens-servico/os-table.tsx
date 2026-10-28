@@ -6,6 +6,8 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
 import { OsPagination } from '@/components/ui/os-pagination'
 import { alterarStatusLote } from './actions'
+import { excluirOsLote } from './excluir-os-action'
+import { Trash2, X, Loader2 } from 'lucide-react'
 
 type OrdemServico = {
   id: string
@@ -58,6 +60,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
   const [bulkStatus, setBulkStatus] = useState('concluida')
   const [isPending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
 
   const allSelected = ordens.length > 0 && selected.size === ordens.length
   const someSelected = selected.size > 0 && !allSelected
@@ -208,6 +211,14 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
         </Suspense>
       </div>
 
+      {excluindo && (
+        <ExcluirLoteModal
+          ids={Array.from(selected)}
+          onFechar={() => setExcluindo(false)}
+          onExcluido={() => { setExcluindo(false); setSelected(new Set()); router.refresh() }}
+        />
+      )}
+
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl">
           <span className="text-sm font-semibold whitespace-nowrap">
@@ -230,6 +241,13 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
           >
             {isPending ? 'Aplicando…' : 'Aplicar'}
           </button>
+          <div className="w-px h-5 bg-white/20" />
+          <button
+            onClick={() => setExcluindo(true)}
+            className="inline-flex items-center gap-1.5 text-red-300 hover:text-red-200 text-sm font-semibold transition-colors"
+          >
+            <Trash2 size={14} /> Excluir
+          </button>
           <button
             onClick={() => { setSelected(new Set()); setErro(null) }}
             className="text-white/60 hover:text-white text-sm transition-colors"
@@ -240,5 +258,48 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
         </div>
       )}
     </>
+  )
+}
+
+/** Confirmação com senha para excluir várias O.S. de uma vez (ação definitiva). */
+function ExcluirLoteModal({ ids, onFechar, onExcluido }: { ids: string[]; onFechar: () => void; onExcluido: () => void }) {
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+  const [pendente, startTransition] = useTransition()
+
+  function confirmar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!senha) return setErro('Digite a sua senha para confirmar.')
+    setErro(null)
+    startTransition(async () => {
+      const r = await excluirOsLote(ids, senha)
+      if (!r.ok) { setErro(r.error); return }
+      onExcluido()
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !pendente) onFechar() }}>
+      <form onSubmit={confirmar} role="dialog" aria-modal="true" aria-labelledby="exl-titulo" className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 id="exl-titulo" className="text-base font-bold text-gray-900">Excluir {ids.length} O.S.?</h2>
+          <button type="button" onClick={onFechar} aria-label="Fechar" className="p-1 text-gray-500 hover:text-gray-800"><X size={16} /></button>
+        </div>
+        <p className="text-sm text-gray-700 mb-3">
+          As O.S. selecionadas, seus itens e os eventos da agenda ligados a elas serão apagados <strong>de forma permanente</strong>. Não dá para desfazer.
+        </p>
+        <label htmlFor="exl-senha" className="block text-sm font-medium text-gray-700 mb-1">Confirme com a sua senha de login</label>
+        <input id="exl-senha" type="password" autoFocus autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)}
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        {erro && <p role="alert" className="mt-3 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{erro}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onFechar} disabled={pendente} className="px-4 py-2 text-sm font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface">Cancelar</button>
+          <button type="submit" disabled={pendente}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-700 rounded-lg hover:bg-red-800 disabled:opacity-60">
+            {pendente && <Loader2 size={14} className="animate-spin" />} Excluir {ids.length}
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }
