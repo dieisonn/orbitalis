@@ -2,7 +2,7 @@
 
 import { Printer } from 'lucide-react'
 
-type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean }
+type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: string; unidade?: string; opcoes?: string[] }
 
 type Item = {
   id: string
@@ -37,9 +37,6 @@ export type Config = {
   corPrimaria: string | null; cnpj: string | null; telefone: string | null; endereco: string | null
   email?: string | null; site?: string | null; instrucoesOs?: string | null; cidade?: string | null; uf?: string | null
 } | null
-
-/** Tipos de serviço cadastrados pela empresa (viram caixas de marcar na folha impressa). */
-export type TipoServicoOpcao = { id: string; sigla: string; nome: string }
 
 const ORIGEM_LABEL: Record<string, string> = {
   manual_admin: 'Manual',
@@ -79,7 +76,7 @@ export const PRINT_CSS = `
         * { box-sizing: border-box; }
       `
 
-export function PrintOS({ os, config, tipos }: { os: OS; config?: Config; tipos?: TipoServicoOpcao[] }) {
+export function PrintOS({ os, config }: { os: OS; config?: Config }) {
   const numero = os.numero != null
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
@@ -106,13 +103,13 @@ export function PrintOS({ os, config, tipos }: { os: OS; config?: Config; tipos?
       </div>
       <div className="no-print h-14" />
 
-      <DocumentoOS os={os} config={config} tipos={tipos} />
+      <DocumentoOS os={os} config={config} />
     </>
   )
 }
 
 /** O documento da O.S. (sem a barra de ações). `modoDia` = folha do técnico, com mais espaço para anotações. */
-export function DocumentoOS({ os, config, tipos = [], modoDia = false }: { os: OS; config?: Config; tipos?: TipoServicoOpcao[]; modoDia?: boolean }) {
+export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: Config; modoDia?: boolean }) {
   const numero = os.numero != null
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
@@ -122,16 +119,13 @@ export function DocumentoOS({ os, config, tipos = [], modoDia = false }: { os: O
   const c = os.ambiente.cliente
   const fone = [c.telefone, c.celular].filter(Boolean).join(' · ')
   const dia = fmtDia(os.dataAgendamento)
+  // número no padrão da lista de O.S.: SIGLA-0000 (a sigla já identifica o tipo de serviço)
+  const numeroCompleto = `${os.tipoServico?.sigla ?? 'OS'}-${os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase()}`
   // dataAgendamento guarda só a DATA (meia-noite UTC); o horário fica em horaInicio/horaFim
   const entrada = `${dia}${os.horaInicio ? ` - ${os.horaInicio}` : ''}`
   const saida = `${dia}${os.horaFim ? ` - ${os.horaFim}` : ''}`
   const dataLonga = new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
   const cidadeEmpresa = [config?.cidade, config?.uf].filter(Boolean).join('/')
-  // tipos cadastrados; se o da O.S. não estiver na lista (ex.: tipo desativado), entra para aparecer marcado
-  const listaTipos = os.tipoServico && !tipos.some((t) => t.id === os.tipoServico?.id || t.sigla === os.tipoServico?.sigla)
-    ? [...tipos, { id: os.tipoServico.id ?? 'os', sigla: os.tipoServico.sigla, nome: os.tipoServico.nome }]
-    : tipos
-  const tipoMarcado = (t: TipoServicoOpcao) => !!os.tipoServico && (t.id === os.tipoServico.id || t.sigla === os.tipoServico.sigla)
   const linhasObs = modoDia ? 6 : 4
 
   return (
@@ -160,7 +154,7 @@ export function DocumentoOS({ os, config, tipos = [], modoDia = false }: { os: O
 
       {/* TÍTULO */}
       <div style={{ ...barra, display: 'flex', justifyContent: 'space-between', fontSize: '11pt', padding: '5px 8px' }}>
-        <span style={{ fontWeight: 700 }}>ORDEM DE SERVIÇO Nº {os.numero != null ? String(os.numero).padStart(4, '0') : numero}</span>
+        <span style={{ fontWeight: 700 }}>ORDEM DE SERVIÇO Nº {numeroCompleto}{os.tipoServico ? <span style={{ fontWeight: 400, fontSize: '9.5pt' }}>{`  ·  ${os.tipoServico.nome}`}</span> : null}</span>
         <span style={{ fontWeight: 700 }}>{dia}</span>
       </div>
 
@@ -176,25 +170,20 @@ export function DocumentoOS({ os, config, tipos = [], modoDia = false }: { os: O
         </div>
       </Secao>
 
-      {/* TIPO DE SERVIÇO */}
+      {/* MANUTENÇÃO / TÉCNICO */}
       <div style={{ border: borda, borderTop: 'none', display: 'grid', gridTemplateColumns: '1.6fr 1fr' }}>
         <div style={{ padding: '6px 8px' }}>
-          <p style={rotulo}>Tipo de serviço</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 10px', marginTop: '4px' }}>
-            {listaTipos.length === 0 && <span style={{ color: '#888' }}>—</span>}
-            {listaTipos.map((t) => <Caixa key={t.id} marcada={tipoMarcado(t)}>{t.nome}</Caixa>)}
-          </div>
-          <div style={{ display: 'flex', gap: '14px', marginTop: '6px', paddingTop: '5px', borderTop: '1px dotted #bbb' }}>
-            <span style={{ ...rotulo, alignSelf: 'center' }}>Manutenção:</span>
+          <p style={rotulo}>Tipo de manutenção</p>
+          <div style={{ display: 'flex', gap: '18px', marginTop: '5px' }}>
             <Caixa marcada={os.tipo === 'preventiva'}>Preventiva</Caixa>
             <Caixa marcada={os.tipo === 'corretiva'}>Corretiva</Caixa>
           </div>
+          <p style={{ ...rotulo, marginTop: '8px' }}>Origem</p>
+          <p style={{ margin: '2px 0 0 0' }}>{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
         </div>
         <div style={{ borderLeft: borda, padding: '6px 8px', lineHeight: 1.5 }}>
           <p style={rotulo}>Técnico responsável</p>
-          <p style={{ margin: '2px 0 6px 0', fontWeight: 700 }}>{tecnicoLabel}</p>
-          <p style={rotulo}>Origem</p>
-          <p style={{ margin: '2px 0 0 0' }}>{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
+          <p style={{ margin: '2px 0 0 0', fontWeight: 700 }}>{tecnicoLabel}</p>
         </div>
       </div>
 
@@ -241,7 +230,19 @@ export function DocumentoOS({ os, config, tipos = [], modoDia = false }: { os: O
                     <p style={rotulo}>Checklist de serviços</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px', marginTop: '4px' }}>
                       {checklistItems.map((ci) => (
-                        <Caixa key={ci.id} marcada={false}>{ci.descricao}{ci.obrigatorio ? ' *' : ''}</Caixa>
+                        <div key={ci.id} style={{ breakInside: 'avoid' }}>
+                          <Caixa marcada={false}>
+                            {ci.descricao}{ci.obrigatorio ? ' *' : ''}
+                            {ci.tipo === 'numero' && <span style={{ color: '#666' }}>{`  ________ ${ci.unidade ?? ''}`}</span>}
+                          </Caixa>
+                          {/* opções para marcar no papel */}
+                          {ci.opcoes && ci.opcoes.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', margin: '2px 0 0 15px' }}>
+                              {ci.opcoes.map((o) => <Caixa key={o} marcada={false}><span style={{ fontSize: '7.5pt', color: '#444' }}>{o}</span></Caixa>)}
+                            </div>
+                          )}
+                          {ci.tipo === 'texto' && <div style={{ height: '14px', margin: '0 0 0 15px', borderBottom: '1px solid #ccc' }} />}
+                        </div>
                       ))}
                     </div>
                   </div>
