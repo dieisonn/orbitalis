@@ -1,5 +1,6 @@
 import { OsOrigem, OsTipo } from '@prisma/client';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsOptional,
@@ -43,6 +44,11 @@ export class CreateOrdemServicoDto {
   @IsOptional()
   @IsUUID()
   modeloChecklistId?: string;
+
+  // true = quem programa decidiu que esta O.S. não leva checklist (ignora a sugestão automática)
+  @IsOptional()
+  @IsBoolean()
+  semChecklist?: boolean;
 
   @IsDateString()
   dataAgendamento: string;

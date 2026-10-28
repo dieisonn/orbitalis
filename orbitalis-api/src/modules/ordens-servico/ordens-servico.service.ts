@@ -93,11 +93,13 @@ export class OrdensServicoService {
     }
 
     // Checklist próprio do caso: escolhido pelo admin ou sugerido por tipo + tipo de serviço
-    const snapshot = await resolverChecklistItens(this.prisma, {
-      modeloChecklistId: dto.modeloChecklistId,
-      tipo: dto.tipo ?? 'corretiva',
-      tipoServicoId: dto.tipoServicoId,
-    });
+    const snapshot = dto.semChecklist
+      ? []
+      : await resolverChecklistItens(this.prisma, {
+          modeloChecklistId: dto.modeloChecklistId,
+          tipo: dto.tipo ?? 'corretiva',
+          tipoServicoId: dto.tipoServicoId,
+        });
 
     const result = await this.prisma.$transaction(async (tx) => {
       const os = await tx.ordemServico.create({
