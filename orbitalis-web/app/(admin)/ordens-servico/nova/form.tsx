@@ -2,7 +2,7 @@
 
 import { useTransition, useState } from 'react'
 import { criarOs } from './actions'
-import { ChecklistSelect } from '@/components/ui/checklist-select'
+import { ChecklistSelect, NENHUM_CHECKLIST } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 import { textoSobre } from '@/lib/cor'
 import { ClienteSelect } from '@/components/ui/cliente-select'
@@ -83,7 +83,8 @@ export function NovaOsForm({
           dataAgendamento,
           observacoesGerais,
           tipo: tipo ?? 'nao_se_aplica',
-          modeloChecklistId,
+          modeloChecklistId: modeloChecklistId === NENHUM_CHECKLIST ? '' : modeloChecklistId,
+          semChecklist: modeloChecklistId === NENHUM_CHECKLIST,
           tipoServicoId,
           equipamentoId,
           horaInicio,
@@ -251,7 +252,13 @@ export function NovaOsForm({
           tipoServicoId={tipoServicoId || null}
           value={modeloChecklistId}
           onChange={setModeloChecklistId}
+          permitirNenhum
         />
+        {modeloChecklistId !== NENHUM_CHECKLIST && clienteId && (!ambienteId || (ambienteSelecionado && ambienteSelecionado.equipamentos.length === 0)) && (
+          <p className="text-xs text-gray-600 mt-1">
+            O checklist é aplicado a cada equipamento da O.S. Sem ambiente (ou em ambiente sem equipamentos) a O.S. sai sem checklist.
+          </p>
+        )}
       </div>
 
       {/* Técnico */}

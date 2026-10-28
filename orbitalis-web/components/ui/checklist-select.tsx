@@ -9,10 +9,14 @@ type Props = {
   value: string
   onChange: (id: string) => void
   className?: string
+  /** Mostra a opção "Sem checklist" (valor NENHUM_CHECKLIST) para quem programa decidir que não terá. */
+  permitirNenhum?: boolean
 }
 
+export const NENHUM_CHECKLIST = 'none'
+
 /** Seletor de checklist: "Automático" (sugestão por tipo + serviço) ou um modelo específico. */
-export function ChecklistSelect({ modelos, tipo, tipoServicoId, value, onChange, className }: Props) {
+export function ChecklistSelect({ modelos, tipo, tipoServicoId, value, onChange, className, permitirNenhum = false }: Props) {
   const sugerido = sugerirModelo(modelos, tipo, tipoServicoId)
 
   return (
@@ -28,6 +32,7 @@ export function ChecklistSelect({ modelos, tipo, tipoServicoId, value, onChange,
         <option value="">
           {sugerido ? `Automático — ${sugerido.nome}` : 'Automático — nenhum checklist para este caso'}
         </option>
+        {permitirNenhum && <option value={NENHUM_CHECKLIST}>Sem checklist nesta O.S.</option>}
         {modelos.map((m) => (
           <option key={m.id} value={m.id}>
             {m.nome}
@@ -35,7 +40,7 @@ export function ChecklistSelect({ modelos, tipo, tipoServicoId, value, onChange,
           </option>
         ))}
       </select>
-      {!value && !sugerido && (
+      {!value && !sugerido && value !== NENHUM_CHECKLIST && (
         <p className="text-xs text-amber-600 mt-1">
           Não há checklist cadastrado para este tipo/serviço. A O.S. será criada sem checklist —{' '}
           <a href="/checklists/novo" className="underline">crie um em Checklists</a>.
