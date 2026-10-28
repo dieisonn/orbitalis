@@ -338,7 +338,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
 
       {/* Últimas O.S. */}
       {dash.ultimasOs.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-border mb-4 overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-border mb-4 overflow-x-auto">
           <div className="flex items-center justify-between px-5 py-3 bg-surface border-b border-border">
             <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
               <ClipboardList size={14} className="text-primary" /> Últimas O.S.
@@ -392,7 +392,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
       ) : (
         <div className="space-y-4">
           {cliente.ambientes.map((amb) => (
-            <div key={amb.id} className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+            <div key={amb.id} className="bg-white rounded-2xl shadow-sm border border-border overflow-x-auto">
               <div className="flex items-center justify-between px-5 py-3 bg-surface border-b border-border">
                 <div className="flex items-center gap-2">
                   <Building2 size={14} className="text-primary" />

@@ -33,12 +33,12 @@ export default async function EquipamentosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Equipamentos</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} ativo(s) cadastrado(s)</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ExportarEquipamentosButton />
           <ImportarEquipamentosButton />
           <a

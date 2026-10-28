@@ -109,8 +109,8 @@ export default function Sidebar({ config, alertasCount = 0, user }: { config?: C
 
   return (
     <>
-      {/* Barra superior — celular */}
-      <header className="fixed top-0 inset-x-0 z-40 h-14 md:hidden flex items-center gap-3 px-3 bg-[var(--nav-bg)] border-b border-[var(--nav-border)] print:hidden">
+      {/* Barra superior — celular e tablet (menu recolhido abaixo de 1024px) */}
+      <header className="fixed top-0 inset-x-0 z-40 h-14 lg:hidden flex items-center gap-3 px-3 bg-[var(--nav-bg)] border-b border-[var(--nav-border)] print:hidden">
         <button
           className="p-2 -ml-1 text-gray-700 rounded-md hover:bg-white/70"
           onClick={() => setOpen(true)}
@@ -126,15 +126,15 @@ export default function Sidebar({ config, alertasCount = 0, user }: { config?: C
         )}
       </header>
 
-      {open && <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setOpen(false)} />}
 
       <aside
         className={[
           'flex flex-col shrink-0 print:hidden h-full',
           'bg-[var(--nav-bg)] border-r border-[var(--nav-border)] text-gray-800',
-          'fixed inset-y-0 left-0 z-50 w-64 md:static md:w-60 md:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 w-64 lg:static lg:w-60 lg:translate-x-0',
           'transition-transform duration-200',
-          open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ].join(' ')}
       >
         <div className="px-3 pt-2.5 pb-2 flex items-start gap-2 shrink-0">
@@ -143,7 +143,7 @@ export default function Sidebar({ config, alertasCount = 0, user }: { config?: C
             <img src={logoSrc} alt={nomeExibido} className="max-h-10 w-auto max-w-full object-contain" />
           </Link>
           <button
-            className="md:hidden p-1.5 text-gray-500 hover:text-gray-900 rounded-md"
+            className="lg:hidden p-1.5 text-gray-500 hover:text-gray-900 rounded-md"
             onClick={() => setOpen(false)}
             aria-label="Fechar menu"
           >

@@ -78,14 +78,14 @@ export default async function ConfiabilidadePage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Confiabilidade de Equipamentos</h1>
           <p className="text-gray-500 text-sm mt-1">
             MTTR, MTBF e retrabalho dos últimos 12 meses · {metricas.length} equipamento(s) · limites: MTTR {mttrLimite}h · MTBF {mtbfLimite}d
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ExportCsvButton metricas={metricas} custoPorH={custoPorH} />
           <a
             href="/configuracoes"

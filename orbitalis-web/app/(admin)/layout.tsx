@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex h-screen overflow-hidden print:block print:h-auto print:overflow-visible">
       <Sidebar config={config} alertasCount={alertasCount} user={user} />
-      <main id="conteudo" className="flex-1 min-w-0 px-4 pt-16 pb-6 md:p-8 overflow-y-auto print:p-0 print:w-full print:overflow-visible">
+      <main id="conteudo" className="flex-1 min-w-0 px-4 sm:px-6 pt-16 pb-6 lg:p-8 overflow-y-auto print:p-0 print:w-full print:overflow-visible">
         {children}
       </main>
       <SearchPalette />

@@ -83,7 +83,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Ordens de Serviço</h1>
           <p className="text-gray-500 text-sm mt-1">
@@ -104,7 +104,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <a
             href="/ordens-servico/dia"
             className="inline-flex items-center gap-2 px-4 py-2 border border-border text-sm font-semibold text-gray-600 rounded-lg hover:bg-surface transition-colors"

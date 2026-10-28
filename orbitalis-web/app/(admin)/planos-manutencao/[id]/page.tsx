@@ -90,7 +90,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
   return (
     <div className="max-w-4xl">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 text-sm">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-6 text-sm">
         <a href="/planos-manutencao" className="text-gray-500 hover:text-primary transition-colors">
           ← Planos Preventivos
         </a>
@@ -100,7 +100,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
 
       {/* Cabeçalho */}
       <div className="bg-white rounded-2xl shadow-sm border border-border p-6 mb-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex items-start gap-4">
             <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <CalendarClock size={20} className="text-primary" />
@@ -115,7 +115,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
             {plano.ativo
               ? <span className="flex items-center gap-1.5 text-xs font-semibold text-action bg-action/10 px-2.5 py-1 rounded-full"><CheckCircle size={12} />Ativo</span>
               : <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full"><XCircle size={12} />Inativo</span>
@@ -179,7 +179,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
       </div>
 
       {/* Ambientes e equipamentos */}
-      <div className="bg-white rounded-2xl shadow-sm border border-border overflow-hidden mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-border overflow-x-auto mb-6">
         <div className="px-6 py-3 border-b border-border bg-surface flex items-center gap-2">
           <Cpu size={14} className="text-primary" />
           <h2 className="text-sm font-bold text-gray-700">Equipamentos Cobertos pelo Plano</h2>
@@ -199,15 +199,18 @@ export default async function DetalhePlanoPage({ params }: Props) {
                 <tbody className="divide-y divide-border">
                   {configs.map((c) => (
                     <tr key={c.equipamentoId} className="hover:bg-surface/50 transition-colors">
-                      <td className="px-5 py-3 w-8 text-gray-400 text-xs">
+                      <td className="pl-4 pr-1 sm:px-5 py-3 w-8 text-gray-400 text-xs">
                         <Cpu size={13} />
                       </td>
-                      <td className="px-5 py-3 font-medium text-gray-900">{c.equipamento.nome}</td>
-                      <td className="px-5 py-3 text-gray-400 text-xs">{c.equipamento.tipoEquipamento}</td>
-                      <td className="px-5 py-3 text-gray-400 text-xs">
+                      <td className="px-3 sm:px-5 py-3 font-medium text-gray-900">
+                        {c.equipamento.nome}
+                        <span className="sm:hidden block text-xs font-normal text-gray-400">{[c.equipamento.tipoEquipamento, c.equipamento.marca].filter(Boolean).join(' · ')}</span>
+                      </td>
+                      <td className="hidden sm:table-cell px-5 py-3 text-gray-400 text-xs">{c.equipamento.tipoEquipamento}</td>
+                      <td className="hidden sm:table-cell px-5 py-3 text-gray-400 text-xs">
                         {[c.equipamento.marca, c.equipamento.modelo].filter(Boolean).join(' ')}
                       </td>
-                      <td className="px-5 py-3 text-right">
+                      <td className="px-3 sm:px-5 py-3 text-right">
                         {c.modeloChecklist ? (
                           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-lg font-medium">
                             {c.modeloChecklist.nome}
@@ -368,7 +371,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border border-border overflow-x-auto shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface border-b border-border">

@@ -335,7 +335,7 @@ export default async function HistoricoEquipamentoPage({ params }: Props) {
             <p className="text-sm text-gray-500">Nenhuma O.S. registrada para este equipamento.</p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-border overflow-hidden">
+          <div className="bg-white rounded-lg border border-border overflow-x-auto">
             {/* Linha de aquisição */}
             {eq.valorAquisicao !== null && (
               <div className="flex items-center gap-4 px-5 py-3.5 border-b border-border bg-surface">

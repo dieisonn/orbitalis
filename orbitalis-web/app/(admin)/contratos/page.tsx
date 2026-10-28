@@ -30,7 +30,7 @@ export default async function ContratosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Contratos</h1>
           <p className="text-gray-500 text-sm mt-1">{contratos.length} contrato(s) cadastrado(s)</p>
@@ -47,16 +47,16 @@ export default async function ContratosPage() {
           <p className="text-gray-400">Nenhum contrato cadastrado.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="@container bg-white rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
                 <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
-                <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Descrição</th>
-                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
-                <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor Total</th>
-                <th className="hidden lg:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="O.S. dos planos preventivos vinculados: concluídas / geradas">Consumo</th>
-                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
+                <th className="hidden @lg:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Descrição</th>
+                <th className="hidden @xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
+                <th className="hidden @3xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor Total</th>
+                <th className="hidden @5xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="O.S. dos planos preventivos vinculados: concluídas / geradas">Consumo</th>
+                <th className="hidden @xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
                 <th className="px-4 py-3"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
@@ -72,9 +72,10 @@ export default async function ContratosPage() {
 
                 return (
                   <tr key={c.id} className="hover:bg-surface/60">
-                    <td className="px-4 py-3 font-medium text-gray-800">
+                    <td className="px-3 @xl:px-4 py-3 font-medium text-gray-800">
                       <div className="line-clamp-2 break-words">{c.cliente.nomeFantasia ?? c.cliente.razaoSocial}</div>
-                      <div className="sm:hidden mt-1">
+                      <div className="@lg:hidden mt-0.5 text-xs font-normal text-gray-500 line-clamp-2 break-words">{c.descricao}</div>
+                      <div className="@xl:hidden mt-1">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                           vencido ? 'bg-red-100 text-red-700' :
                           !c.ativo ? 'bg-gray-100 text-gray-500' :
@@ -84,10 +85,10 @@ export default async function ContratosPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">
-                      <div className="line-clamp-2 break-words min-w-[140px]">{c.descricao}</div>
+                    <td className="hidden @lg:table-cell px-4 py-3 text-gray-600 text-xs">
+                      <div className="line-clamp-2 break-words">{c.descricao}</div>
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">
+                    <td className="hidden @xl:table-cell px-4 py-3 text-gray-500 whitespace-nowrap">
                       <span className="text-xs">{fmtDate(c.vigenciaInicio)}</span>
                       <span className="text-gray-500 mx-1">→</span>
                       <span className={`text-xs font-semibold ${vencido ? 'text-red-600' : urgente ? 'text-yellow-600' : 'text-gray-700'}`}>
@@ -97,13 +98,13 @@ export default async function ContratosPage() {
                         <AlertTriangle size={11} className={`inline ml-1 ${vencido ? 'text-red-500' : 'text-yellow-500'}`} />
                       )}
                     </td>
-                    <td className="hidden md:table-cell px-4 py-3 text-gray-700 font-mono text-xs">
+                    <td className="hidden @3xl:table-cell px-4 py-3 text-gray-700 font-mono text-xs">
                       {fmtBRL(valorTotal)}
                       {c.valorMensal != null && (
                         <div className="text-[10px] text-gray-400">{fmtBRL(c.valorMensal)}/mês × {meses}</div>
                       )}
                     </td>
-                    <td className="hidden lg:table-cell px-4 py-3 text-xs whitespace-nowrap">
+                    <td className="hidden @5xl:table-cell px-4 py-3 text-xs whitespace-nowrap">
                       {c.consumo && c.consumo.planos > 0 ? (
                         <>
                           <span className="font-semibold text-gray-700">{c.consumo.osConcluidas}/{c.consumo.osGeradas}</span>
@@ -113,7 +114,7 @@ export default async function ContratosPage() {
                         <span className="text-gray-500" title="Vincule um plano preventivo a este contrato">sem plano</span>
                       )}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3">
+                    <td className="hidden @xl:table-cell px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                         vencido ? 'bg-red-100 text-red-700' :
                         !c.ativo ? 'bg-gray-100 text-gray-500' :
@@ -122,7 +123,7 @@ export default async function ContratosPage() {
                         {vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <td className="px-3 @xl:px-4 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         <a href={`/contratos/${c.id}`} className="text-primary text-xs font-semibold hover:underline">Ver</a>
                         <DeleteButton action={excluirContrato.bind(null, c.id)} />

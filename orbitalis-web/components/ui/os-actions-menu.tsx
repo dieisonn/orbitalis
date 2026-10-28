@@ -268,6 +268,7 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
   const [panel, setPanel] = useState<Panel>('menu')
   const [pos, setPos]     = useState({ top: 0, left: 0 })
   const [openUp, setOpenUp] = useState(false)
+  const [maxH, setMaxH] = useState(480)
   const btnRef            = useRef<HTMLButtonElement>(null)
 
   const isTerminal = status === 'concluida' || status === 'cancelada'
@@ -279,7 +280,11 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect()
       const menuW = 208
-      const up = window.innerHeight - r.bottom < 320
+      const abaixo = window.innerHeight - r.bottom - 12
+      const acima = r.top - 12
+      // abre para o lado com mais espaço e limita a altura (com rolagem) para nunca sair da tela
+      const up = abaixo < 340 && acima > abaixo
+      setMaxH(Math.max(160, Math.min(up ? acima : abaixo, 520)))
       const left = Math.min(
         window.innerWidth - menuW - 8,
         Math.max(8, r.right - menuW),
@@ -312,10 +317,10 @@ export function OsActionsMenu({ osId, status, tecnicos, valorMaoObra, valorPecas
 
           {/* fixed: não é afetado por overflow-hidden dos ancestrais */}
           <div
-            className="fixed z-50 bg-white border border-border rounded-xl shadow-xl w-52 overflow-hidden"
+            className="fixed z-50 bg-white border border-border rounded-xl shadow-xl w-52 overflow-y-auto overflow-x-hidden"
             style={openUp
-              ? { bottom: window.innerHeight - pos.top + 4, left: pos.left }
-              : { top: pos.top, left: pos.left }}
+              ? { bottom: window.innerHeight - pos.top + 4, left: pos.left, maxHeight: maxH }
+              : { top: pos.top, left: pos.left, maxHeight: maxH }}
           >
 
             {panel === 'menu' && (

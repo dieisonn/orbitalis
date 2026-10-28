@@ -148,7 +148,7 @@ export default async function OsDetailPage({ params }: Props) {
 
       {/* Header */}
       <div className="bg-white rounded-2xl shadow-sm border border-border p-6 mb-4">
-        <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
               <ClipboardCheck size={22} className="text-primary" />
@@ -162,7 +162,7 @@ export default async function OsDetailPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             {(os.status === 'em_andamento' || os.status === 'agendada') && (
               <ConcluirOsBtn osId={os.id} osNum={osNum} />
             )}

@@ -43,7 +43,7 @@ export default async function ProdutividadePage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Produtividade dos Técnicos</h1>
           <p className="text-gray-500 text-sm mt-1">

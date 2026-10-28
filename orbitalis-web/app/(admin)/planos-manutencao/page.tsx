@@ -36,7 +36,7 @@ export default async function PlanosPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Planos Preventivos</h1>
           <p className="text-gray-500 text-sm mt-1">Motor Cron executa diariamente às 00:00:01</p>
@@ -52,17 +52,17 @@ export default async function PlanosPage({ searchParams }: Props) {
           <p className="text-gray-400 text-sm">Nenhum plano cadastrado.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="@container bg-white rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="border-b border-border bg-surface">
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cliente</th>
-                <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Técnico</th>
-                <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Equip.</th>
-                <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Frequência</th>
-                <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Próx. Geração</th>
+                <th className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Técnico</th>
+                <th className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Equip.</th>
+                <th className="hidden @3xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Frequência</th>
+                <th className="hidden @3xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Próx. Geração</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">Ativo</th>
-                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-10 sm:w-28"><span className="sr-only">Ações</span></th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-14 @xl:w-36"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -73,18 +73,18 @@ export default async function PlanosPage({ searchParams }: Props) {
                     {p.cliente?.nomeFantasia && (
                       <p className="text-xs text-gray-400 truncate">{p.cliente.razaoSocial}</p>
                     )}
-                    <div className="sm:hidden text-xs text-gray-500 mt-0.5">
+                    <div className="@xl:hidden text-xs text-gray-500 mt-0.5">
                       {p.tecnico ? (p.tecnico.nome ?? p.tecnico.email) : <span className="italic text-gray-400">Não atribuído</span>}
                     </div>
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-3 text-gray-500 text-xs truncate">
+                  <td className="hidden @xl:table-cell px-4 py-3 text-gray-500 text-xs truncate">
                     {p.tecnico ? (p.tecnico.nome ?? p.tecnico.email) : <span className="italic">Não atribuído</span>}
                   </td>
-                  <td className="hidden sm:table-cell px-4 py-3 text-gray-600 text-xs">{p._count?.equipamentosConfig ?? 0} eq.</td>
-                  <td className="hidden md:table-cell px-4 py-3 text-gray-600 text-xs">
+                  <td className="hidden @xl:table-cell px-4 py-3 text-gray-600 text-xs">{p._count?.equipamentosConfig ?? 0} eq.</td>
+                  <td className="hidden @3xl:table-cell px-4 py-3 text-gray-600 text-xs">
                     {FREQ[p.frequenciaDias] ?? `${p.frequenciaDias}d`}
                   </td>
-                  <td className="hidden md:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                  <td className="hidden @3xl:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                     {new Date(p.proximaGeracao).toLocaleDateString('pt-BR')}
                   </td>
                   <td className="px-4 py-3">
@@ -96,13 +96,13 @@ export default async function PlanosPage({ searchParams }: Props) {
                     <div className="flex items-center justify-end gap-1">
                       <a href={`/planos-manutencao/${p.id}`}
                         className="inline-flex items-center gap-1 px-2 py-1.5 bg-primary/10 text-primary text-xs font-semibold rounded-lg hover:bg-primary/20 transition-colors">
-                        <ClipboardList size={12} /><span className="hidden sm:inline">Ver</span>
+                        <ClipboardList size={12} /><span className="hidden @xl:inline">Ver</span>
                       </a>
                       <a href={`/planos-manutencao/${p.id}/editar`}
-                        className="hidden sm:inline-flex items-center gap-1 px-2 py-1.5 bg-action/10 text-action text-xs font-semibold rounded-lg hover:bg-action/20 transition-colors">
+                        className="hidden @xl:inline-flex items-center gap-1 px-2 py-1.5 bg-action/10 text-action text-xs font-semibold rounded-lg hover:bg-action/20 transition-colors">
                         <Pencil size={12} />Editar
                       </a>
-                      <div className="hidden sm:block"><DeletePlanoButton planoId={p.id} /></div>
+                      <div className="hidden @xl:block"><DeletePlanoButton planoId={p.id} /></div>
                     </div>
                   </td>
                 </tr>

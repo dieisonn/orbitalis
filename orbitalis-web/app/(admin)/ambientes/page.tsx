@@ -59,7 +59,7 @@ export default async function AmbientesPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Ambientes</h1>
           <p className="text-gray-500 text-sm mt-1">

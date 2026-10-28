@@ -292,7 +292,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
             const grupoSelected = items.every((e) => selecionados.has(e.id))
 
             return (
-              <div key={clienteId} className="bg-white rounded-xl border border-border overflow-hidden">
+              <div key={clienteId} className="@container bg-white rounded-xl border border-border overflow-hidden">
                 {/* Cabeçalho do grupo */}
                 <button
                   type="button"
@@ -306,7 +306,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                     />
                     <span className="font-bold text-primary text-sm truncate">{clienteNome}</span>
                     {clienteRazaoSocial && (
-                      <span className="hidden sm:inline text-xs text-gray-400 truncate">{clienteRazaoSocial}</span>
+                      <span className="hidden @xl:inline text-xs text-gray-400 truncate">{clienteRazaoSocial}</span>
                     )}
                   </div>
                   <span className="text-xs text-gray-400 font-medium shrink-0 ml-2">
@@ -329,12 +329,12 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                           />
                         </th>
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipamento</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</th>
+                        <th className="hidden @xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</th>
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Potência</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Marca / Modelo</th>
-                        <th className="hidden md:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nº Série</th>
-                        <th className="hidden md:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Condição</th>
-                        <th className="hidden lg:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">QR</th>
+                        <th className="hidden @xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Marca / Modelo</th>
+                        <th className="hidden @3xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nº Série</th>
+                        <th className="hidden @3xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Condição</th>
+                        <th className="hidden @5xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">QR</th>
                         <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide"></th>
                       </tr>
                     </thead>
@@ -366,7 +366,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             </td>
 
                             {/* Ambiente */}
-                            <td className="hidden sm:table-cell px-4 py-3">
+                            <td className="hidden @xl:table-cell px-4 py-3">
                               {eq.ambiente ? (
                                 <>
                                   <p className="text-sm text-gray-700 font-medium">{eq.ambiente.nome}</p>
@@ -392,18 +392,18 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             </td>
 
                             {/* Marca / Modelo */}
-                            <td className="hidden sm:table-cell px-4 py-3">
+                            <td className="hidden @xl:table-cell px-4 py-3">
                               <p className="text-sm text-gray-700 font-medium">{eq.marca}</p>
                               {eq.modelo && <p className="text-xs text-gray-400">{eq.modelo}</p>}
                             </td>
 
                             {/* Nº Série */}
-                            <td className="hidden md:table-cell px-4 py-3 font-mono text-xs text-gray-500">
+                            <td className="hidden @3xl:table-cell px-4 py-3 font-mono text-xs text-gray-500">
                               {eq.numeroSerie || <span className="text-gray-300 not-italic font-sans">—</span>}
                             </td>
 
                             {/* Condição */}
-                            <td className="hidden md:table-cell px-4 py-3">
+                            <td className="hidden @3xl:table-cell px-4 py-3">
                               {eq.condicao ? (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${eq.condicao === 'novo' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                                   <BadgeCheck size={10} />
@@ -416,24 +416,24 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             </td>
 
                             {/* QR */}
-                            <td className="hidden lg:table-cell px-4 py-3">
+                            <td className="hidden @5xl:table-cell px-4 py-3">
                               <QrModal equipamentoId={eq.id} codigoQr={eq.codigoQr} nome={eq.nome} />
                             </td>
 
                             {/* Ações */}
-                            <td className="px-4 py-3 text-right">
+                            <td className="px-3 @xl:px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1.5">
                                 <a
                                   href={`/equipamentos/${eq.id}/historico`}
                                   className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
                                 >
-                                  <History size={11} /> Histórico
+                                  <History size={11} /><span className="hidden @2xl:inline">Histórico</span>
                                 </a>
                                 <a
                                   href={`/equipamentos/${eq.id}/editar`}
                                   className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-primary bg-primary/5 rounded-lg hover:bg-primary/10 transition-colors"
                                 >
-                                  <Pencil size={11} /> Editar
+                                  <Pencil size={11} /><span className="hidden @2xl:inline">Editar</span>
                                 </a>
                                 <DeleteButton action={deletarAction.bind(null, eq.id)} />
                               </div>

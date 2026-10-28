@@ -32,12 +32,12 @@ export default async function UsuariosPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Técnicos</h1>
           <p className="text-gray-500 text-sm mt-1">{result.total} técnico(s) cadastrado(s)</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ConvidarBtn tipo="tecnico" />
           <a href="/usuarios/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
             + Novo Técnico
