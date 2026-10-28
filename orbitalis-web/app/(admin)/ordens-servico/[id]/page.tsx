@@ -156,7 +156,7 @@ export default async function OsDetailPage({ params }: Props) {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-xl font-bold text-gray-900">{osNum}</h1>
-                <StatusBadge status={os.status} />
+                <StatusBadge status={os.status} data={os.dataAgendamento} />
               </div>
               <p className="text-sm text-gray-500">{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
             </div>

@@ -228,7 +228,7 @@ export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: 
                 {checklistItems.length > 0 && (
                   <div style={{ marginBottom: '6px' }}>
                     <p style={rotulo}>Checklist de serviços</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 16px', marginTop: '4px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 14px', marginTop: '3px' }}>
                       {checklistItems.map((ci) => (
                         <div key={ci.id} style={{ breakInside: 'avoid' }}>
                           <Caixa marcada={false}>
@@ -237,8 +237,8 @@ export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: 
                           </Caixa>
                           {/* opções para marcar no papel */}
                           {ci.opcoes && ci.opcoes.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 12px', margin: '2px 0 0 15px' }}>
-                              {ci.opcoes.map((o) => <Caixa key={o} marcada={false}><span style={{ fontSize: '7.5pt', color: '#444' }}>{o}</span></Caixa>)}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0 8px', margin: '0 0 0 15px', lineHeight: 1.1 }}>
+                              {ci.opcoes.map((o) => <Caixa key={o} marcada={false} pequeno><span style={{ fontSize: '6.5pt', color: '#444' }}>{o}</span></Caixa>)}
                             </div>
                           )}
                           {ci.tipo === 'texto' && <div style={{ height: '14px', margin: '0 0 0 15px', borderBottom: '1px solid #ccc' }} />}
@@ -346,10 +346,10 @@ function Campo({ rotulo: r, valor, esquerda = false }: { rotulo: string; valor: 
 }
 
 /** Caixa de marcar para folha impressa. */
-function Caixa({ marcada, children }: { marcada: boolean; children: React.ReactNode }) {
+function Caixa({ marcada, children, pequeno }: { marcada: boolean; children: React.ReactNode; pequeno?: boolean }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '5px', fontSize: '8.5pt', lineHeight: 1.35 }}>
-      <span style={{ width: '10px', height: '10px', border: '1px solid #444', borderRadius: '2px', marginTop: '1px', flexShrink: 0, fontSize: '9px', lineHeight: '9px', textAlign: 'center', fontWeight: 900 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: pequeno ? '3px' : '5px', fontSize: '8.5pt', lineHeight: pequeno ? 1.15 : 1.25 }}>
+      <span style={{ width: pequeno ? '7px' : '10px', height: pequeno ? '7px' : '10px', border: '1px solid #444', borderRadius: '2px', marginTop: pequeno ? '1px' : '1px', flexShrink: 0, fontSize: '9px', lineHeight: '9px', textAlign: 'center', fontWeight: 900 }}>
         {marcada ? '✓' : ''}
       </span>
       <span style={marcada ? { fontWeight: 700 } : undefined}>{children}</span>

@@ -18,6 +18,12 @@ import { resolverChecklistItens } from '../../common/checklist-resolver';
 
 const AMBIENTE_PADRAO = 'Sem local definido';
 
+/** Dia de hoje no Brasil (UTC-3) como data à meia-noite UTC — mesma convenção de OrdemServico.dataAgendamento. */
+function inicioHojeBR(): Date {
+  const d = new Date(Date.now() - 3 * 3600_000);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
 @Injectable()
 export class OrdensServicoService {
   constructor(
@@ -193,8 +199,8 @@ export class OrdensServicoService {
         // O.S. com dataAgendamento no passado e ainda abertas/agendadas
         this.prisma.ordemServico.count({
           where: {
-            dataAgendamento: { lt: agora },
-            status: { in: ['aberta', 'agendada'] },
+            dataAgendamento: { lt: inicioHojeBR() },
+            status: { in: ['aberta', 'agendada', 'em_andamento'] },
           },
         }),
 
@@ -307,7 +313,7 @@ export class OrdensServicoService {
           (o) => o.status === 'concluida' && o.dataConclusao && o.dataConclusao >= ha30Dias,
         ).length;
         const atrasadasTec = ativas.filter(
-          (o) => ['aberta', 'agendada'].includes(o.status) && o.dataAgendamento < agora,
+          (o) => ['aberta', 'agendada', 'em_andamento'].includes(o.status) && o.dataAgendamento < inicioHojeBR(),
         ).length;
         const aIniciar = ativas.filter(
           (o) => o.status === 'agendada' && o.dataAgendamento >= agora,
@@ -615,8 +621,8 @@ export class OrdensServicoService {
 
     // Status / atrasadas (mutuamente exclusivos)
     if (atrasadas) {
-      where.status = { in: ['aberta', 'agendada'] };
-      where.dataAgendamento = { lt: agora };
+      where.status = { in: ['aberta', 'agendada', 'em_andamento'] };
+      where.dataAgendamento = { lt: inicioHojeBR() };
     } else if (status) {
       where.status = status;
     }

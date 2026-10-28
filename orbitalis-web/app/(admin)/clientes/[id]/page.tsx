@@ -366,7 +366,7 @@ export default async function ClienteDetalhePage({ params }: Props) {
                     <td className="px-5 py-2.5">
                       <a href={`/ordens-servico/${os.id}`} className="font-mono text-primary font-semibold hover:underline">{num}</a>
                     </td>
-                    <td className="px-3 py-2.5"><StatusBadge status={os.status as any} /></td>
+                    <td className="px-3 py-2.5"><StatusBadge status={os.status as any} data={(os as any).dataAgendamento} /></td>
                     <td className="px-3 py-2.5 text-gray-500 capitalize">{os.tipo === 'nao_se_aplica' ? 'Não se aplica' : os.tipo}</td>
                     <td className="px-3 py-2.5 text-gray-600">{os.ambiente.nome}</td>
                     <td className="px-3 py-2.5 text-gray-500">{os.tecnico ? (os.tecnico.nome ?? os.tecnico.email) : '—'}</td>

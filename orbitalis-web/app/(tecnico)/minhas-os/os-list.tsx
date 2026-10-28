@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { StatusBadge } from '@/components/ui/status-badge'
+import { StatusBadge, osAtrasada } from '@/components/ui/status-badge'
 import { ClipboardList, AlertTriangle } from 'lucide-react'
 
 type OrdemServico = {
@@ -34,7 +34,7 @@ function isHoje(isoDate: string): boolean {
 
 function isAtrasada(os: OrdemServico): boolean {
   if (os.status === 'concluida' || os.status === 'cancelada') return false
-  return new Date(os.dataAgendamento) < new Date()
+  return osAtrasada(os.status, os.dataAgendamento)
 }
 
 export function OsList({ ordens }: { ordens: OrdemServico[] }) {

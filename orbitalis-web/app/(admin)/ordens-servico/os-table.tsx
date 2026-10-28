@@ -164,7 +164,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                     )}
                     {/* Celular: status, técnico e data entram aqui */}
                     <div className="sm:hidden mt-2 space-y-1">
-                      <StatusBadge status={os.status} />
+                      <StatusBadge status={os.status} data={os.dataAgendamento} />
                       <div className="text-xs text-gray-500">
                         {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}{horario ? ` · ${horario}` : ''}
                         {tecnicoNome ? ` · ${tecnicoNome}` : ''}
@@ -172,7 +172,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                     </div>
                   </td>
                   <td className="hidden sm:table-cell px-3 py-3">
-                    <StatusBadge status={os.status} />
+                    <StatusBadge status={os.status} data={os.dataAgendamento} />
                   </td>
                   <td className="hidden lg:table-cell px-3 py-3 text-gray-700">
                     {tecnicoNome ?? <span className="text-gray-400">Sem técnico</span>}
