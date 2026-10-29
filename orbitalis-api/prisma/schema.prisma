@@ -257,6 +257,13 @@ model PlanoManutencao {
   // null = plano antigo, sem limite (só a data limite vale)
   visitasPrevistas Int?    @map("visitas_previstas")
   visitasGeradas   Int     @default(0) @map("visitas_geradas")
+  // Como agrupar as O.S. de cada visita: 'cliente' (uma O.S. com todos os equipamentos), 'ambiente'
+  // (uma por ambiente) ou null = padrão da empresa. maxEquipamentosPorOs divide visitas grandes.
+  agrupamento          String? @map("agrupamento") @db.VarChar(10)
+  maxEquipamentosPorOs Int?    @map("max_equipamentos_por_os")
+  // Horário padrão da visita (HH:MM), aplicado às O.S. geradas
+  horaInicio           String? @map("hora_inicio") @db.VarChar(5)
+  horaFim              String? @map("hora_fim") @db.VarChar(5)
 
   cliente            Cliente                  @relation(fields: [clienteId], references: [id])
   contrato           Contrato?                @relation(fields: [contratoId], references: [id], onDelete: SetNull)
@@ -390,6 +397,8 @@ model ConfiguracaoEmpresa {
   email        String?  @db.VarChar(255)
   site         String?  @db.VarChar(255)
   instrucoesOs String?  @map("instrucoes_os") @db.Text
+  // Agrupamento padrão das O.S. geradas pelos planos preventivos: 'cliente' ou 'ambiente'
+  agrupamentoOsPadrao String @default("cliente") @map("agrupamento_os_padrao") @db.VarChar(10)
   // Localização da empresa (base para feriados estaduais/municipais e documentos)
   cidade       String?  @db.VarChar(120)
   uf           String?  @db.VarChar(2)

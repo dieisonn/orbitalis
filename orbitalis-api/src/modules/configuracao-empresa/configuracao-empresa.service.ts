@@ -14,6 +14,7 @@ type UpsertDto = {
   email?: string | null;
   site?: string | null;
   instrucoesOs?: string | null;
+  agrupamentoOsPadrao?: string;
   cidade?: string | null;
   uf?: string | null;
   codigoIbge?: string | null;
@@ -71,6 +72,7 @@ export class ConfiguracaoEmpresaService {
       email: null,
       site: null,
       instrucoesOs: null,
+      agrupamentoOsPadrao: 'cliente',
       cidade: null,
       uf: null,
       codigoIbge: null,
@@ -84,16 +86,20 @@ export class ConfiguracaoEmpresaService {
   }
 
   async upsert(data: UpsertDto) {
-    const { responsavelTecnicoId, cidade, uf, codigoIbge, email, site, instrucoesOs, ...rest } = data;
+    const { responsavelTecnicoId, cidade, uf, codigoIbge, email, site, instrucoesOs, agrupamentoOsPadrao, ...rest } = data;
     // campos de texto opcionais: vazio limpa
     const textos: { email?: string | null; site?: string | null; instrucoesOs?: string | null } = {};
     if (email !== undefined) textos.email = (email ?? '').trim().slice(0, 255) || null;
     if (site !== undefined) textos.site = (site ?? '').trim().slice(0, 255) || null;
     if (instrucoesOs !== undefined) textos.instrucoesOs = (instrucoesOs ?? '').trim().slice(0, 2000) || null;
+    if (agrupamentoOsPadrao !== undefined && !['cliente', 'ambiente'].includes(agrupamentoOsPadrao)) {
+      throw new BadRequestException("Agrupamento deve ser 'cliente' ou 'ambiente'");
+    }
     const local = normalizarLocalizacao({ cidade, uf, codigoIbge });
     const existing = await this.prisma.configuracaoEmpresa.findFirst();
 
     const updateData: any = { ...rest, ...local, ...textos };
+    if (agrupamentoOsPadrao !== undefined) updateData.agrupamentoOsPadrao = agrupamentoOsPadrao;
     if (responsavelTecnicoId !== undefined) {
       updateData.responsavelTecnicoId = responsavelTecnicoId || null;
     }
@@ -118,6 +124,7 @@ export class ConfiguracaoEmpresaService {
         email: textos.email ?? null,
         site: textos.site ?? null,
         instrucoesOs: textos.instrucoesOs ?? null,
+        agrupamentoOsPadrao: agrupamentoOsPadrao ?? 'cliente',
         cidade: local.cidade ?? null,
         uf: local.uf ?? null,
         codigoIbge: local.codigoIbge ?? null,

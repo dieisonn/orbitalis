@@ -68,6 +68,10 @@ export class PlanosManutencaoService {
           contratoId: dto.contratoId || null,
           frequenciaDias: dto.frequenciaDias,
           visitasPrevistas: dto.visitasPrevistas,
+          agrupamento: dto.agrupamento || null,
+          maxEquipamentosPorOs: dto.maxEquipamentosPorOs ?? null,
+          horaInicio: dto.horaInicio || null,
+          horaFim: dto.horaFim || null,
           proximaGeracao: new Date(dto.proximaGeracao),
           dataFim: dto.dataFim ? new Date(dto.dataFim) : null,
           ativo: dto.ativo ?? true,
@@ -148,6 +152,10 @@ export class PlanosManutencaoService {
       tipoServicoId?: string | null;
       frequenciaDias?: number;
       visitasPrevistas?: number;
+      agrupamento?: string | null;
+      maxEquipamentosPorOs?: number | null;
+      horaInicio?: string | null;
+      horaFim?: string | null;
       proximaGeracao?: string;
       dataFim?: string | null;
       ativo?: boolean;
@@ -165,6 +173,26 @@ export class PlanosManutencaoService {
         throw new BadRequestException('Informe de 1 a 120 visitas por equipamento incluídas no plano');
       }
       rest.visitasPrevistas = v;
+    }
+
+    if (rest.agrupamento !== undefined) {
+      rest.agrupamento = rest.agrupamento || null;
+      if (rest.agrupamento && !['cliente', 'ambiente'].includes(rest.agrupamento)) {
+        throw new BadRequestException("Agrupamento deve ser 'cliente' ou 'ambiente'");
+      }
+    }
+    if (rest.maxEquipamentosPorOs !== undefined) {
+      const m = rest.maxEquipamentosPorOs == null || (rest.maxEquipamentosPorOs as unknown) === '' ? null : Number(rest.maxEquipamentosPorOs);
+      if (m !== null && (!Number.isInteger(m) || m < 1 || m > 500)) {
+        throw new BadRequestException('Máximo de equipamentos por O.S. deve ser de 1 a 500');
+      }
+      rest.maxEquipamentosPorOs = m;
+    }
+    for (const k of ['horaInicio', 'horaFim'] as const) {
+      if (rest[k] !== undefined) {
+        rest[k] = rest[k] || null;
+        if (rest[k] && !/^([01]\d|2[0-3]):[0-5]\d$/.test(rest[k] as string)) throw new BadRequestException('Horário deve estar no formato HH:MM');
+      }
     }
 
     const contratoPatch = (rest as { contratoId?: string | null }).contratoId;

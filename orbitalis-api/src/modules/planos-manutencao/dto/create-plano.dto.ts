@@ -3,7 +3,10 @@ import {
   IsBoolean,
   IsDateString,
   IsInt,
+  IsIn,
   IsOptional,
+  IsString,
+  Matches,
   IsUUID,
   Max,
   Min,
@@ -49,6 +52,27 @@ export class CreatePlanoManutencaoDto {
 
   @IsDateString()
   proximaGeracao: string;
+
+  // 'cliente' | 'ambiente' | vazio (usa o padrão da empresa)
+  @IsOptional()
+  @IsIn(['cliente', 'ambiente'])
+  agrupamento?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  maxEquipamentosPorOs?: number;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  horaInicio?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  horaFim?: string;
 
   @IsOptional()
   @IsDateString()

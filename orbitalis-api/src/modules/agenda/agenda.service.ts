@@ -28,7 +28,7 @@ const INCLUDE_OS = {
   ambiente: { include: { cliente: true } },
   tecnico: { select: { id: true, nome: true } },
   tipoServico: { select: { id: true, sigla: true, nome: true, duracaoMinutos: true } },
-  itens: { include: { equipamento: { select: { nome: true } } } },
+  itens: { include: { equipamento: { select: { nome: true, ambiente: { select: { nome: true } } } } } },
 } satisfies Prisma.OrdemServicoInclude;
 
 type OsCompleta = Prisma.OrdemServicoGetPayload<{ include: typeof INCLUDE_OS }>;
@@ -38,6 +38,9 @@ export function duracaoLegivel(min: number): string {
   if (h === 0) return `${m} min`;
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`;
 }
+
+const ambientesDaOs = (os: { itens: { equipamento: { ambiente: { nome: string } | null } | null }[] }) =>
+  [...new Set(os.itens.map((i) => i.equipamento?.ambiente?.nome).filter((n): n is string => !!n))].sort((a, b) => a.localeCompare(b, 'pt-BR', { numeric: true }));
 
 const nomeDoCliente = (c: { razaoSocial: string; nomeFantasia: string | null }) =>
   c.nomeFantasia?.trim() || c.razaoSocial;
@@ -75,7 +78,8 @@ export class AgendaService implements OnApplicationBootstrap {
 
   private tituloDaOs(os: OsCompleta) {
     const cliente = nomeDoCliente(os.ambiente.cliente);
-    return `${os.tipoServico?.sigla ?? 'OS'} - ${cliente}`;
+    const n = os.itens.length;
+    return `${os.tipoServico?.sigla ?? 'OS'} - ${cliente}${n > 1 ? ` (${n} equipamentos)` : ''}`;
   }
 
   private descricaoDaOs(os: OsCompleta, duracaoMin: number) {
@@ -90,10 +94,14 @@ export class AgendaService implements OnApplicationBootstrap {
       `Cliente: ${nomeDoCliente(cli)}`,
       cli.telefone ? `Telefone: ${cli.telefone}` : null,
       `Endereço: ${cli.endereco}`,
-      `Ambiente: ${os.ambiente.nome}${os.ambiente.localizacaoInterna ? ` — ${os.ambiente.localizacaoInterna}` : ''}`,
+      ...(ambientesDaOs(os).length > 1
+        ? []
+        : [`Ambiente: ${os.ambiente.nome}${os.ambiente.localizacaoInterna ? ` — ${os.ambiente.localizacaoInterna}` : ''}`]),
       os.tecnico?.nome ? `Técnico: ${os.tecnico.nome}` : null,
-      os.itens.length ? '\nEquipamentos:' : null,
-      ...os.itens.map((i) => `- ${i.equipamento?.nome ?? ''}`),
+      os.itens.length ? `\nEquipamentos (${os.itens.length}):` : null,
+      ...(ambientesDaOs(os).length > 1
+        ? ambientesDaOs(os).flatMap((amb) => [`${amb}:`, ...os.itens.filter((i) => i.equipamento?.ambiente?.nome === amb).map((i) => `- ${i.equipamento?.nome ?? ''}`)])
+        : os.itens.map((i) => `- ${i.equipamento?.nome ?? ''}`)),
       os.observacoesGerais ? `\nDescrição / observações:\n${os.observacoesGerais}` : null,
       base ? `\nAbrir O.S.: ${base}/ordens-servico/${os.id}` : null,
     ].filter((l): l is string => l !== null).join('\n');
@@ -122,7 +130,7 @@ export class AgendaService implements OnApplicationBootstrap {
     };
     const textos = {
       titulo: this.tituloDaOs(os),
-      descricao: this.descricaoDaOs(os, duracao),
+      descricao: this.descricaoDaOs(os, Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / 60000))),
       local: os.ambiente.cliente.endereco,
     };
 
