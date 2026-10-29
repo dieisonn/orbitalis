@@ -14,6 +14,10 @@ export async function editarPlano(
     visitasPrevistas: string
     proximaGeracao: string
     dataFim?: string
+    agrupamento?: string
+    maxEquipamentosPorOs?: string
+    horaInicio?: string
+    horaFim?: string
     ativo: boolean
     equipamentosConfig: EquipConfig[]
   },
@@ -26,6 +30,10 @@ export async function editarPlano(
     visitasPrevistas: Number(data.visitasPrevistas),
     proximaGeracao: data.proximaGeracao,
     dataFim: data.dataFim || null,
+    agrupamento: data.agrupamento || null,
+    maxEquipamentosPorOs: data.maxEquipamentosPorOs ? Number(data.maxEquipamentosPorOs) : null,
+    horaInicio: data.horaInicio || null,
+    horaFim: data.horaFim || null,
     ativo: data.ativo,
     equipamentosConfig: data.equipamentosConfig,
   })

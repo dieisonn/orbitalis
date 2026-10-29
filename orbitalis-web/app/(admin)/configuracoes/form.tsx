@@ -13,6 +13,7 @@ type Config = {
   email?: string | null
   site?: string | null
   instrucoesOs?: string | null
+  agrupamentoOsPadrao?: string | null
   cidade?: string | null
   uf?: string | null
   codigoIbge?: string | null
@@ -64,7 +65,7 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
         cidade !== (config.cidade ?? '') || uf !== (config.uf ?? '') || ibge !== (config.codigoIbge ?? '')
           ? { cidade, uf, codigoIbge: ibge }
           : undefined,
-        { email: fd.get('email') as string, site: fd.get('site') as string, instrucoesOs: fd.get('instrucoesOs') as string },
+        { email: fd.get('email') as string, site: fd.get('site') as string, instrucoesOs: fd.get('instrucoesOs') as string, agrupamentoOsPadrao: fd.get('agrupamentoOsPadrao') as string },
       )
       if (!result.ok) { setError(result.error ?? 'Erro ao salvar'); return }
       setSuccess(true)
@@ -143,6 +144,15 @@ export function ConfiguracaoForm({ config }: { config: Config }) {
               placeholder={'Ex.:\n• Preencha data e hora de chegada.\n• Pagamentos somente pelo setor comercial.'}
               className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-y" />
             <p className="text-xs text-gray-500 mt-1">Aparece em todas as ordens de serviço impressas, para o técnico. Deixe em branco para não imprimir.</p>
+          </div>
+          <div className="md:col-span-2">
+            <label htmlFor="agrupamentoOsPadrao" className="block text-sm font-medium text-gray-700 mb-1">O.S. geradas pelos planos preventivos</label>
+            <select id="agrupamentoOsPadrao" name="agrupamentoOsPadrao" defaultValue={config.agrupamentoOsPadrao ?? 'cliente'}
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <option value="cliente">Uma O.S. por visita (todos os equipamentos do cliente juntos)</option>
+              <option value="ambiente">Uma O.S. por ambiente</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Padrão para todos os planos; cada plano pode escolher outro. Por visita, a agenda recebe um evento só e o técnico preenche um documento só.</p>
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@ export async function salvarConfiguracao(
   telefone: string,
   endereco: string,
   local?: { cidade: string; uf: string; codigoIbge: string },   // só enviado quando a pessoa alterou a localização
-  contato?: { email: string; site: string; instrucoesOs: string },   // vazio limpa o campo
+  contato?: { email: string; site: string; instrucoesOs: string; agrupamentoOsPadrao?: string },   // vazio limpa o campo
 ) {
   try {
     await api.patch('/configuracao', {
@@ -23,7 +23,7 @@ export async function salvarConfiguracao(
       telefone: telefone || undefined,
       endereco: endereco || undefined,
       ...(local ? { cidade: local.cidade, uf: local.uf, codigoIbge: local.codigoIbge } : {}),
-      ...(contato ? { email: contato.email, site: contato.site, instrucoesOs: contato.instrucoesOs } : {}),
+      ...(contato ? { email: contato.email, site: contato.site, instrucoesOs: contato.instrucoesOs, ...(contato.agrupamentoOsPadrao ? { agrupamentoOsPadrao: contato.agrupamentoOsPadrao } : {}) } : {}),
     })
     return { ok: true as const }
   } catch (err) {

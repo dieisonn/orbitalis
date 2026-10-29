@@ -14,6 +14,10 @@ export async function criarPlano(data: {
   visitasPrevistas: number
   proximaGeracao: string
   dataFim?: string
+  agrupamento?: string
+  maxEquipamentosPorOs?: string
+  horaInicio?: string
+  horaFim?: string
   equipamentosConfig: EquipConfig[]
 }) {
   await api.post('/planos-manutencao', {
@@ -25,6 +29,10 @@ export async function criarPlano(data: {
     visitasPrevistas: data.visitasPrevistas,
     proximaGeracao: data.proximaGeracao,
     dataFim: data.dataFim || undefined,
+    agrupamento: data.agrupamento || undefined,
+    maxEquipamentosPorOs: data.maxEquipamentosPorOs ? Number(data.maxEquipamentosPorOs) : undefined,
+    horaInicio: data.horaInicio || undefined,
+    horaFim: data.horaFim || undefined,
     ativo: true,
     equipamentosConfig: data.equipamentosConfig,
   })

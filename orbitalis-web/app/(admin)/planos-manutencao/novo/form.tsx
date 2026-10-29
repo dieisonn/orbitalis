@@ -4,6 +4,7 @@ import { useTransition, useState, useMemo } from 'react'
 import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { criarPlano } from './actions'
 import { CampoVisitas } from '../campo-visitas'
+import { CamposVisita } from '../campos-visita'
 import { Building2, Cpu } from 'lucide-react'
 import { textoSobre } from '@/lib/cor'
 import { CampoData } from '@/components/ui/campo-data'
@@ -131,6 +132,10 @@ export function NovoPlanoForm({
           visitasPrevistas: Number(visitas),
           proximaGeracao: fd.get('proximaGeracao') as string,
           dataFim: fd.get('dataFim') as string,
+          agrupamento: fd.get('agrupamento') as string,
+          maxEquipamentosPorOs: fd.get('maxEquipamentosPorOs') as string,
+          horaInicio: fd.get('horaInicio') as string,
+          horaFim: fd.get('horaFim') as string,
           equipamentosConfig,
         })
       } catch (err) {
@@ -247,6 +252,8 @@ export function NovoPlanoForm({
 
           {/* Visitas por equipamento */}
           <CampoVisitas valor={visitas} onChange={setVisitas} primeira={prox} frequenciaDias={freq} dataLimite={limite} />
+
+          <CamposVisita />
         </div>
       </div>
 

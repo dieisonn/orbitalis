@@ -34,6 +34,10 @@ type Plano = {
   id: string
   frequenciaDias: number
   visitasPrevistas: number | null
+  agrupamento: string | null
+  maxEquipamentosPorOs: number | null
+  horaInicio: string | null
+  horaFim: string | null
   visitasGeradas: number
   ativo: boolean
   proximaGeracao: string
@@ -100,6 +104,10 @@ export default async function EditarPlanoPage({ params }: Props) {
         frequenciaDias={plano.frequenciaDias}
         visitasPrevistas={plano.visitasPrevistas}
         visitasGeradas={plano.visitasGeradas}
+        agrupamento={plano.agrupamento}
+        maxEquipamentosPorOs={plano.maxEquipamentosPorOs}
+        horaInicio={plano.horaInicio}
+        horaFim={plano.horaFim}
         proximaGeracao={plano.proximaGeracao}
         dataFim={plano.dataFim}
         ativo={plano.ativo}

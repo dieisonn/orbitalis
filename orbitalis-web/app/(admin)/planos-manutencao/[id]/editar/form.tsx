@@ -6,6 +6,7 @@ import { hojeISO, somarDiasISO, somarMesesISO, proximoDiaDaSemana } from '@/lib/
 import { ContratoSelect, type ContratoOpcao } from '@/components/ui/contrato-select'
 import { editarPlano } from './actions'
 import { CampoVisitas } from '../../campo-visitas'
+import { CamposVisita } from '../../campos-visita'
 import { Building2 } from 'lucide-react'
 import { textoSobre } from '@/lib/cor'
 
@@ -52,6 +53,10 @@ type Props = {
   tipoServicoId: string | null
   frequenciaDias: number
   visitasPrevistas: number | null
+  agrupamento?: string | null
+  maxEquipamentosPorOs?: number | null
+  horaInicio?: string | null
+  horaFim?: string | null
   visitasGeradas: number
   proximaGeracao: string
   dataFim: string | null
@@ -73,6 +78,10 @@ export function EditarPlanoForm({
   tipoServicoId: tipoServicoIdInicial,
   frequenciaDias,
   visitasPrevistas,
+  agrupamento,
+  maxEquipamentosPorOs,
+  horaInicio,
+  horaFim,
   visitasGeradas,
   proximaGeracao,
   dataFim,
@@ -152,6 +161,10 @@ export function EditarPlanoForm({
           visitasPrevistas:  visitas,
           proximaGeracao:    fd.get('proximaGeracao') as string,
           dataFim:           fd.get('dataFim') as string,
+          agrupamento:          fd.get('agrupamento') as string,
+          maxEquipamentosPorOs: fd.get('maxEquipamentosPorOs') as string,
+          horaInicio:           fd.get('horaInicio') as string,
+          horaFim:              fd.get('horaFim') as string,
           ativo: isAtivo,
           equipamentosConfig,
         })
@@ -251,6 +264,8 @@ export function EditarPlanoForm({
 
           {/* Visitas por equipamento */}
           <CampoVisitas valor={visitas} onChange={setVisitas} primeira={prox} frequenciaDias={freq} dataLimite={limite} geradas={visitasGeradas} />
+
+          <CamposVisita agrupamento={agrupamento} maxEquipamentosPorOs={maxEquipamentosPorOs} horaInicio={horaInicio} horaFim={horaFim} />
         </div>
 
         {/* Toggle ativo */}
