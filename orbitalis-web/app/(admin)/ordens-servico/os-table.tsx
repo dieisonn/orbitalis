@@ -6,8 +6,8 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
 import { OsPagination } from '@/components/ui/os-pagination'
 import { alterarStatusLote } from './actions'
-import { excluirOsLote } from './excluir-os-action'
-import { Trash2, X, Loader2 } from 'lucide-react'
+import { excluirOsLote, unirOsLote } from './excluir-os-action'
+import { Trash2, X, Loader2, Layers } from 'lucide-react'
 
 type OrdemServico = {
   id: string
@@ -61,6 +61,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
   const [isPending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
   const [excluindo, setExcluindo] = useState(false)
+  const [unindo, setUnindo] = useState(false)
 
   const allSelected = ordens.length > 0 && selected.size === ordens.length
   const someSelected = selected.size > 0 && !allSelected
@@ -211,6 +212,14 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
         </Suspense>
       </div>
 
+      {unindo && (
+        <UnirLoteModal
+          ids={Array.from(selected)}
+          onFechar={() => setUnindo(false)}
+          onUnido={() => { setUnindo(false); setSelected(new Set()); router.refresh() }}
+        />
+      )}
+
       {excluindo && (
         <ExcluirLoteModal
           ids={Array.from(selected)}
@@ -242,6 +251,15 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
             {isPending ? 'Aplicando…' : 'Aplicar'}
           </button>
           <div className="w-px h-5 bg-white/20" />
+          {selected.size >= 2 && (
+            <button
+              onClick={() => setUnindo(true)}
+              className="inline-flex items-center gap-1.5 text-sky-200 hover:text-white text-sm font-semibold transition-colors whitespace-nowrap"
+              title="Junta as O.S. do mesmo cliente e dia em uma visita só"
+            >
+              <Layers size={14} /> Unir em visita
+            </button>
+          )}
           <button
             onClick={() => setExcluindo(true)}
             className="inline-flex items-center gap-1.5 text-red-300 hover:text-red-200 text-sm font-semibold transition-colors"
@@ -297,6 +315,51 @@ function ExcluirLoteModal({ ids, onFechar, onExcluido }: { ids: string[]; onFech
           <button type="submit" disabled={pendente}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-700 rounded-lg hover:bg-red-800 disabled:opacity-60">
             {pendente && <Loader2 size={14} className="animate-spin" />} Excluir {ids.length}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+
+/** Une O.S. do mesmo cliente e dia em uma visita (uma O.S. e um evento na agenda). */
+function UnirLoteModal({ ids, onFechar, onUnido }: { ids: string[]; onFechar: () => void; onUnido: () => void }) {
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
+  const [pendente, startTransition] = useTransition()
+
+  function confirmar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!senha) return setErro('Digite a sua senha para confirmar.')
+    setErro(null)
+    startTransition(async () => {
+      const r = await unirOsLote(ids, senha)
+      if (!r.ok) { setErro(r.error); return }
+      onUnido()
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/40 flex items-center justify-center p-4" onMouseDown={(e) => { if (e.target === e.currentTarget && !pendente) onFechar() }}>
+      <form onSubmit={confirmar} role="dialog" aria-modal="true" aria-labelledby="uni-titulo" className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 id="uni-titulo" className="text-base font-bold text-gray-900">Unir {ids.length} O.S. em uma visita?</h2>
+          <button type="button" onClick={onFechar} aria-label="Fechar" className="p-1 text-gray-500 hover:text-gray-800"><X size={16} /></button>
+        </div>
+        <p className="text-sm text-gray-700 mb-2">
+          Os equipamentos de todas as O.S. vão para a <strong>O.S. de menor número</strong>, cada um com o seu checklist, e as demais O.S. e seus eventos na agenda são apagados. A agenda fica com um evento só.
+        </p>
+        <p className="text-xs text-gray-500 mb-3">Precisam ser do mesmo cliente, data, tipo de serviço e técnico, e ainda sem execução.</p>
+        <label htmlFor="uni-senha" className="block text-sm font-medium text-gray-700 mb-1">Confirme com a sua senha de login</label>
+        <input id="uni-senha" type="password" autoFocus autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)}
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        {erro && <p role="alert" className="mt-3 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{erro}</p>}
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onFechar} disabled={pendente} className="px-4 py-2 text-sm font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface">Cancelar</button>
+          <button type="submit" disabled={pendente}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:opacity-90 disabled:opacity-60">
+            {pendente && <Loader2 size={14} className="animate-spin" />} Unir {ids.length}
           </button>
         </div>
       </form>

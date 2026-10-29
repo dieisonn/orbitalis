@@ -22,3 +22,14 @@ export async function excluirOsLote(ids: string[], senha: string) {
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao excluir' }
   }
 }
+
+/** Junta O.S. do mesmo cliente e dia em uma visita (uma O.S., um evento), confirmado com a senha do admin. */
+export async function unirOsLote(ids: string[], senha: string) {
+  try {
+    const r = await api.post<{ destinoId: string; unidas: number; equipamentos: number }>('/ordens-servico/unir', { ids, senha })
+    revalidatePath('/ordens-servico')
+    return { ok: true as const, ...r }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao unir O.S.' }
+  }
+}
