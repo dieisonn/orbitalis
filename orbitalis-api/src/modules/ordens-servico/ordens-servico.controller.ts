@@ -173,6 +173,13 @@ export class OrdensServicoController {
     return this.ordensServicoService.update(id, body);
   }
 
+  // POST /api/v1/ordens-servico/unir — Admin: junta O.S. do mesmo cliente/dia em uma visita (uma O.S., um evento)
+  @Post('unir')
+  @Roles(UsuarioTipo.admin)
+  unir(@Body() body: { ids: string[]; senha: string }, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.unir(body.ids, body.senha, user.id);
+  }
+
   // POST /api/v1/ordens-servico/excluir-lote — Admin, exclusão definitiva de várias O.S. com senha
   @Post('excluir-lote')
   @Roles(UsuarioTipo.admin)

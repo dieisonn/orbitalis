@@ -15,6 +15,7 @@ import { TriarOsDto } from './dto/triar-os.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
+import { ambienteVarios } from '../cron/geracao-preventiva';
 
 const AMBIENTE_PADRAO = 'Sem local definido';
 
@@ -843,6 +844,60 @@ export class OrdensServicoService {
     const alvo = existentes.map((o) => o.id);
     await this.apagarOs(alvo);
     return { excluidas: alvo.length, ignoradas: lista.length - alvo.length };
+  }
+
+  // POST /ordens-servico/unir — junta várias O.S. do mesmo cliente e dia em uma visita: os equipamentos
+  // vão para a O.S. de menor número (cada um mantém checklist e observações) e as demais são removidas,
+  // com seus eventos da agenda. Só O.S. ainda sem execução. A senha do admin confirma a operação.
+  async unir(ids: string[], senha: string, adminId: string) {
+    const lista = Array.from(new Set((ids ?? []).filter((i) => typeof i === 'string')));
+    if (lista.length < 2) throw new BadRequestException('Selecione ao menos duas O.S. para unir');
+    if (lista.length > 200) throw new BadRequestException('Máximo de 200 O.S. por vez');
+    await this.confirmarSenha(adminId, senha);
+
+    const oss = await this.prisma.ordemServico.findMany({
+      where: { id: { in: lista } },
+      include: { itens: true, ambiente: { select: { clienteId: true } } },
+      orderBy: [{ numero: 'asc' }],
+    });
+    if (oss.length !== lista.length) throw new BadRequestException('Alguma O.S. não foi encontrada');
+    const dia = (d: Date) => d.toISOString().slice(0, 10);
+    const [destino, ...outras] = oss;
+    for (const o of oss) {
+      if (!['aberta', 'agendada'].includes(o.status)) throw new BadRequestException('Só é possível unir O.S. abertas ou agendadas');
+      if (o.itens.some((i) => i.statusItem !== 'pendente')) throw new BadRequestException('Há O.S. com equipamento já executado; não podem ser unidas');
+      if (o.ambiente.clienteId !== destino.ambiente.clienteId) throw new BadRequestException('Todas as O.S. precisam ser do mesmo cliente');
+      if (dia(o.dataAgendamento) !== dia(destino.dataAgendamento)) throw new BadRequestException('Todas as O.S. precisam ter a mesma data');
+      if ((o.tipoServicoId ?? null) !== (destino.tipoServicoId ?? null)) throw new BadRequestException('Todas as O.S. precisam ser do mesmo tipo de serviço');
+      if ((o.tecnicoId ?? null) !== (destino.tecnicoId ?? null)) throw new BadRequestException('Todas as O.S. precisam ter o mesmo técnico');
+    }
+    const equipamentoIds = oss.flatMap((o) => o.itens.map((i) => i.equipamentoId));
+    if (new Set(equipamentoIds).size !== equipamentoIds.length) throw new BadRequestException('Há equipamento repetido nas O.S. selecionadas');
+
+    const equipamentos = await this.prisma.equipamento.findMany({ where: { id: { in: equipamentoIds } }, select: { ambienteId: true } });
+    const ambientes = new Set(equipamentos.map((e) => e.ambienteId));
+    const ambienteId = ambientes.size === 1
+      ? [...ambientes][0]
+      : await ambienteVarios(this.prisma, destino.ambiente.clienteId, destino.empresaId ?? null);
+    const obs = oss.map((o) => o.observacoesGerais?.trim()).filter((t): t is string => !!t);
+
+    await this.prisma.$transaction(async (tx) => {
+      const idsOutras = outras.map((o) => o.id);
+      await tx.ordemServicoItem.updateMany({ where: { ordemServicoId: { in: idsOutras } }, data: { ordemServicoId: destino.id } });
+      await tx.ordemServico.update({
+        where: { id: destino.id },
+        data: {
+          ambienteId,
+          horaInicio: destino.horaInicio ?? outras.find((o) => o.horaInicio)?.horaInicio ?? null,
+          horaFim: destino.horaFim ?? outras.find((o) => o.horaFim)?.horaFim ?? null,
+          observacoesGerais: obs.length ? Array.from(new Set(obs)).join('\n') : null,
+        },
+      });
+      await tx.auditoriaConflitoSincronizacao.deleteMany({ where: { ordemServicoId: { in: idsOutras } } });
+      await tx.ordemServico.deleteMany({ where: { id: { in: idsOutras } } });
+    });
+    await this.agenda.sincronizarOs(destino.id);
+    return { destinoId: destino.id, unidas: oss.length, equipamentos: equipamentoIds.length };
   }
 
   private async confirmarSenha(adminId: string, senha: string) {

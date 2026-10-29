@@ -58,7 +58,7 @@ export function montarGrupos<T extends ConfigGeracao>(configs: T[], modo: Agrupa
 }
 
 /** Ambiente "Vários ambientes" do cliente, para O.S. de visita que cobre mais de um ambiente. */
-async function ambienteVarios(prisma: PrismaService, clienteId: string, empresaId: string | null): Promise<string> {
+export async function ambienteVarios(prisma: PrismaService, clienteId: string, empresaId: string | null): Promise<string> {
   const existente = await prisma.ambiente.findFirst({
     where: { clienteId, nome: AMBIENTE_VARIOS, deletedAt: null },
     select: { id: true },
