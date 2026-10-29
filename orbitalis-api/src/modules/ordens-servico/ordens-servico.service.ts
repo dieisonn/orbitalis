@@ -684,7 +684,7 @@ export class OrdensServicoService {
     const os = await this.prisma.ordemServico.findUnique({
       where: { id },
       include: {
-        itens:       { include: { equipamento: true } },
+        itens:       { include: { equipamento: { include: { ambiente: { select: { id: true, nome: true, localizacaoInterna: true } } } } } },
         ambiente:    { include: { cliente: true } },
         tecnico:     { select: { id: true, email: true, nome: true } },
         tipoServico: true,
