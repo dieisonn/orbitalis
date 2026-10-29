@@ -12,6 +12,9 @@ import {
   Save,
   CheckCheck,
   Clock,
+  ChevronDown,
+  ChevronUp,
+  Copy,
 } from 'lucide-react'
 import SignatureCanvas, { type SignatureCanvasHandle } from '@/components/ui/signature-canvas'
 import { atualizarStatusOs, sincronizarOs } from './actions'
@@ -35,6 +38,7 @@ type OsItem = {
     modelo: string | null
     tipoEquipamento: string
     numeroSerie: string | null
+    ambiente?: { nome: string } | null
   }
 }
 
@@ -88,6 +92,45 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     return init
   })
 
+  // Equipamentos organizados por ambiente (salas juntas); visitas grandes começam recolhidas
+  const itens = [...os.itens].sort((a, b) =>
+    (a.equipamento.ambiente?.nome ?? '').localeCompare(b.equipamento.ambiente?.nome ?? '', 'pt-BR', { numeric: true }) ||
+    a.equipamento.nome.localeCompare(b.equipamento.nome, 'pt-BR', { numeric: true }))
+  const ambientesNomes = new Set(itens.map((i) => i.equipamento.ambiente?.nome).filter(Boolean))
+  const [abertos, setAbertos] = useState<Set<string>>(() => {
+    if (itens.length <= 3) return new Set(itens.map((i) => i.id))
+    const primeiro = itens.find((i) => i.statusItem !== 'concluido')
+    return new Set(primeiro ? [primeiro.id] : [])
+  })
+  const [filtro, setFiltro] = useState<'todos' | 'pendentes'>('todos')
+
+  function alternarAberto(itemId: string) {
+    setAbertos((prev) => {
+      const n = new Set(prev)
+      if (n.has(itemId)) n.delete(itemId)
+      else n.add(itemId)
+      return n
+    })
+  }
+
+  // Mesmo checklist = mesmos itens (ids): permite copiar o preenchimento entre equipamentos iguais
+  const assinatura = (item: OsItem) => parseSnapshot(item.checklistSnapshot).map((c) => c.id).sort().join('|')
+
+  function aplicarAosIguais(item: OsItem) {
+    const sig = assinatura(item)
+    const origem = checked[item.id] ?? new Set<string>()
+    setSaved(false)
+    setChecked((prev) => {
+      const n = { ...prev }
+      for (const o of itens) {
+        if (o.id !== item.id && itemStatus[o.id] !== 'concluido' && assinatura(o) === sig) n[o.id] = new Set(origem)
+      }
+      return n
+    })
+  }
+  const iguaisPendentes = (item: OsItem) =>
+    itens.filter((o) => o.id !== item.id && itemStatus[o.id] !== 'concluido' && assinatura(o) === assinatura(item)).length
+
   // Auto-sync: drena fila local quando reconectar
   useEffect(() => {
     setPendingSync(hasPendingSync(os.id))
@@ -123,10 +166,31 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
 
   function toggleItemDone(itemId: string) {
     setSaved(false)
+    const concluindo = itemStatus[itemId] !== 'concluido'
     setItemStatus((prev) => ({
       ...prev,
       [itemId]: prev[itemId] === 'concluido' ? 'pendente' : 'concluido',
     }))
+    if (concluindo && itens.length > 3) {
+      // recolhe o concluído e abre o próximo pendente
+      const idx = itens.findIndex((i) => i.id === itemId)
+      const proximo = [...itens.slice(idx + 1), ...itens.slice(0, idx)].find((i) => i.id !== itemId && itemStatus[i.id] !== 'concluido')
+      setAbertos((prev) => {
+        const n = new Set(prev)
+        n.delete(itemId)
+        if (proximo) n.add(proximo.id)
+        return n
+      })
+    }
+  }
+
+  function concluirProntos() {
+    setSaved(false)
+    setItemStatus((prev) => {
+      const n = { ...prev }
+      for (const i of os.itens) if (n[i.id] !== 'concluido' && mandatoryOk(i)) n[i.id] = 'concluido'
+      return n
+    })
   }
 
   function mandatoryOk(item: OsItem): boolean {
@@ -135,6 +199,8 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     return cl.filter((c) => c.obrigatorio).every((c) => checkedSet.has(c.id))
   }
 
+  const feitos = os.itens.filter((i) => itemStatus[i.id] === 'concluido').length
+  const prontosParaConcluir = os.itens.filter((i) => itemStatus[i.id] !== 'concluido' && mandatoryOk(i)).length
   const allItemsDone = os.itens.length > 0 && os.itens.every((i) => itemStatus[i.id] === 'concluido')
 
   function buildPayload(concluindo: boolean) {
@@ -212,6 +278,37 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
 
   return (
     <div className="space-y-4">
+      {/* Progresso da visita */}
+      {os.itens.length > 1 && (
+        <div className="sticky top-0 z-10 -mx-1 px-1 py-2 bg-surface/95 backdrop-blur">
+          <div className="bg-white rounded-2xl border border-border p-3 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-gray-800">{feitos}/{os.itens.length} equipamentos concluídos</span>
+              <span className="text-xs text-gray-400">{Math.round((feitos / os.itens.length) * 100)}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-full bg-green-500 transition-all" style={{ width: `${(feitos / os.itens.length) * 100}%` }} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button type="button" onClick={() => setFiltro(filtro === 'todos' ? 'pendentes' : 'todos')}
+                className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">
+                {filtro === 'todos' ? 'Ver só pendentes' : 'Ver todos'}
+              </button>
+              <button type="button" onClick={() => setAbertos(abertos.size ? new Set() : new Set(itens.map((i) => i.id)))}
+                className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">
+                {abertos.size ? 'Recolher todos' : 'Expandir todos'}
+              </button>
+              {isWorking && prontosParaConcluir > 0 && (
+                <button type="button" onClick={concluirProntos}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-full bg-green-500 text-white hover:bg-green-600">
+                  Concluir {prontosParaConcluir} pronto{prontosParaConcluir > 1 ? 's' : ''}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Banner: iniciar */}
       {canStart && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
@@ -241,15 +338,45 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
         <p className="text-sm text-center text-gray-400 py-6">Nenhum equipamento nesta O.S.</p>
       )}
 
-      {os.itens.map((item, idx) => {
+      {itens.map((item, idx) => {
+        if (filtro === 'pendentes' && itemStatus[item.id] === 'concluido') return null
         const cl = parseSnapshot(item.checklistSnapshot)
         const checkedSet = checked[item.id] ?? new Set()
         const isDone = itemStatus[item.id] === 'concluido'
         const canMarkDone = mandatoryOk(item)
+        const aberto = abertos.has(item.id)
+        const ambNome = item.equipamento.ambiente?.nome
+        const novoGrupo = ambientesNomes.size > 1 && (idx === 0 || itens[idx - 1].equipamento.ambiente?.nome !== ambNome)
+        const grupoCabecalho = novoGrupo && (
+          <h3 className="pt-2 text-xs font-bold uppercase tracking-wide text-primary">{ambNome ?? 'Sem ambiente'}</h3>
+        )
+
+        if (!aberto) {
+          return (
+            <div key={item.id} className="space-y-2">
+              {grupoCabecalho}
+              <button type="button" onClick={() => alternarAberto(item.id)}
+                className={['w-full flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition-colors',
+                  isDone ? 'bg-green-50 border-green-200' : 'bg-white border-border hover:border-primary/40'].join(' ')}>
+                <span className="text-[10px] text-gray-400 w-6 shrink-0">{idx + 1}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold text-gray-800 text-sm truncate">{item.equipamento.nome}</span>
+                  <span className="block text-xs text-gray-500 truncate">{item.equipamento.marca}{item.equipamento.modelo ? ` ${item.equipamento.modelo}` : ''}</span>
+                </span>
+                <span className="text-[11px] text-gray-400 shrink-0">{cl.length > 0 ? `${checkedSet.size}/${cl.length}` : ''}</span>
+                <span className={['text-[10px] font-bold px-2 py-0.5 rounded shrink-0', isDone ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'].join(' ')}>
+                  {isDone ? 'Concluído' : 'Pendente'}
+                </span>
+                <ChevronDown size={14} className="text-gray-400 shrink-0" />
+              </button>
+            </div>
+          )
+        }
 
         return (
+          <div key={item.id} className="space-y-2">
+          {grupoCabecalho}
           <div
-            key={item.id}
             className={[
               'rounded-2xl border p-4 space-y-3 transition-colors',
               isDone ? 'bg-green-50 border-green-200' : 'bg-white border-border',
@@ -368,6 +495,23 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
                 <p className="text-sm text-gray-600">{item.observacoesTecnicas}</p>
               </div>
             ) : null}
+
+            {/* Ações do equipamento */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {!isReadOnly && iguaisPendentes(item) > 0 && (
+                <button type="button" onClick={() => aplicarAosIguais(item)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">
+                  <Copy size={12} /> Copiar para {iguaisPendentes(item)} equipamento{iguaisPendentes(item) > 1 ? 's' : ''} igual{iguaisPendentes(item) > 1 ? 'is' : ''}
+                </button>
+              )}
+              {itens.length > 1 && (
+                <button type="button" onClick={() => alternarAberto(item.id)}
+                  className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 ml-auto">
+                  <ChevronUp size={12} /> Recolher
+                </button>
+              )}
+            </div>
+          </div>
           </div>
         )
       })}

@@ -60,6 +60,9 @@ export default async function OsDetailPage({ params }: Props) {
 
   const shortId = `OS-${os.id.slice(0, 6).toUpperCase()}`
   const cliente = os.ambiente.cliente.nomeFantasia ?? os.ambiente.cliente.razaoSocial
+  // Visita com equipamentos em vários ambientes: o título vira o cliente e o local, a contagem de ambientes
+  const nAmbientes = new Set(os.itens.map((i) => i.equipamento.ambiente?.nome).filter(Boolean)).size
+  const varios = nAmbientes > 1
 
   return (
     <div className="space-y-4">
@@ -78,7 +81,7 @@ export default async function OsDetailPage({ params }: Props) {
           <div className="min-w-0">
             <p className="text-xs font-mono text-gray-400">{shortId}</p>
             <h1 className="text-lg font-bold text-primary mt-0.5 truncate">
-              {os.ambiente.nome}
+              {varios ? cliente : os.ambiente.nome}
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
               {ORIGEM_LABEL[os.origem] ?? os.origem}
@@ -107,8 +110,8 @@ export default async function OsDetailPage({ params }: Props) {
           <div className="flex items-start gap-2">
             <MapPin size={12} className="text-primary/40 mt-0.5 shrink-0" />
             <div>
-              <p className="text-gray-400 uppercase tracking-wide text-[10px]">Localização</p>
-              <p className="font-medium text-gray-700">{os.ambiente.localizacaoInterna}</p>
+              <p className="text-gray-400 uppercase tracking-wide text-[10px]">{varios ? 'Ambientes' : 'Localização'}</p>
+              <p className="font-medium text-gray-700">{varios ? `${nAmbientes} ambientes` : os.ambiente.localizacaoInterna}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">
