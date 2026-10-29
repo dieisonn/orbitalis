@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Printer } from 'lucide-react'
 
 type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: string; unidade?: string; opcoes?: string[] }
@@ -12,6 +13,7 @@ type Item = {
   equipamento: {
     nome: string; marca: string; modelo: string | null
     tipoEquipamento: string; codigoQr: string; numeroSerie: string | null
+    ambiente?: { nome: string } | null
   }
 }
 
@@ -81,6 +83,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
   const cor = config?.corPrimaria ?? '#0505ad'
+  const [formato, setFormato] = useState<Formato>('tabela')
 
   return (
     <>
@@ -91,6 +94,15 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
         <a href=".." className="text-sm text-gray-600 hover:text-gray-900 font-medium">← Voltar</a>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400 font-mono">{numero}</span>
+          {os.itens.length > 1 && (
+            <label className="text-xs text-gray-600 flex items-center gap-1.5">
+              Checklist:
+              <select value={formato} onChange={(e) => setFormato(e.target.value as Formato)} className="border border-gray-300 rounded px-1.5 py-1 text-xs bg-white">
+                <option value="tabela">Tabela de marcação</option>
+                <option value="blocos">Bloco por equipamento</option>
+              </select>
+            </label>
+          )}
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-lg"
@@ -103,13 +115,15 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
       </div>
       <div className="no-print h-14" />
 
-      <DocumentoOS os={os} config={config} />
+      <DocumentoOS os={os} config={config} formato={formato} />
     </>
   )
 }
 
 /** O documento da O.S. (sem a barra de ações). `modoDia` = folha do técnico, com mais espaço para anotações. */
-export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: Config; modoDia?: boolean }) {
+export type Formato = 'tabela' | 'blocos'
+
+export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }: { os: OS; config?: Config; modoDia?: boolean; formato?: Formato }) {
   const numero = os.numero != null
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
@@ -127,6 +141,13 @@ export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: 
   const dataLonga = new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
   const cidadeEmpresa = [config?.cidade, config?.uf].filter(Boolean).join('/')
   const linhasObs = modoDia ? 6 : 4
+  // Equipamentos organizados por ambiente (salas juntas) e numerados na ordem em que aparecem no papel
+  const itensOrd = [...os.itens].sort((a, b) =>
+    (a.equipamento.ambiente?.nome ?? '').localeCompare(b.equipamento.ambiente?.nome ?? '', 'pt-BR', { numeric: true }) ||
+    a.equipamento.nome.localeCompare(b.equipamento.nome, 'pt-BR', { numeric: true }))
+  const numeros = new Map(itensOrd.map((it, i) => [it.id, i + 1]))
+  const ambientesNomes = [...new Set(itensOrd.map((i) => i.equipamento.ambiente?.nome).filter((n): n is string => !!n))]
+  const blocosDoc = montarBlocos(itensOrd, formato)
 
   return (
     <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '9pt', color: '#111', background: '#fff', maxWidth: '210mm', margin: '0 auto' }}>
@@ -208,18 +229,34 @@ export function DocumentoOS({ os, config, modoDia = false }: { os: OS; config?: 
 
       {/* LOCAL E EQUIPAMENTOS */}
       <Secao titulo="Local e equipamentos">
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 1fr', borderBottom: os.itens.length ? borda : 'none' }}>
-          <Campo rotulo="Ambiente" valor={<strong>{os.ambiente.nome}</strong>} />
-          <Campo rotulo="Localização" valor={os.ambiente.localizacaoInterna} esquerda />
-          <Campo rotulo="Cap. térmica" valor={os.ambiente.capacidadeTermica} esquerda />
-        </div>
+        {ambientesNomes.length > 1 ? (
+          <div style={{ borderBottom: os.itens.length ? borda : 'none' }}>
+            <Campo rotulo="Local" valor={<strong>{`${ambientesNomes.length} ambientes · ${os.itens.length} equipamentos`}</strong>} />
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 1fr', borderBottom: os.itens.length ? borda : 'none' }}>
+            <Campo rotulo="Ambiente" valor={<strong>{os.ambiente.nome}</strong>} />
+            <Campo rotulo="Localização" valor={os.ambiente.localizacaoInterna} esquerda />
+            <Campo rotulo="Cap. térmica" valor={os.ambiente.capacidadeTermica} esquerda />
+          </div>
+        )}
 
-        {os.itens.map((item, idx) => {
+        {blocosDoc.map((bloco, bi) => {
+          const ultimo = bi === blocosDoc.length - 1
+          if (bloco.tipo === 'matriz') {
+            return (
+              <div key={`m${bi}`} style={{ borderBottom: ultimo ? 'none' : borda }}>
+                <MatrizChecklist itens={bloco.itens} checklist={bloco.checklist} numeros={numeros} mostrarAmbiente={ambientesNomes.length > 1} />
+              </div>
+            )
+          }
+          const item = bloco.item
+          const idx = numeros.get(item.id)! - 1
           const checklistItems = parseSnapshot(item.checklistSnapshot)
           return (
-            <div key={item.id} style={{ borderBottom: idx < os.itens.length - 1 ? borda : 'none', breakInside: 'avoid' }}>
+            <div key={item.id} style={{ borderBottom: ultimo ? 'none' : borda, breakInside: 'avoid' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', background: '#f7f7f7', borderBottom: borda }}>
-                <Campo rotulo={`Equipamento ${idx + 1}`} valor={<strong>{item.equipamento.nome}</strong>} />
+                <Campo rotulo={`Equipamento ${idx + 1}${ambientesNomes.length > 1 && item.equipamento.ambiente ? ` · ${item.equipamento.ambiente.nome}` : ''}`} valor={<strong>{item.equipamento.nome}</strong>} />
                 <Campo rotulo="Marca" valor={item.equipamento.marca} esquerda />
                 <Campo rotulo="Modelo" valor={item.equipamento.modelo ?? ''} esquerda />
                 <Campo rotulo="Série" valor={item.equipamento.numeroSerie ?? ''} esquerda />
@@ -354,5 +391,84 @@ function Caixa({ marcada, children, pequeno }: { marcada: boolean; children: Rea
       </span>
       <span style={marcada ? { fontWeight: 700 } : undefined}>{children}</span>
     </span>
+  )
+}
+
+
+type BlocoDoc =
+  | { tipo: 'matriz'; itens: Item[]; checklist: ChecklistItem[] }
+  | { tipo: 'bloco'; item: Item }
+
+/** Equipamentos com o mesmo checklist viram uma tabela de marcação; os demais, um bloco cada. */
+function montarBlocos(itens: Item[], formato: Formato): BlocoDoc[] {
+  if (formato === 'blocos') return itens.map((item) => ({ tipo: 'bloco' as const, item }))
+  const grupos = new Map<string, { itens: Item[]; checklist: ChecklistItem[] }>()
+  const avulsos: Item[] = []
+  for (const it of itens) {
+    const ck = parseSnapshot(it.checklistSnapshot)
+    if (ck.length === 0) { avulsos.push(it); continue }
+    const chave = JSON.stringify(ck.map((c) => [c.descricao, c.tipo ?? '', c.unidade ?? '', c.obrigatorio, c.opcoes ?? []]))
+    const g = grupos.get(chave) ?? { itens: [], checklist: ck }
+    g.itens.push(it)
+    grupos.set(chave, g)
+  }
+  const blocos: BlocoDoc[] = []
+  for (const g of grupos.values()) {
+    if (g.itens.length >= 2) blocos.push({ tipo: 'matriz', itens: g.itens, checklist: g.checklist })
+    else blocos.push({ tipo: 'bloco', item: g.itens[0] })
+  }
+  for (const it of avulsos) blocos.push({ tipo: 'bloco', item: it })
+  return blocos
+}
+
+/**
+ * Tabela de marcação: uma linha por equipamento, uma coluna por item do checklist (numeradas, com a
+ * legenda acima). Itens de escolha usam letras (a, b, c) para anotar na célula.
+ */
+function MatrizChecklist({ itens, checklist, numeros, mostrarAmbiente }: {
+  itens: Item[]; checklist: ChecklistItem[]; numeros: Map<string, number>; mostrarAmbiente: boolean
+}) {
+  const letras = 'abcdefghij'
+  const cel: React.CSSProperties = { border: borda, padding: '2px 3px', textAlign: 'center', fontSize: '8pt' }
+  return (
+    <div style={{ padding: '6px 8px' }}>
+      <p style={rotulo}>Checklist de serviços — marque (✓) ou anote a letra / valor em cada equipamento</p>
+      <div style={{ columnCount: 2, columnGap: '14px', marginTop: '3px', fontSize: '7.5pt', lineHeight: 1.25 }}>
+        {checklist.map((ci, n) => (
+          <div key={ci.id} style={{ breakInside: 'avoid', marginBottom: '2px' }}>
+            <strong>{n + 1}.</strong> {ci.descricao}{ci.obrigatorio ? ' *' : ''}
+            {ci.tipo === 'numero' && <span style={{ color: '#555' }}>{` — valor${ci.unidade ? ` (${ci.unidade})` : ''}`}</span>}
+            {ci.opcoes && ci.opcoes.length > 0 && (
+              <span style={{ color: '#444' }}>{' — '}{ci.opcoes.map((o, k) => `${letras[k] ?? k + 1}) ${o}`).join('  ')}</span>
+            )}
+          </div>
+        ))}
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '5px', tableLayout: 'fixed' }}>
+        <thead>
+          <tr style={{ background: '#f1f1f1' }}>
+            <th style={{ ...cel, width: '5mm' }}>Nº</th>
+            <th style={{ ...cel, textAlign: 'left', width: mostrarAmbiente ? '30mm' : '38mm' }}>Equipamento</th>
+            {mostrarAmbiente && <th style={{ ...cel, textAlign: 'left', width: '22mm' }}>Ambiente</th>}
+            {checklist.map((ci, n) => <th key={ci.id} style={{ ...cel, fontWeight: 700, width: ci.tipo === 'numero' || ci.tipo === 'texto' ? '11mm' : undefined }}>{n + 1}</th>)}
+            <th style={{ ...cel, width: '24mm' }}>Obs.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {itens.map((it) => (
+            <tr key={it.id} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <td style={cel}>{numeros.get(it.id)}</td>
+              <td style={{ ...cel, textAlign: 'left', height: '7mm', overflowWrap: 'anywhere' }}>
+                <strong>{it.equipamento.nome}</strong>
+                <div style={{ fontSize: '6.5pt', color: '#666', lineHeight: 1.1 }}>{[it.equipamento.marca, it.equipamento.modelo].filter(Boolean).join(' ')}</div>
+              </td>
+              {mostrarAmbiente && <td style={{ ...cel, textAlign: 'left', fontSize: '7pt', overflowWrap: 'anywhere' }}>{it.equipamento.ambiente?.nome ?? ''}</td>}
+              {checklist.map((ci) => <td key={ci.id} style={cel} />)}
+              <td style={{ ...cel, textAlign: 'left', fontSize: '7pt' }}>{it.observacoesTecnicas ?? ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
