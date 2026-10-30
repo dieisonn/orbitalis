@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import { FileText, AlertTriangle, CheckCircle } from 'lucide-react'
 import { ContratoActions } from './contrato-actions'
+import { RenovarContrato } from './renovar-contrato'
 import { CalendarDays } from 'lucide-react'
 import Link from 'next/link'
 
@@ -17,6 +18,8 @@ type Contrato = {
   vigenciaInicio: string; vigenciaFim: string; numOsIncluidas: number | null
   ativo: boolean; observacoes: string | null; criadoEm: string
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
+  renovadoDe: { id: string; descricao: string; vigenciaInicio: string; vigenciaFim: string } | null
+  renovacoes: { id: string; descricao: string; vigenciaInicio: string; vigenciaFim: string }[]
 }
 
 type Props = { params: Promise<{ id: string }> }
@@ -61,6 +64,22 @@ export default async function ContratoPage({ params }: Props) {
           </div>
           <ContratoActions contratoId={id} ativo={contrato.ativo} />
         </div>
+
+        {contrato.renovacoes.length === 0 && (
+          <div className="mb-5"><RenovarContrato contratoId={id} /></div>
+        )}
+
+        {/* Histórico de renovações */}
+        {(contrato.renovadoDe || contrato.renovacoes.length > 0) && (
+          <div className="mb-5 bg-surface rounded-xl px-4 py-3 text-sm space-y-1">
+            {contrato.renovadoDe && (
+              <p className="text-gray-700">Renovação de <Link href={`/contratos/${contrato.renovadoDe.id}`} className="text-primary font-semibold hover:underline">{contrato.renovadoDe.descricao}</Link> <span className="text-gray-500">({fmtDate(contrato.renovadoDe.vigenciaInicio)} a {fmtDate(contrato.renovadoDe.vigenciaFim)})</span></p>
+            )}
+            {contrato.renovacoes.map((r) => (
+              <p key={r.id} className="text-gray-700">Renovado em <Link href={`/contratos/${r.id}`} className="text-primary font-semibold hover:underline">{r.descricao}</Link> <span className="text-gray-500">({fmtDate(r.vigenciaInicio)} a {fmtDate(r.vigenciaFim)})</span></p>
+            ))}
+          </div>
+        )}
 
         {/* Status banner */}
         {vencido && (

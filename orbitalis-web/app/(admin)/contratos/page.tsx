@@ -13,6 +13,7 @@ type Contrato = {
   id: string; descricao: string; valorMensal: number | null
   vigenciaInicio: string; vigenciaFim: string; numOsIncluidas: number | null
   ativo: boolean
+  renovacoes?: { id: string }[]
   cliente: { razaoSocial: string; nomeFantasia: string | null }
 }
 
@@ -77,11 +78,12 @@ export default async function ContratosPage() {
                       <div className="@lg:hidden mt-0.5 text-xs font-normal text-gray-500 line-clamp-2 break-words">{c.descricao}</div>
                       <div className="@xl:hidden mt-1">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          c.renovacoes?.length ? 'bg-blue-100 text-blue-700' :
                           vencido ? 'bg-red-100 text-red-700' :
                           !c.ativo ? 'bg-gray-100 text-gray-500' :
                           'bg-green-100 text-green-700'
                         }`}>
-                          {vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
+                          {c.renovacoes?.length ? 'Renovado' : vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
                         </span>
                       </div>
                     </td>
@@ -116,11 +118,12 @@ export default async function ContratosPage() {
                     </td>
                     <td className="hidden @xl:table-cell px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                        c.renovacoes?.length ? 'bg-blue-100 text-blue-700' :
                         vencido ? 'bg-red-100 text-red-700' :
                         !c.ativo ? 'bg-gray-100 text-gray-500' :
                         'bg-green-100 text-green-700'
                       }`}>
-                        {vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
+                        {c.renovacoes?.length ? 'Renovado' : vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
                       </span>
                     </td>
                     <td className="px-3 @xl:px-4 py-3 text-right whitespace-nowrap">
