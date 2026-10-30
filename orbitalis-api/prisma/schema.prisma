@@ -436,10 +436,16 @@ model Contrato {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   empresaId      String?   @map("empresa_id") @db.Uuid
 
-  cliente Cliente           @relation(fields: [clienteId], references: [id])
-  planos  PlanoManutencao[]
+  // Renovação: o contrato novo aponta para o anterior, que fica no histórico
+  renovadoDeId   String?   @map("renovado_de_id") @db.Uuid
+
+  cliente    Cliente           @relation(fields: [clienteId], references: [id])
+  planos     PlanoManutencao[]
+  renovadoDe Contrato?         @relation("RenovacaoContrato", fields: [renovadoDeId], references: [id], onDelete: SetNull)
+  renovacoes Contrato[]        @relation("RenovacaoContrato")
 
   @@index([clienteId, vigenciaFim])
+  @@index([renovadoDeId])
   @@map("contratos")
 }
 

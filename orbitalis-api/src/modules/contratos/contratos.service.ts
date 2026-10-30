@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FeriadosService } from '../feriados/feriados.service';
 import { dataDoCiclo, visitasRestantes } from '../cron/geracao-preventiva';
@@ -25,6 +25,17 @@ export type Consumo = {
   meses: number;          // duração da vigência
   osIncluidasPeriodo: number | null; // incluídas por mês × meses
   excedeuPeriodo: boolean;
+};
+
+export type RenovarContratoInput = {
+  descricao?: string;
+  valorMensal?: number | null;
+  vigenciaInicio: string;
+  vigenciaFim: string;
+  numOsIncluidas?: number | null;
+  observacoes?: string | null;
+  // Por plano do contrato antigo: equipamentos que continuam (ou entram) e as visitas por equipamento
+  planos: { planoId: string; equipamentoIds: string[]; visitasPrevistas?: number }[];
 };
 
 @Injectable()
@@ -96,7 +107,7 @@ export class ContratosService {
   async findAll(clienteId?: string) {
     const contratos = await this.prisma.contrato.findMany({
       where: clienteId ? { clienteId } : undefined,
-      include: { cliente: { select: { razaoSocial: true, nomeFantasia: true } } },
+      include: { cliente: { select: { razaoSocial: true, nomeFantasia: true } }, renovacoes: { select: { id: true } } },
       orderBy: { vigenciaFim: 'asc' },
     });
     return this.anexarConsumo(contratos);
@@ -108,6 +119,8 @@ export class ContratosService {
       include: {
         cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
         planos: { select: { id: true, ativo: true, frequenciaDias: true, proximaGeracao: true, dataFim: true } },
+        renovadoDe: { select: { id: true, descricao: true, vigenciaInicio: true, vigenciaFim: true } },
+        renovacoes: { select: { id: true, descricao: true, vigenciaInicio: true, vigenciaFim: true } },
       },
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado');
@@ -160,6 +173,138 @@ export class ContratosService {
         ...(data.ativo !== undefined && { ativo: data.ativo }),
       },
       include: { cliente: { select: { razaoSocial: true, nomeFantasia: true } } },
+    });
+  }
+
+  /** Tudo que a tela de renovação precisa: dados atuais (para manter ou mudar), planos com equipamentos e datas sugeridas. */
+  async renovacaoPreview(id: string) {
+    const contrato = await this.prisma.contrato.findUnique({
+      where: { id },
+      include: {
+        cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+        renovacoes: { select: { id: true } },
+        planos: {
+          where: { ativo: true },
+          orderBy: { proximaGeracao: 'asc' },
+          include: {
+            tipoServico: { select: { sigla: true, nome: true } },
+            equipamentosConfig: {
+              where: { equipamento: { deletedAt: null } },
+              include: { equipamento: { select: { id: true, nome: true, tipoEquipamento: true, ambiente: { select: { nome: true } } } } },
+            },
+          },
+        },
+      },
+    });
+    if (!contrato) throw new NotFoundException('Contrato não encontrado');
+
+    const noPlano = new Set(contrato.planos.flatMap((p) => p.equipamentosConfig.map((c) => c.equipamentoId)));
+    const outros = await this.prisma.equipamento.findMany({
+      where: { deletedAt: null, ambiente: { clienteId: contrato.clienteId, deletedAt: null }, id: { notIn: [...noPlano] } },
+      select: { id: true, nome: true, tipoEquipamento: true, ambiente: { select: { nome: true } } },
+      orderBy: [{ ambiente: { nome: 'asc' } }, { nome: 'asc' }],
+    });
+
+    const dia = 86_400_000;
+    const duracao = contrato.vigenciaFim.getTime() - contrato.vigenciaInicio.getTime();
+    const sugeridoInicio = new Date(contrato.vigenciaFim.getTime() + dia);
+    // Mesma duração em meses (12 meses → de 01/11 a 31/10 do ano seguinte), sem derrapar em ano bissexto
+    const meses = Math.max(1, Math.round((duracao + dia) / (30.4375 * dia)));
+    const sugeridoFim = new Date(Date.UTC(sugeridoInicio.getUTCFullYear(), sugeridoInicio.getUTCMonth() + meses, sugeridoInicio.getUTCDate()) - dia);
+    return {
+      jaRenovado: contrato.renovacoes.length > 0,
+      contrato: {
+        id: contrato.id, descricao: contrato.descricao, valorMensal: contrato.valorMensal,
+        numOsIncluidas: contrato.numOsIncluidas, observacoes: contrato.observacoes,
+        vigenciaInicio: contrato.vigenciaInicio, vigenciaFim: contrato.vigenciaFim, cliente: contrato.cliente,
+      },
+      sugestao: { vigenciaInicio: sugeridoInicio, vigenciaFim: sugeridoFim },
+      planos: contrato.planos.map((p) => ({
+        id: p.id, frequenciaDias: p.frequenciaDias, visitasPrevistas: p.visitasPrevistas, tipoServico: p.tipoServico,
+        equipamentos: p.equipamentosConfig.map((c) => ({ ...c.equipamento, ambiente: c.equipamento.ambiente.nome })),
+      })),
+      outrosEquipamentos: outros.map((e) => ({ ...e, ambiente: e.ambiente.nome })),
+    };
+  }
+
+  /**
+   * Renova um contrato: cria um contrato novo (com os valores mantidos ou alterados) e, para cada plano
+   * preventivo ativo, um plano novo com os equipamentos escolhidos e as novas datas. O contrato e os
+   * planos antigos ficam no histórico (encerrados), com suas O.S. intactas.
+   */
+  async renovar(id: string, dto: RenovarContratoInput) {
+    const antigo = await this.prisma.contrato.findUnique({
+      where: { id },
+      include: { renovacoes: { select: { id: true } }, planos: { where: { ativo: true }, include: { equipamentosConfig: true } } },
+    });
+    if (!antigo) throw new NotFoundException('Contrato não encontrado');
+    if (antigo.renovacoes.length > 0) throw new ConflictException('Este contrato já foi renovado');
+
+    const inicio = new Date(dto.vigenciaInicio);
+    const fim = new Date(dto.vigenciaFim);
+    if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) throw new BadRequestException('Informe a vigência do novo contrato');
+    if (fim <= inicio) throw new BadRequestException('O fim da vigência deve ser depois do início');
+    if (dto.valorMensal != null && (isNaN(Number(dto.valorMensal)) || Number(dto.valorMensal) < 0)) throw new BadRequestException('Valor mensal inválido');
+
+    const escolhas = new Map((dto.planos ?? []).map((p) => [p.planoId, p]));
+    for (const pid of escolhas.keys()) {
+      if (!antigo.planos.some((p) => p.id === pid)) throw new BadRequestException('Plano não pertence a este contrato');
+    }
+    const todosIds = [...new Set([...escolhas.values()].flatMap((p) => p.equipamentoIds))];
+    if (todosIds.length) {
+      const validos = await this.prisma.equipamento.count({ where: { id: { in: todosIds }, deletedAt: null, ambiente: { clienteId: antigo.clienteId } } });
+      if (validos !== todosIds.length) throw new BadRequestException('Há equipamento que não pertence ao cliente do contrato');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const novo = await tx.contrato.create({
+        data: {
+          clienteId: antigo.clienteId,
+          descricao: dto.descricao?.trim() || antigo.descricao,
+          valorMensal: dto.valorMensal === undefined ? antigo.valorMensal : dto.valorMensal,
+          vigenciaInicio: inicio,
+          vigenciaFim: fim,
+          numOsIncluidas: dto.numOsIncluidas === undefined ? antigo.numOsIncluidas : dto.numOsIncluidas,
+          observacoes: dto.observacoes === undefined ? antigo.observacoes : (dto.observacoes?.trim() || null),
+          renovadoDeId: antigo.id,
+          empresaId: antigo.empresaId,
+        },
+      });
+
+      let planosCriados = 0;
+      for (const velho of antigo.planos) {
+        const esc = escolhas.get(velho.id);
+        if (!esc || esc.equipamentoIds.length === 0) continue;   // plano sem equipamentos não é renovado
+        const modelos = new Map(velho.equipamentosConfig.map((c) => [c.equipamentoId, c.modeloChecklistId]));
+        await tx.planoManutencao.create({
+          data: {
+            clienteId: velho.clienteId,
+            tecnicoId: velho.tecnicoId,
+            tipoServicoId: velho.tipoServicoId,
+            contratoId: novo.id,
+            frequenciaDias: velho.frequenciaDias,
+            visitasPrevistas: esc.visitasPrevistas ?? velho.visitasPrevistas,
+            agrupamento: velho.agrupamento,
+            maxEquipamentosPorOs: velho.maxEquipamentosPorOs,
+            horaInicio: velho.horaInicio,
+            horaFim: velho.horaFim,
+            proximaGeracao: inicio,
+            dataFim: fim,
+            ativo: true,
+            empresaId: velho.empresaId,
+            equipamentosConfig: {
+              create: esc.equipamentoIds.map((eid) => ({ equipamentoId: eid, modeloChecklistId: modelos.get(eid) ?? null })),
+            },
+          },
+        });
+        planosCriados++;
+      }
+
+      // O contrato antigo vira histórico: encerrado, e seus planos param de gerar O.S.
+      await tx.planoManutencao.updateMany({ where: { contratoId: antigo.id, ativo: true }, data: { ativo: false } });
+      await tx.contrato.update({ where: { id: antigo.id }, data: { ativo: false } });
+
+      return { id: novo.id, planosCriados };
     });
   }
 
