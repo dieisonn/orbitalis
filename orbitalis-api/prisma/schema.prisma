@@ -584,6 +584,8 @@ model EventoAgenda {
   tiposExtrasIds String[] @default([]) @map("tipos_extras_ids") @db.Uuid
   tecnicoId      String?  @map("tecnico_id") @db.Uuid
   clienteId      String?  @map("cliente_id") @db.Uuid
+  // Eventos criados juntos por uma repetição compartilham a série (editar/excluir "este, seguintes ou todos")
+  serieId        String?  @map("serie_id") @db.Uuid
   criadoEm       DateTime @default(now()) @map("criado_em")
   atualizadoEm   DateTime @updatedAt @map("atualizado_em")
 
@@ -594,6 +596,7 @@ model EventoAgenda {
 
   @@index([empresaId, inicio])
   @@index([tecnicoId])
+  @@index([serieId])
   @@map("eventos_agenda")
 }
 

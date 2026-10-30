@@ -1,4 +1,5 @@
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsOptional, IsString, IsUUID, Matches, MaxLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateEventoDto {
   @IsOptional() @IsString() @MaxLength(200)
@@ -70,4 +71,18 @@ export class UpdateEventoDto {
   // Tipos adicionais (além do principal), no máximo 3
   @IsOptional() @IsArray() @ArrayMaxSize(3) @IsUUID('all', { each: true })
   tiposExtrasIds?: string[];
+}
+
+export class OcorrenciaDto {
+  @IsDateString()
+  inicio: string;
+
+  @IsDateString()
+  fim: string;
+}
+
+/** Evento repetido: os campos do evento + as datas de cada ocorrência (calculadas pela tela). */
+export class CriarSerieDto extends CreateEventoDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => OcorrenciaDto)
+  ocorrencias: OcorrenciaDto[];
 }

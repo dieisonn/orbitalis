@@ -8,7 +8,9 @@ import { AuthUser } from '../../common/decorators/current-user.decorator';
 import {
   DURACAO_PADRAO_MIN, janelaDaOs, paraHHMM, relogioLocal,
 } from './agenda-tempo';
-import { CreateEventoDto, UpdateEventoDto } from './dto/evento.dto';
+import { randomUUID } from 'crypto';
+import { CreateEventoDto, CriarSerieDto, UpdateEventoDto } from './dto/evento.dto';
+import { Escopo } from './agenda-escopo';
 
 const COR_PADRAO = '#039BE5';
 const MAX_EVENTOS = 2000;
@@ -157,6 +159,7 @@ export class AgendaService implements OnApplicationBootstrap {
 
   private paraResposta(e: EventoCompleto, extras: TipoResumo[] = []) {
     return {
+      serieId: e.serieId,
       id: e.id,
       titulo: e.titulo,
       descricao: e.descricao,
@@ -371,7 +374,7 @@ export class AgendaService implements OnApplicationBootstrap {
     if (fim <= inicio) throw new BadRequestException('O fim deve ser depois do início');
   }
 
-  async criar(dto: CreateEventoDto) {
+  async criar(dto: CreateEventoDto, serieId?: string) {
     const [tipo, cliente] = await Promise.all([
       dto.tipoServicoId ? this.prisma.tipoServico.findFirst({ where: { id: dto.tipoServicoId } }) : null,
       dto.clienteId ? this.prisma.cliente.findFirst({ where: { id: dto.clienteId, deletedAt: null } }) : null,
@@ -410,13 +413,43 @@ export class AgendaService implements OnApplicationBootstrap {
         clienteId: dto.clienteId ?? null,
         tipoServicoId: dto.tipoServicoId ?? null,
         tiposExtrasIds: extras.map((t) => t.id),
+        serieId: serieId ?? null,
       },
       include: INCLUDE_EVENTO,
     });
     return this.uma(criado);
   }
 
-  async atualizar(id: string, dto: UpdateEventoDto) {
+  /** Cria as ocorrências de uma repetição, todas na mesma série. Se uma falhar, desfaz as anteriores. */
+  async criarSerie(dto: CriarSerieDto) {
+    const { ocorrencias, ...base } = dto;
+    const serieId = randomUUID();
+    const criados: { id: string }[] = [];
+    try {
+      for (const o of ocorrencias) {
+        criados.push(await this.criar({ ...base, inicio: o.inicio, fim: o.fim }, ocorrencias.length > 1 ? serieId : undefined));
+      }
+    } catch (e) {
+      await this.prisma.eventoAgenda.deleteMany({ where: { id: { in: criados.map((c) => c.id) } } });
+      throw e;
+    }
+    return { serieId: criados.length > 1 ? serieId : null, criados: criados.length, primeiro: criados[0] };
+  }
+
+  /** Outros eventos da série atingidos pelo escopo (este exclui o próprio; seguintes = a partir deste). */
+  private async irmaosDaSerie(atual: { id: string; serieId: string | null; inicio: Date }, escopo: Escopo) {
+    if (escopo === 'este' || !atual.serieId) return [];
+    return this.prisma.eventoAgenda.findMany({
+      where: {
+        serieId: atual.serieId,
+        id: { not: atual.id },
+        ordemServicoId: null,
+        ...(escopo === 'seguintes' ? { inicio: { gte: atual.inicio } } : {}),
+      },
+    });
+  }
+
+  async atualizar(id: string, dto: UpdateEventoDto, escopo: Escopo = 'este') {
     const atual = await this.carregar(id);
     const os = atual.ordemServico;
 
@@ -460,6 +493,27 @@ export class AgendaService implements OnApplicationBootstrap {
         },
         include: INCLUDE_EVENTO,
       });
+
+      // Série: aplica as mesmas mudanças aos demais eventos do escopo. Mudou data/hora → todos andam o mesmo
+      // tanto e ganham a nova duração; os demais campos são copiados.
+      for (const irmao of await this.irmaosDaSerie(atual, escopo)) {
+        const deslocamento = mudouHorario ? inicio.getTime() - atual.inicio.getTime() : 0;
+        const novoInicio = new Date(irmao.inicio.getTime() + deslocamento);
+        const novoFim = mudouHorario ? new Date(novoInicio.getTime() + (fimEfetivo.getTime() - inicio.getTime())) : irmao.fim;
+        await this.prisma.eventoAgenda.update({
+          where: { id: irmao.id },
+          data: {
+            ...textos,
+            ...(mudouHorario ? { inicio: novoInicio, fim: novoFim } : {}),
+            ...(dto.diaInteiro !== undefined ? { diaInteiro: dto.diaInteiro } : {}),
+            ...(dto.cor !== undefined ? { cor: dto.cor } : {}),
+            ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId } : {}),
+            ...(dto.clienteId !== undefined ? { clienteId: dto.clienteId } : {}),
+            ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId } : {}),
+            ...(extras ? { tiposExtrasIds: extras.map((t) => t.id) } : {}),
+          },
+        });
+      }
       return this.uma(salvo);
     }
 
@@ -503,7 +557,7 @@ export class AgendaService implements OnApplicationBootstrap {
     return this.uma(await this.carregar(id));
   }
 
-  async remover(id: string) {
+  async remover(id: string, escopo: Escopo = 'este') {
     const e = await this.carregar(id);
     if (e.ordemServico) {
       throw new ConflictException(
@@ -511,7 +565,8 @@ export class AgendaService implements OnApplicationBootstrap {
         'Para tirá-lo da agenda, cancele ou exclua a O.S.',
       );
     }
-    await this.prisma.eventoAgenda.delete({ where: { id } });
-    return { message: 'Evento excluído' };
+    const irmaos = await this.irmaosDaSerie(e, escopo);
+    await this.prisma.eventoAgenda.deleteMany({ where: { id: { in: [id, ...irmaos.map((i) => i.id)] } } });
+    return { message: irmaos.length ? `${irmaos.length + 1} eventos excluídos` : 'Evento excluído', excluidos: irmaos.length + 1 };
   }
 }

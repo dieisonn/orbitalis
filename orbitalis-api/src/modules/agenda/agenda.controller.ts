@@ -5,7 +5,8 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AuthUser, CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AgendaService } from './agenda.service';
-import { CreateEventoDto, UpdateEventoDto } from './dto/evento.dto';
+import { CreateEventoDto, CriarSerieDto, UpdateEventoDto } from './dto/evento.dto';
+import { Escopo, parseEscopo } from './agenda-escopo';
 import { AvisosAgendaDto } from './dto/avisos.dto';
 
 @Controller('agenda')
@@ -63,10 +64,18 @@ export class AgendaController {
     return this.agenda.criar(dto);
   }
 
+  // Evento repetido: cria todas as ocorrências de uma vez, ligadas pela mesma série — antes de ':id'
+  @Post('serie')
+  @Roles(UsuarioTipo.admin)
+  criarSerie(@Body() dto: CriarSerieDto) {
+    return this.agenda.criarSerie(dto);
+  }
+
+  // escopo: este (padrão) | seguintes | todos — vale para eventos de uma série
   @Patch(':id')
   @Roles(UsuarioTipo.admin)
-  atualizar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEventoDto) {
-    return this.agenda.atualizar(id, dto);
+  atualizar(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEventoDto, @Query('escopo') escopo?: string) {
+    return this.agenda.atualizar(id, dto, parseEscopo(escopo));
   }
 
   @Post(':id/restaurar')
@@ -77,7 +86,7 @@ export class AgendaController {
 
   @Delete(':id')
   @Roles(UsuarioTipo.admin)
-  remover(@Param('id', ParseUUIDPipe) id: string) {
-    return this.agenda.remover(id);
+  remover(@Param('id', ParseUUIDPipe) id: string, @Query('escopo') escopo?: string) {
+    return this.agenda.remover(id, parseEscopo(escopo));
   }
 }
