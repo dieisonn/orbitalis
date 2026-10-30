@@ -11,6 +11,7 @@ import {
 } from '@/lib/agenda'
 import { textoSobre } from '@/lib/cor'
 import { chamar } from './evento-modal'
+import { EscopoSerieDialog, type Escopo } from './escopo-serie-dialog'
 import { PaletaCor } from './paleta-cor'
 
 const MARGEM = 8
@@ -72,9 +73,12 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
     try { await fn(); onMudou(); onFechar() }
     catch (err) { setErro(err instanceof Error ? err.message : 'Erro'); setOcupado(false) }
   }
+  const [escopoDlg, setEscopoDlg] = useState(false)
+  const apagar = (escopo?: Escopo) => executar(() => chamar('DELETE', `/agenda/${e.id}${escopo ? `?escopo=${escopo}` : ''}`))
   const excluir = () => {
+    if (e.serieId) { setEscopoDlg(true); return }
     if (!confirm(`Excluir o evento "${e.titulo}"?`)) return
-    executar(() => chamar('DELETE', `/agenda/${e.id}`))
+    apagar()
   }
   const restaurar = () => {
     if (!confirm('Voltar título, descrição e local para o texto gerado pela O.S.?')) return
@@ -86,7 +90,8 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
   return (
     <div ref={ref} role="dialog" aria-label={`Evento: ${e.titulo}`}
       style={{ position: 'fixed', zIndex: 60, width: Math.min(LARGURA, window.innerWidth - 2 * MARGEM), left: pos?.left ?? -9999, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
-      className="bg-white rounded-xl shadow-xl border border-border overflow-hidden max-h-[calc(100vh-16px)] overflow-y-auto">
+ className="bg-white rounded-xl shadow-xl border border-border overflow-hidden max-h-[calc(100vh-16px)] overflow-y-auto">
+      {escopoDlg && <EscopoSerieDialog acao="excluir" onCancelar={() => setEscopoDlg(false)} onEscolher={(esc) => { setEscopoDlg(false); apagar(esc) }} />}
       <div className="h-2" style={{ backgroundColor: e.corHex }} />
 
       <div className="flex items-center justify-end gap-0.5 px-2 pt-2">
@@ -203,6 +208,7 @@ export function EventoMenu({ evento: e, x, y, onFechar, onDuplicar, onMudou }: {
   useFechar(ref, onFechar)
   const [ocupado, setOcupado] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [escopoDlg, setEscopoDlg] = useState(false)
   const ehOs = !!e.ordemServico
   const padrao = corPadraoDe(e)
   const atual = e.corHex.toLowerCase() === padrao.toLowerCase() ? null : e.corHex
@@ -220,9 +226,10 @@ export function EventoMenu({ evento: e, x, y, onFechar, onDuplicar, onMudou }: {
       onContextMenu={(ev) => ev.preventDefault()}
       style={{ position: 'fixed', zIndex: 70, width: LARGURA, left: pos?.left ?? -9999, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
       className="bg-white rounded-xl shadow-xl border border-border py-1.5">
+      {escopoDlg && <EscopoSerieDialog acao="excluir" onCancelar={() => setEscopoDlg(false)} onEscolher={(esc) => { setEscopoDlg(false); executar(() => chamar('DELETE', `/agenda/${e.id}?escopo=${esc}`)) }} />}
       <button disabled={ocupado || ehOs} className={item}
         title={ehOs ? 'Evento de O.S.: cancele ou exclua a O.S. para tirá-lo da agenda' : undefined}
-        onClick={() => { if (confirm(`Excluir o evento "${e.titulo}"?`)) executar(() => chamar('DELETE', `/agenda/${e.id}`)) }}>
+        onClick={() => { if (e.serieId) setEscopoDlg(true); else if (confirm(`Excluir o evento "${e.titulo}"?`)) executar(() => chamar('DELETE', `/agenda/${e.id}`)) }}>
         {ocupado ? <Loader2 size={17} className="animate-spin" /> : <Trash2 size={17} className="text-gray-600" />} Excluir
       </button>
       <button disabled={ocupado} className={item} onClick={() => { onFechar(); onDuplicar() }}>

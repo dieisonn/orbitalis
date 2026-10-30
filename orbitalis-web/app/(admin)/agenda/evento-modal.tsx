@@ -31,6 +31,8 @@ type Props = {
   onClienteCriado?: (c: ClienteOpcao) => void   // cliente cadastrado dentro do modal: a agenda guarda para os próximos eventos
 }
 
+import { EscopoSerieDialog, type Escopo } from './escopo-serie-dialog'
+
 export async function chamar(method: string, path: string, body?: object) {
   const res = await fetch(`/api/agenda-proxy?path=${encodeURIComponent(path)}`, {
     method,
@@ -108,6 +110,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   // fim vindo do arrasto vale como "já escolhido": o tipo de serviço não o sobrescreve
   const [tocou, setTocou] = useState({ titulo: !!origem, local: !!origem, fim: !!origem || !!rFimSug })
   const [salvando, setSalvando] = useState(false)
+  const [perguntando, setPerguntando] = useState(false)
   // Repetição (só em evento novo ou duplicado)
   const [repete, setRepete] = useState<'nao' | 'dia' | 'util' | 'semana' | 'mes' | 'ano' | 'custom'>('nao')
   const [intervalo, setIntervalo] = useState(1)
@@ -171,7 +174,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   // Sem fim preenchido (novo evento), mostra a duração padrão
   const fimEfetivo = horaFim || somar(horaIni, duracaoTipos)
 
-  async function salvar() {
+  async function salvar(escopo?: Escopo) {
     setErro(null)
     const [y, mo, d] = data.split('-').map(Number)
     if (!y) return setErro('Informe a data')
@@ -181,10 +184,13 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
       : instante(y, mo - 1, d, ...(fimEfetivo.split(':').map(Number) as [number, number]))
     if (new Date(fim) <= new Date(inicio)) return setErro('O fim deve ser depois do início')
 
+    // Evento de uma série: pergunta o alcance antes de salvar
+    if (evento?.serieId && !escopo) { setPerguntando(true); return }
+
     setSalvando(true)
     try {
       if (evento) {
-        await chamar('PATCH', `/agenda/${evento.id}`, {
+        await chamar('PATCH', `/agenda/${evento.id}${evento.serieId && escopo ? `?escopo=${escopo}` : ''}`, {
           titulo: titulo.trim() || undefined,
           descricao: descricao.trim() || null,
           local: local.trim() || null,
@@ -199,28 +205,27 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         const [hi, mi] = horaIni.split(':').map(Number)
         const [hf, mf] = fimEfetivo.split(':').map(Number)
         const lista = ocorrencias.length ? ocorrencias : [{ y, m: mo - 1, d }]
-        let criados = 0
+        const janela = (o: { y: number; m: number; d: number }) => ({
+          inicio: diaInteiro ? instante(o.y, o.m, o.d, 0, 0) : instante(o.y, o.m, o.d, hi, mi),
+          fim: diaInteiro ? instante(o.y, o.m, o.d + 1, 0, 0) : instante(o.y, o.m, o.d, hf, mf),
+        })
+        const corpo = {
+          titulo: titulo.trim() || undefined,
+          descricao: descricao.trim() || null,
+          local: local.trim() || null,
+          diaInteiro,
+          tecnicoId: tecnicoId || null,
+          tipoServicoId: tipoIds[0] || null,
+          tiposExtrasIds: tipoIds.slice(1),
+          clienteId: clienteId || null,
+          ...(corPropria ? { cor: corPropria } : {}),
+        }
         try {
-          for (const o of lista) {
-            await chamar('POST', '/agenda', {
-              titulo: titulo.trim() || undefined,
-              descricao: descricao.trim() || null,
-              local: local.trim() || null,
-              inicio: diaInteiro ? instante(o.y, o.m, o.d, 0, 0) : instante(o.y, o.m, o.d, hi, mi),
-              fim: diaInteiro ? instante(o.y, o.m, o.d + 1, 0, 0) : instante(o.y, o.m, o.d, hf, mf),
-              diaInteiro,
-              tecnicoId: tecnicoId || null,
-              tipoServicoId: tipoIds[0] || null,
-              tiposExtrasIds: tipoIds.slice(1),
-              clienteId: clienteId || null,
-              ...(corPropria ? { cor: corPropria } : {}),
-            })
-            criados++
-          }
+          // Repetição: a API cria todas as ocorrências de uma vez, ligadas na mesma série (tudo ou nada)
+          if (lista.length > 1) await chamar('POST', '/agenda/serie', { ...corpo, ...janela(lista[0]), ocorrencias: lista.map(janela) })
+          else await chamar('POST', '/agenda', { ...corpo, ...janela(lista[0]) })
         } catch (err) {
-          if (criados > 0) onMudou()
-          const base = err instanceof Error ? err.message : 'Erro ao salvar'
-          setErro(criados > 0 ? `${base} — ${criados} de ${lista.length} eventos foram criados.` : base)
+          setErro(err instanceof Error ? err.message : 'Erro ao salvar')
           setSalvando(false)
           return
         }
@@ -236,6 +241,10 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const rot = 'block text-xs font-medium text-gray-600 mb-1'
   return (
     <>
+      {perguntando && evento && (
+        <EscopoSerieDialog acao="alterar" onCancelar={() => setPerguntando(false)}
+          onEscolher={(e) => { setPerguntando(false); salvar(e) }} />
+      )}
       {/* Cabeçalho com a cor do evento: muda ao escolher o tipo ou uma cor */}
       <div className="px-5 pt-3 pb-4 border-t-[6px] transition-colors" style={{ borderTopColor: corEfetiva, backgroundColor: `${corEfetiva}1F` }}>
         <div className="flex items-center justify-between mb-1">
@@ -419,7 +428,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
           className="px-5 py-2 text-gray-700 font-semibold rounded-lg text-sm hover:bg-surface">
           Cancelar
         </button>
-        <button onClick={salvar} disabled={salvando}
+        <button onClick={() => salvar()} disabled={salvando}
           className="px-6 py-2 bg-action text-white font-semibold rounded-lg text-sm hover:bg-action/90 disabled:opacity-60 min-w-[7rem]">
           {salvando ? <Loader2 size={14} className="animate-spin inline" /> : (ocorrencias.length > 1 && !evento ? `Criar ${ocorrencias.length} eventos` : 'Salvar')}
         </button>

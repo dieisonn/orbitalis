@@ -12,6 +12,7 @@ import { FeriadosModal } from './feriados-modal'
 import { AvisosAgendaBotao } from '@/components/layout/avisos-agenda'
 import { EventoModal, type ClienteOpcao, type TecnicoOpcao, type TipoOpcao } from './evento-modal'
 import { EventoPopover, EventoMenu, type Ancora } from './evento-popover'
+import { EscopoSerieDialog, type Escopo } from './escopo-serie-dialog'
 
 const ancoraDe = (el: Element): Ancora => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } }
 type AoAbrir = (e: EventoAgenda, a: Ancora) => void
@@ -75,6 +76,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
   const [eventos, setEventos] = useState<EventoAgenda[]>([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const [escopoPend, setEscopoPend] = useState<{ ev: EventoAgenda; ini: string; fim: string } | null>(null)
   const [tecnicoFiltro, setTecnicoFiltro] = useState('')
   // cartão (clique esquerdo), menu (clique direito) e formulário (novo, editar ou duplicar)
   const [pop, setPop] = useState<{ e: EventoAgenda; a: Ancora } | null>(null)
@@ -176,12 +178,14 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
 
   // Salva o novo horário de um evento (arrastar na grade/mês ou ajustar a duração). Atualiza a tela
   // na hora e desfaz se a API recusar (ex.: O.S. encerrada, evento de O.S. atravessando a meia-noite)
-  async function salvarHorario(ev: EventoAgenda, novoIni: string, novoFim: string) {
+  async function salvarHorario(ev: EventoAgenda, novoIni: string, novoFim: string, escopo?: Escopo) {
     if (novoIni === ev.inicio && novoFim === ev.fim) return
+    // Evento de uma série: pergunta se vale só para este, para os seguintes ou para todos
+    if (ev.serieId && !escopo) { setEscopoPend({ ev, ini: novoIni, fim: novoFim }); return }
     const anterior = eventos
     setEventos((l) => l.map((x) => (x.id === ev.id ? { ...x, inicio: novoIni, fim: novoFim } : x)))
     try {
-      const res = await fetch(`/api/agenda-proxy?path=${encodeURIComponent(`/agenda/${ev.id}`)}`, {
+      const res = await fetch(`/api/agenda-proxy?path=${encodeURIComponent(`/agenda/${ev.id}${escopo ? `?escopo=${escopo}` : ''}`)}`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ inicio: novoIni, fim: novoFim }),
       })
@@ -346,6 +350,10 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
           onDuplicar={() => setModal({ evento: null, modelo: menu.e })}
           onMudou={carregar}
         />
+      )}
+      {escopoPend && (
+        <EscopoSerieDialog acao="alterar" onCancelar={() => setEscopoPend(null)}
+          onEscolher={(esc) => { const p = escopoPend; setEscopoPend(null); salvarHorario(p.ev, p.ini, p.fim, esc) }} />
       )}
       {modal && (
         <EventoModal

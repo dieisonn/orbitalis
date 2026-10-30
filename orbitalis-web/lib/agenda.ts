@@ -3,6 +3,7 @@
 
 export type EventoAgenda = {
   id: string
+  serieId?: string | null     // eventos criados juntos por uma repetição
   titulo: string
   descricao: string | null
   local: string | null
