@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { FeriadosService } from '../feriados/feriados.service';
 import { dataDoCiclo, visitasRestantes } from '../cron/geracao-preventiva';
@@ -184,7 +184,6 @@ export class ContratosService {
         cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
         renovacoes: { select: { id: true } },
         planos: {
-          where: { ativo: true },
           orderBy: { proximaGeracao: 'asc' },
           include: {
             tipoServico: { select: { sigla: true, nome: true } },
@@ -198,7 +197,9 @@ export class ContratosService {
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado');
 
-    const noPlano = new Set(contrato.planos.flatMap((p) => p.equipamentosConfig.map((c) => c.equipamentoId)));
+    const ativos = contrato.planos.filter((p) => p.ativo);
+    const planosBase = ativos.length ? ativos : contrato.planos;
+    const noPlano = new Set(planosBase.flatMap((p) => p.equipamentosConfig.map((c) => c.equipamentoId)));
     const outros = await this.prisma.equipamento.findMany({
       where: { deletedAt: null, ambiente: { clienteId: contrato.clienteId, deletedAt: null }, id: { notIn: [...noPlano] } },
       select: { id: true, nome: true, tipoEquipamento: true, ambiente: { select: { nome: true } } },
@@ -219,7 +220,7 @@ export class ContratosService {
         vigenciaInicio: contrato.vigenciaInicio, vigenciaFim: contrato.vigenciaFim, cliente: contrato.cliente,
       },
       sugestao: { vigenciaInicio: sugeridoInicio, vigenciaFim: sugeridoFim },
-      planos: contrato.planos.map((p) => ({
+      planos: planosBase.map((p) => ({
         id: p.id, frequenciaDias: p.frequenciaDias, visitasPrevistas: p.visitasPrevistas, tipoServico: p.tipoServico,
         equipamentos: p.equipamentosConfig.map((c) => ({ ...c.equipamento, ambiente: c.equipamento.ambiente.nome })),
       })),
@@ -235,10 +236,9 @@ export class ContratosService {
   async renovar(id: string, dto: RenovarContratoInput) {
     const antigo = await this.prisma.contrato.findUnique({
       where: { id },
-      include: { renovacoes: { select: { id: true } }, planos: { where: { ativo: true }, include: { equipamentosConfig: true } } },
+      include: { planos: { include: { equipamentosConfig: true } } },
     });
     if (!antigo) throw new NotFoundException('Contrato não encontrado');
-    if (antigo.renovacoes.length > 0) throw new ConflictException('Este contrato já foi renovado');
 
     const inicio = new Date(dto.vigenciaInicio);
     const fim = new Date(dto.vigenciaFim);
@@ -246,9 +246,12 @@ export class ContratosService {
     if (fim <= inicio) throw new BadRequestException('O fim da vigência deve ser depois do início');
     if (dto.valorMensal != null && (isNaN(Number(dto.valorMensal)) || Number(dto.valorMensal) < 0)) throw new BadRequestException('Valor mensal inválido');
 
+    // Planos que serviram de base: os ativos; se o contrato já foi renovado (planos encerrados), todos
+    const ativos = antigo.planos.filter((p) => p.ativo);
+    const planosBase = ativos.length ? ativos : antigo.planos;
     const escolhas = new Map((dto.planos ?? []).map((p) => [p.planoId, p]));
     for (const pid of escolhas.keys()) {
-      if (!antigo.planos.some((p) => p.id === pid)) throw new BadRequestException('Plano não pertence a este contrato');
+      if (!planosBase.some((p) => p.id === pid)) throw new BadRequestException('Plano não pertence a este contrato');
     }
     const todosIds = [...new Set([...escolhas.values()].flatMap((p) => p.equipamentoIds))];
     if (todosIds.length) {
@@ -272,7 +275,7 @@ export class ContratosService {
       });
 
       let planosCriados = 0;
-      for (const velho of antigo.planos) {
+      for (const velho of planosBase) {
         const esc = escolhas.get(velho.id);
         if (!esc || esc.equipamentoIds.length === 0) continue;   // plano sem equipamentos não é renovado
         const modelos = new Map(velho.equipamentosConfig.map((c) => [c.equipamentoId, c.modeloChecklistId]));
