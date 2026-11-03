@@ -27,11 +27,22 @@ export type ResultadoImportacao = {
 export class ClientesService {
   constructor(private readonly prisma: PrismaService, private readonly agenda: AgendaService) {}
 
+  // Documento é único por empresa. Cliente excluído (soft delete) não pode segurar o documento:
+  // se o dono atual foi excluído, o documento é liberado; se está ativo, é conflito de verdade.
+  private async garantirDocumentoLivre(documento: string, exceto?: string) {
+    const donos = await this.prisma.cliente.findMany({
+      where: { documento, ...(exceto ? { NOT: { id: exceto } } : {}) },
+      select: { id: true, deletedAt: true, razaoSocial: true },
+    });
+    const ativo = donos.find((d) => !d.deletedAt);
+    if (ativo) throw new ConflictException(`Documento já cadastrado no cliente "${ativo.razaoSocial}"`);
+    if (donos.length) await this.prisma.cliente.updateMany({ where: { id: { in: donos.map((d) => d.id) } }, data: { documento: null } });
+  }
+
   async create(dto: CreateClienteDto) {
     const documento = soDigitos(dto.documento) || null;
     if (documento) {
-      const existe = await this.prisma.cliente.findFirst({ where: { documento } });
-      if (existe) throw new ConflictException('Documento já cadastrado');
+      await this.garantirDocumentoLivre(documento);
     }
 
     // O cadastro do cliente (empresa) é separado do acesso ao portal: não cria login nem
@@ -282,7 +293,7 @@ export class ClientesService {
     // Soft delete (§6.5) — UPDATE deleted_at em vez de DELETE
     return this.prisma.cliente.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: new Date(), documento: null },
     });
   }
 
@@ -301,8 +312,7 @@ export class ClientesService {
         throw new BadRequestException('Documento deve ter 11 dígitos (CPF) ou 14 (CNPJ)');
       }
       if (documento) {
-        const outro = await this.prisma.cliente.findFirst({ where: { documento, NOT: { id } } });
-        if (outro) throw new ConflictException('Documento já cadastrado em outro cliente');
+        await this.garantirDocumentoLivre(documento, id);
       }
       data.documento = documento || null;
     }
