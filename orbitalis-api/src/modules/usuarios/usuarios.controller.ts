@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { UsuarioTipo } from '@prisma/client';
 
 const SELECT_TECNICO = {
@@ -17,6 +18,7 @@ export class UsuariosController {
 
   @Get('tecnicos/produtividade')
   @Roles(UsuarioTipo.admin)
+  @Modulo('equipe')
   async produtividade(@Query('mes') mesQ?: string, @Query('ano') anoQ?: string) {
     const agora = new Date();
     const mes = mesQ ? parseInt(mesQ) : agora.getMonth() + 1;
@@ -90,6 +92,7 @@ export class UsuariosController {
 
   @Post()
   @Roles(UsuarioTipo.admin)
+  @Modulo('equipe')
   async criarTecnico(@Body() body: { email: string; senha: string; nome?: string; telefone?: string; especialidade?: string; crea?: string }) {
     if (!body.email || !body.senha) throw new BadRequestException('Email e senha são obrigatórios');
     const existe = await this.prisma.usuario.findUnique({ where: { email: body.email } });
@@ -111,6 +114,7 @@ export class UsuariosController {
 
   @Patch(':id')
   @Roles(UsuarioTipo.admin)
+  @Modulo('equipe')
   async atualizarTecnico(
     @Param('id') id: string,
     @Body() body: { email?: string; senha?: string; nome?: string; telefone?: string; especialidade?: string; crea?: string },
@@ -128,6 +132,7 @@ export class UsuariosController {
 
   @Delete(':id')
   @Roles(UsuarioTipo.admin)
+  @Modulo('equipe')
   async removerTecnico(@Param('id') id: string) {
     await this.prisma.$transaction([
       this.prisma.ordemServico.updateMany({ where: { tecnicoId: id }, data: { tecnicoId: null } }),

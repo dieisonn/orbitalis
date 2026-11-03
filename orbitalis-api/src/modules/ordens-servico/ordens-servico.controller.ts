@@ -14,6 +14,7 @@ import { OsStatus, UsuarioTipo } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { OrdensServicoService } from './ordens-servico.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
@@ -151,6 +152,7 @@ export class OrdensServicoController {
   // PATCH /api/v1/ordens-servico/:id/financeiro — Admin registra valores
   @Patch(':id/financeiro')
   @Roles(UsuarioTipo.admin)
+  @Modulo('financeiro')
   financeiro(
     @Param('id') id: string,
     @Body() body: { valorMaoObra?: number; valorPecas?: number },

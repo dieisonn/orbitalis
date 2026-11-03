@@ -10,6 +10,7 @@ import { UsuarioTipo } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { runWithTenant } from '../../common/tenant.context';
 import { TIPOS_SERVICO_PADRAO } from '../../common/tipos-servico-padrao';
+import { permissoesEfetivas } from '../../common/modulos';
 import { ModelosChecklistService } from '../modelos-checklist/modelos-checklist.service';
 import { LoginDto } from './dto/login.dto';
 import { RegistrarDto } from './dto/registrar.dto';
@@ -32,6 +33,8 @@ export class AuthService {
         senhaHash: true,
         tipo: true,
         empresaId: true,
+        perfilAcesso: true,
+        permissoes: true,
       },
     });
 
@@ -59,6 +62,7 @@ export class AuthService {
     return {
       access_token: this.jwt.sign(payload),
       role: usuario.tipo,
+      permissoes: usuario.tipo === UsuarioTipo.admin ? permissoesEfetivas(usuario.perfilAcesso, usuario.permissoes) : null,
     };
   }
 

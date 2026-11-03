@@ -71,6 +71,7 @@ enum OsItemStatus {
 enum ConviteTipo {
   tecnico
   cliente
+  admin
 }
 
 // ─────────────────────────────────────────
@@ -101,6 +102,9 @@ model Convite {
   usadoEm   DateTime?   @map("usado_em")
   criadoEm  DateTime    @default(now()) @map("criado_em")
   empresaId String?     @map("empresa_id") @db.Uuid
+  // Convite de usuário do escritório: perfil e módulos liberados
+  perfilAcesso String?  @map("perfil_acesso") @db.VarChar(30)
+  permissoes   String[] @default([])
 
   @@map("convites")
 }
@@ -121,6 +125,9 @@ model Usuario {
   empresaId     String?     @map("empresa_id") @db.Uuid
   // Avisos da agenda: quantos minutos antes de um evento a pessoa quer ser notificada (até 3)
   avisosAgenda  Int[]       @default([30]) @map("avisos_agenda")
+  // Equipe do escritório (tipo admin): null/'administrador' = acesso total; senão só os módulos de `permissoes`
+  perfilAcesso  String?     @map("perfil_acesso") @db.VarChar(30)
+  permissoes    String[]    @default([])
 
   cliente                        Cliente?
   ordensComoTecnico              OrdemServico[]    @relation("TecnicoOrdens")

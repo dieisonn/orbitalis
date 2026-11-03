@@ -3,11 +3,13 @@ import { ContratosService, RenovarContratoInput } from './contratos.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { UsuarioTipo } from '@prisma/client';
 
 @Controller('contratos')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UsuarioTipo.admin)
+@Modulo('planos')
 export class ContratosController {
   constructor(private readonly contratosService: ContratosService) {}
 

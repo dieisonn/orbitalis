@@ -5,6 +5,8 @@ export interface AuthUser {
   email: string;
   role: string;
   empresaId?: string;
+  // Só admin: null = acesso total; lista = módulos liberados
+  permissoes?: string[] | null;
 }
 
 export const CurrentUser = createParamDecorator(

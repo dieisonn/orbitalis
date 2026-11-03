@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsuarioTipo } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { permissoesEfetivas, podeConceder, resolverAcesso } from '../../common/modulos';
 import { CriarConviteDto } from './dto/criar-convite.dto';
 import { AceitarConviteDto } from './dto/aceitar-convite.dto';
 
@@ -18,7 +20,7 @@ export class ConvitesService {
     private readonly jwt: JwtService,
   ) {}
 
-  async gerar(dto: CriarConviteDto) {
+  async gerar(dto: CriarConviteDto, user?: { permissoes?: string[] | null }) {
     if (dto.tipo === 'cliente') {
       if (!dto.clienteId) throw new BadRequestException('Informe o cliente que receberá o convite');
       const cliente = await this.prisma.cliente.findFirst({
@@ -30,6 +32,13 @@ export class ConvitesService {
         throw new ConflictException('Este cliente já possui acesso ao portal');
     }
 
+    let acesso: { perfilAcesso: string; permissoes: string[] } | null = null;
+    if (dto.tipo === 'admin') {
+      try { acesso = resolverAcesso(dto.perfilAcesso, dto.permissoes); }
+      catch (e) { throw new BadRequestException((e as Error).message); }
+      if (!podeConceder(user?.permissoes, acesso)) throw new ForbiddenException('Você não tem permissão para conceder esse acesso');
+    }
+
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -38,6 +47,7 @@ export class ConvitesService {
         tipo: dto.tipo,
         email: dto.email ?? null,
         clienteId: dto.clienteId ?? null,
+        ...(acesso ? { perfilAcesso: acesso.perfilAcesso, permissoes: acesso.permissoes } : {}),
         expiresAt,
       },
     });
@@ -65,6 +75,7 @@ export class ConvitesService {
 
     return {
       tipo: convite.tipo,
+      perfilAcesso: convite.perfilAcesso,
       email: convite.email,
       nomeEmpresa: empresa?.nomeEmpresa ?? null,
       razaoSocialCliente,
@@ -95,7 +106,9 @@ export class ConvitesService {
 
     const senhaHash = await bcrypt.hash(dto.senha, 10);
     const tipo =
-      convite.tipo === 'tecnico' ? UsuarioTipo.tecnico : UsuarioTipo.cliente;
+      convite.tipo === 'tecnico' ? UsuarioTipo.tecnico
+      : convite.tipo === 'admin' ? UsuarioTipo.admin
+      : UsuarioTipo.cliente;
 
     // Tudo ou nada: usuário, vínculo com o cliente e baixa do convite
     const usuario = await this.prisma.$transaction(async (tx) => {
@@ -125,6 +138,7 @@ export class ConvitesService {
           tipo,
           nome: dto.nome,
           empresaId: convite.empresaId,
+          ...(convite.tipo === 'admin' ? { perfilAcesso: convite.perfilAcesso ?? 'administrador', permissoes: convite.permissoes } : {}),
         },
       });
 
@@ -148,6 +162,7 @@ export class ConvitesService {
     return {
       access_token: this.jwt.sign(payload),
       role: usuario.tipo,
+      permissoes: usuario.tipo === UsuarioTipo.admin ? permissoesEfetivas(usuario.perfilAcesso, usuario.permissoes) : null,
     };
   }
 }

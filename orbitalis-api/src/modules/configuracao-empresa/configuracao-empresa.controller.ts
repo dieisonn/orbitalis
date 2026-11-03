@@ -3,6 +3,7 @@ import { ConfiguracaoEmpresaService } from './configuracao-empresa.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { UsuarioTipo } from '@prisma/client';
 
 @Controller('configuracao')
@@ -19,6 +20,7 @@ export class ConfiguracaoEmpresaController {
   @Patch()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UsuarioTipo.admin)
+  @Modulo('configuracoes')
   upsert(@Body() body: { nomeEmpresa?: string; nomeFantasia?: string; logoUrl?: string; corPrimaria?: string; cnpj?: string; telefone?: string; endereco?: string; email?: string | null; site?: string | null; instrucoesOs?: string | null; agrupamentoOsPadrao?: string; cidade?: string | null; uf?: string | null; codigoIbge?: string | null; responsavelTecnicoId?: string | null; mttrLimiteHoras?: number | null; mtbfLimiteDias?: number | null; custoHoraParada?: number | null }) {
     return this.service.upsert(body);
   }

@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { getJwtSecret } from '../../common/jwt-secret';
 import { PrismaService } from '../../prisma/prisma.service';
+import { permissoesEfetivas } from '../../common/modulos';
 
 export interface JwtPayload {
   sub: string;
@@ -32,11 +33,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       empresaId = u?.empresaId ?? undefined;
     }
 
+    // Equipe do escritório: o acesso por módulo vale na hora (mudar o perfil não espera o token expirar)
+    let permissoes: string[] | null = null;
+    if (payload.role === 'admin') {
+      const u = await this.prisma.usuario.findUnique({ where: { id: payload.sub }, select: { perfilAcesso: true, permissoes: true } });
+      permissoes = permissoesEfetivas(u?.perfilAcesso, u?.permissoes);
+    }
+
     return {
       id: payload.sub,
       email: payload.email,
       role: payload.role,
       empresaId,
+      permissoes,
     };
   }
 }

@@ -4,6 +4,7 @@ import { UsuarioTipo } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { RelatoriosService } from './relatorios.service';
 
 @Controller('relatorios')
@@ -13,6 +14,7 @@ export class RelatoriosController {
 
   @Get('os-export')
   @Roles(UsuarioTipo.admin)
+  @Modulo('relatorios')
   async exportarOs(
     @Query('de') de: string,
     @Query('ate') ate: string,
@@ -32,6 +34,7 @@ export class RelatoriosController {
   // GET /api/v1/relatorios/pmoc/:clienteId?mes=6&ano=2026 — Admin
   @Get('pmoc/:clienteId')
   @Roles(UsuarioTipo.admin)
+  @Modulo('relatorios', 'planos')
   pmoc(
     @Param('clienteId') clienteId: string,
     @Query('mes') mes: string,

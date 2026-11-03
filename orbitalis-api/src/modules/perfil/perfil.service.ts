@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { permissoesEfetivas } from '../../common/modulos';
 import { UpdatePerfilDto } from './dto/update-perfil.dto';
 import { TrocarSenhaDto } from './dto/trocar-senha.dto';
 
@@ -13,14 +14,20 @@ const SELECT = {
   crea: true,
   tipo: true,
   dataCriacao: true,
+  perfilAcesso: true,
+  permissoes: true,
 } as const;
 
 @Injectable()
 export class PerfilService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getMeu(userId: string) {
-    return this.prisma.usuario.findUnique({ where: { id: userId }, select: SELECT });
+  async getMeu(userId: string) {
+    const u = await this.prisma.usuario.findUnique({ where: { id: userId }, select: SELECT });
+    if (!u) return u;
+    // `acesso`: null = tudo; lista = módulos liberados (o menu e as rotas seguem isso)
+    const { perfilAcesso, permissoes, ...resto } = u;
+    return { ...resto, perfilAcesso, acesso: resto.tipo === 'admin' ? permissoesEfetivas(perfilAcesso, permissoes) : null };
   }
 
   async update(userId: string, dto: UpdatePerfilDto) {
@@ -30,7 +37,8 @@ export class PerfilService {
     if (dto.especialidade !== undefined) data.especialidade = dto.especialidade || null;
     if (dto.crea !== undefined)         data.crea         = dto.crea         || null;
     if (Object.keys(data).length === 0) return this.getMeu(userId);
-    return this.prisma.usuario.update({ where: { id: userId }, data, select: SELECT });
+    await this.prisma.usuario.update({ where: { id: userId }, data });
+    return this.getMeu(userId);
   }
 
   async trocarSenha(userId: string, dto: TrocarSenhaDto) {

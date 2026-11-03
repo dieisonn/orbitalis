@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
 
 import { UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CreatePlanoManutencaoDto } from './dto/create-plano.dto';
@@ -10,6 +11,7 @@ import { PlanosManutencaoService } from './planos-manutencao.service';
 @Controller('planos-manutencao')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UsuarioTipo.admin)
+@Modulo('planos')
 export class PlanosManutencaoController {
   constructor(private readonly planosService: PlanosManutencaoService) {}
 

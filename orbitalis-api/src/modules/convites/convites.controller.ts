@@ -13,6 +13,7 @@ import { UsuarioTipo } from '@prisma/client';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { ConvitesService } from './convites.service';
 import { CriarConviteDto } from './dto/criar-convite.dto';
 import { AceitarConviteDto } from './dto/aceitar-convite.dto';
@@ -25,8 +26,8 @@ export class ConvitesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UsuarioTipo.admin)
-  gerar(@Body() dto: CriarConviteDto) {
-    return this.svc.gerar(dto);
+  gerar(@Body() dto: CriarConviteDto, @CurrentUser() user: AuthUser) {
+    return this.svc.gerar(dto, user);
   }
 
   // GET /api/v1/convites/:token — valida token (público)

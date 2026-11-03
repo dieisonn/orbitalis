@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { OrcamentoStatus, UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -12,6 +13,7 @@ import { OrcamentosService } from './orcamentos.service';
 @Controller('orcamentos')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UsuarioTipo.admin)
+@Modulo('orcamentos')
 export class OrcamentosController {
   constructor(private readonly svc: OrcamentosService) {}
 

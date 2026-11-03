@@ -1,6 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Modulo } from '../../common/decorators/modulo.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { FinanceiroService } from './financeiro.service';
@@ -8,6 +9,7 @@ import { FinanceiroService } from './financeiro.service';
 @Controller('financeiro')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UsuarioTipo.admin)
+@Modulo('financeiro')
 export class FinanceiroController {
   constructor(private readonly svc: FinanceiroService) {}
 

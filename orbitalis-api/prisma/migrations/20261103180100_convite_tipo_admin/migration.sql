@@ -1,0 +1,1 @@
+ALTER TYPE "ConviteTipo" ADD VALUE IF NOT EXISTS 'admin';
