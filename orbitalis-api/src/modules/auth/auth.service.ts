@@ -41,7 +41,10 @@ export class AuthService {
     if (!usuario) throw new UnauthorizedException('Credenciais inválidas');
 
     const senhaValida = await bcrypt.compare(dto.senha, usuario.senhaHash);
-    if (!senhaValida) throw new UnauthorizedException('Credenciais inválidas');
+    if (!senhaValida) {
+      await this.registrarAcesso(usuario, 'login_falha', 'Tentativa de login com senha incorreta');
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
 
     // Cliente excluído (soft delete) perde o acesso ao portal
     if (usuario.tipo === UsuarioTipo.cliente) {
@@ -59,11 +62,23 @@ export class AuthService {
       empresaId: usuario.empresaId ?? undefined,
     };
 
+    await this.registrarAcesso(usuario, 'login', 'Entrou no sistema');
+
     return {
       access_token: this.jwt.sign(payload),
       role: usuario.tipo,
       permissoes: usuario.tipo === UsuarioTipo.admin ? permissoesEfetivas(usuario.perfilAcesso, usuario.permissoes) : null,
     };
+  }
+
+  // Registro de atividades: entradas no sistema e tentativas de login com senha errada
+  private async registrarAcesso(u: { id: string; email: string; tipo: UsuarioTipo; empresaId: string | null }, acao: string, descricao: string) {
+    try {
+      const nome = await this.prisma.usuario.findUnique({ where: { id: u.id }, select: { nome: true } });
+      await this.prisma.logAuditoria.create({
+        data: { empresaId: u.empresaId, usuarioId: u.id, usuarioNome: nome?.nome ?? null, usuarioEmail: u.email, usuarioTipo: u.tipo, acao, descricao, rota: '/auth/login', metodo: 'POST', entidade: 'auth' },
+      });
+    } catch { /* o registro nunca impede o login */ }
   }
 
   async registrar(dto: RegistrarDto) {

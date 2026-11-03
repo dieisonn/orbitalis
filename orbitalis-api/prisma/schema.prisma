@@ -347,6 +347,32 @@ model OrdemServico {
 }
 
 // ─────────────────────────────────────────
+// log_auditoria — quem fez o quê (alterações e logins)
+// ─────────────────────────────────────────
+model LogAuditoria {
+  id           String   @id @default(uuid()) @db.Uuid
+  empresaId    String?  @map("empresa_id") @db.Uuid
+  usuarioId    String?  @map("usuario_id") @db.Uuid
+  usuarioNome  String?  @map("usuario_nome") @db.VarChar(150)
+  usuarioEmail String?  @map("usuario_email") @db.VarChar(255)
+  usuarioTipo  String?  @map("usuario_tipo") @db.VarChar(20)
+  acao         String   @db.VarChar(20)
+  metodo       String?  @db.VarChar(10)
+  rota         String?  @db.VarChar(255)
+  entidade     String?  @db.VarChar(50)
+  entidadeId   String?  @map("entidade_id") @db.VarChar(60)
+  descricao    String   @db.VarChar(255)
+  detalhes     Json?
+  status       Int?
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  @@index([empresaId, criadoEm(sort: Desc)])
+  @@index([usuarioId])
+  @@index([entidade, entidadeId])
+  @@map("log_auditoria")
+}
+
+// ─────────────────────────────────────────
 // ordem_servico_historico — mudanças de status (quando ocorreu, quem registrou)
 // ─────────────────────────────────────────
 model OrdemServicoHistorico {
