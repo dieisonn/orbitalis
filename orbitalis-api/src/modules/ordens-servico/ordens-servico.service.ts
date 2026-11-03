@@ -515,6 +515,10 @@ export class OrdensServicoService {
         include: { itens: true },
       });
     });
+    await this.registrarHistorico(id, null, resultado.status, user, {
+      ocorridoEm: resultado.dataConclusao ?? new Date(),
+      observacao: resultado.status === 'concluida' ? 'Execução registrada pelo técnico' : 'Execução parcial registrada pelo técnico',
+    });
     await this.agenda.sincronizarOs(id); // descrição do evento acompanha as observações
     return resultado;
   }
@@ -523,6 +527,7 @@ export class OrdensServicoService {
   async concluir(
     id: string,
     data: { assinaturaBase64?: string; tipoGas?: string; quantidadeGasGramas?: number },
+    user?: { id: string; role: string },
   ) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
@@ -530,6 +535,7 @@ export class OrdensServicoService {
       throw new BadRequestException('Não é possível concluir uma O.S. cancelada');
     }
     const jaConcluida = os.status === 'concluida';
+    if (!jaConcluida) await this.registrarHistorico(id, os.status, 'concluida', user, { ocorridoEm: os.dataConclusao ?? new Date() });
 
     const updated = await this.prisma.ordemServico.update({
       where: { id },
@@ -689,6 +695,7 @@ export class OrdensServicoService {
         ambiente:    { include: { cliente: true } },
         tecnico:     { select: { id: true, email: true, nome: true } },
         tipoServico: true,
+        historico:   { orderBy: { ocorridoEm: 'asc' } },
       },
     });
 
@@ -703,12 +710,14 @@ export class OrdensServicoService {
       throw new NotFoundException('Ordem de Serviço não encontrada');
     }
 
+    // o histórico interno (quem mexeu, observações) não vai para o portal do cliente
+    if (user?.role === 'cliente') return { ...os, historico: [] };
     return os;
   }
 
   // PATCH /ordens-servico/:id/triar — Admin despacha a O.S. para o técnico (§US07)
   // Transição válida: aberta → agendada
-  async triar(id: string, dto: TriarOsDto) {
+  async triar(id: string, dto: TriarOsDto, user?: { id: string; role: string }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
 
@@ -737,6 +746,7 @@ export class OrdensServicoService {
       },
     });
 
+    await this.registrarHistorico(id, os.status, 'agendada', user);
     await this.agenda.sincronizarOs(id);
 
     const osNumero = updated.numero != null ? `OS-${String(updated.numero).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`;
@@ -753,21 +763,62 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id/cancelar — Admin cancela
-  async cancelar(id: string) {
+  async cancelar(id: string, user?: { id: string; role: string }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
     if (os.status === 'concluida') {
       throw new BadRequestException('Não é possível cancelar uma O.S. já concluída');
     }
 
-    return this.prisma.ordemServico.update({
+    const cancelada = await this.prisma.ordemServico.update({
       where: { id },
       data: { status: 'cancelada' },
     });
+    await this.registrarHistorico(id, os.status, 'cancelada', user);
+    return cancelada;
+  }
+
+  // Registra no histórico a mudança de status (quando aconteceu, quem registrou e por quê)
+  private async registrarHistorico(
+    osId: string,
+    de: string | null,
+    para: string,
+    user?: { id: string; role?: string },
+    extra?: { ocorridoEm?: Date; observacao?: string | null },
+  ) {
+    try {
+      let nome: string | null = null;
+      if (user?.id) {
+        const u = await this.prisma.usuario.findUnique({ where: { id: user.id }, select: { nome: true, email: true } });
+        nome = u?.nome ?? u?.email ?? null;
+      }
+      await this.prisma.ordemServicoHistorico.create({
+        data: {
+          ordemServicoId: osId,
+          deStatus: de,
+          paraStatus: para,
+          ocorridoEm: extra?.ocorridoEm ?? new Date(),
+          usuarioId: user?.id ?? null,
+          usuarioNome: nome,
+          observacao: extra?.observacao?.trim() || null,
+        },
+      });
+    } catch (e) {
+      // o histórico nunca deve impedir a mudança de status em si
+      console.error('Falha ao registrar histórico da O.S.', e);
+    }
+  }
+
+  private lerDataOcorrencia(v?: string | null): Date | undefined {
+    if (!v) return undefined;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) throw new BadRequestException('Data inválida');
+    if (d.getTime() > Date.now() + 5 * 60_000) throw new BadRequestException('A data não pode estar no futuro');
+    return d;
   }
 
   // PATCH /ordens-servico/:id/status — Admin altera status manualmente
-  async alterarStatus(id: string, status: OsStatus, user?: { id: string; role: string }) {
+  async alterarStatus(id: string, status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
 
@@ -779,21 +830,27 @@ export class OrdensServicoService {
         throw new BadRequestException('O técnico só pode iniciar o atendimento; para encerrar, registre a execução e a assinatura.');
       }
     }
-    const agora = new Date();
-    return this.prisma.ordemServico.update({
+    const informada = this.lerDataOcorrencia(extra?.dataOcorrencia);
+    const agora = informada ?? new Date();
+    const atualizada = await this.prisma.ordemServico.update({
       where: { id },
       data: {
         status,
         // Mantém as datas coerentes com o status (cockpit, MTTR, financeiro e PMOC dependem delas)
-        dataConclusao: status === 'concluida' ? (os.dataConclusao ?? agora) : null,
-        ...(status === 'em_andamento' && !os.dataInicio ? { dataInicio: agora } : {}),
+        // — a data informada pelo admin (quando de fato aconteceu) vale sobre a do registro
+        dataConclusao: status === 'concluida' ? (informada ?? os.dataConclusao ?? agora) : null,
+        ...(status === 'em_andamento' && (informada || !os.dataInicio) ? { dataInicio: agora } : {}),
       },
     });
+    await this.registrarHistorico(id, os.status, status, user, { ocorridoEm: agora, observacao: extra?.observacao });
+    return atualizada;
   }
 
   // PATCH /ordens-servico/bulk-status — Altera status de múltiplas O.S. de uma vez
-  async bulkAlterarStatus(ids: string[], status: OsStatus) {
-    const agora = new Date();
+  async bulkAlterarStatus(ids: string[], status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string }) {
+    const informada = this.lerDataOcorrencia(extra?.dataOcorrencia);
+    const agora = informada ?? new Date();
+    const antes = await this.prisma.ordemServico.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } });
     const { count } = await this.prisma.ordemServico.updateMany({
       where: { id: { in: ids } },
       data: { status, ...(status !== 'concluida' ? { dataConclusao: null } : {}) },
@@ -801,16 +858,17 @@ export class OrdensServicoService {
     // Mantém as datas coerentes com o status
     if (status === 'concluida') {
       await this.prisma.ordemServico.updateMany({
-        where: { id: { in: ids }, dataConclusao: null },
+        where: { id: { in: ids }, ...(informada ? {} : { dataConclusao: null }) },
         data: { dataConclusao: agora },
       });
     }
     if (status === 'em_andamento') {
       await this.prisma.ordemServico.updateMany({
-        where: { id: { in: ids }, dataInicio: null },
+        where: { id: { in: ids }, ...(informada ? {} : { dataInicio: null }) },
         data: { dataInicio: agora },
       });
     }
+    for (const o of antes) await this.registrarHistorico(o.id, o.status, status, user, { ocorridoEm: agora, observacao: extra?.observacao });
     return { atualizadas: count };
   }
 

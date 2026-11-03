@@ -330,12 +330,33 @@ model OrdemServico {
   conflitos        AuditoriaConflitoSincronizacao[]
   orcamento        Orcamento?
   evento           EventoAgenda?
+  historico        OrdemServicoHistorico[]
 
   @@index([status])
   @@index([empresaId])
   // Numeração sequencial por empresa (contadores_empresa); o default é só um respaldo
   @@unique([empresaId, numero])
   @@map("ordens_servico")
+}
+
+// ─────────────────────────────────────────
+// ordem_servico_historico — mudanças de status (quando ocorreu, quem registrou)
+// ─────────────────────────────────────────
+model OrdemServicoHistorico {
+  id             String   @id @default(uuid()) @db.Uuid
+  ordemServicoId String   @map("ordem_servico_id") @db.Uuid
+  deStatus       String?  @map("de_status") @db.VarChar(20)
+  paraStatus     String   @map("para_status") @db.VarChar(20)
+  ocorridoEm     DateTime @map("ocorrido_em")
+  registradoEm   DateTime @default(now()) @map("registrado_em")
+  usuarioId      String?  @map("usuario_id") @db.Uuid
+  usuarioNome    String?  @map("usuario_nome") @db.VarChar(150)
+  observacao     String?  @db.Text
+
+  ordemServico OrdemServico @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+
+  @@index([ordemServicoId])
+  @@map("ordem_servico_historico")
 }
 
 // ─────────────────────────────────────────

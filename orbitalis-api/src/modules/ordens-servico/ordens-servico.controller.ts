@@ -108,15 +108,15 @@ export class OrdensServicoController {
   // PATCH /api/v1/ordens-servico/:id/triar — Admin (§US07)
   @Patch(':id/triar')
   @Roles(UsuarioTipo.admin)
-  triar(@Param('id') id: string, @Body() dto: TriarOsDto) {
-    return this.ordensServicoService.triar(id, dto);
+  triar(@Param('id') id: string, @Body() dto: TriarOsDto, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.triar(id, dto, user);
   }
 
   // PATCH /api/v1/ordens-servico/:id/cancelar — Admin
   @Patch(':id/cancelar')
   @Roles(UsuarioTipo.admin)
-  cancelar(@Param('id') id: string) {
-    return this.ordensServicoService.cancelar(id);
+  cancelar(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.cancelar(id, user);
   }
 
   // PATCH /api/v1/ordens-servico/:id/concluir — Admin (assinatura + gás)
@@ -125,22 +125,27 @@ export class OrdensServicoController {
   concluir(
     @Param('id') id: string,
     @Body() body: { assinaturaBase64?: string; tipoGas?: string; quantidadeGasGramas?: number },
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.ordensServicoService.concluir(id, body);
+    return this.ordensServicoService.concluir(id, body, user);
   }
 
   // PATCH /api/v1/ordens-servico/bulk-status — Altera status em lote
   @Patch('bulk-status')
   @Roles(UsuarioTipo.admin)
-  bulkAlterarStatus(@Body() body: { ids: string[]; status: OsStatus }) {
-    return this.ordensServicoService.bulkAlterarStatus(body.ids, body.status);
+  bulkAlterarStatus(@Body() body: { ids: string[]; status: OsStatus; dataOcorrencia?: string; observacao?: string }, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.bulkAlterarStatus(body.ids, body.status, user, { dataOcorrencia: body.dataOcorrencia, observacao: body.observacao });
   }
 
   // PATCH /api/v1/ordens-servico/:id/status — Admin ou Técnico altera status
   @Patch(':id/status')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
-  alterarStatus(@Param('id') id: string, @Body('status') status: OsStatus, @CurrentUser() user: AuthUser) {
-    return this.ordensServicoService.alterarStatus(id, status, user);
+  alterarStatus(
+    @Param('id') id: string,
+    @Body() body: { status: OsStatus; dataOcorrencia?: string; observacao?: string },
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.ordensServicoService.alterarStatus(id, body.status, user, { dataOcorrencia: body.dataOcorrencia, observacao: body.observacao });
   }
 
   // PATCH /api/v1/ordens-servico/:id/financeiro — Admin registra valores
