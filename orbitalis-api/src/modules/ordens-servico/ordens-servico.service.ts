@@ -911,11 +911,18 @@ export class OrdensServicoService {
   private async apagarOs(ids: string[]) {
     if (ids.length === 0) return;
     await this.prisma.$transaction(async (tx) => {
+      const doPlano = await tx.ordemServico.findMany({ where: { id: { in: ids }, planoId: { not: null } }, select: { planoId: true } });
+      const planoIds = Array.from(new Set(doPlano.map((o) => o.planoId as string)));
       // conflitos não têm cascade, precisam ser deletados antes
       await tx.auditoriaConflitoSincronizacao.deleteMany({ where: { ordemServicoId: { in: ids } } });
       // itens têm onDelete: Cascade, mas deleta explicitamente para segurança
       await tx.ordemServicoItem.deleteMany({ where: { ordemServicoId: { in: ids } } });
       await tx.ordemServico.deleteMany({ where: { id: { in: ids } } });
+      // plano que ficou sem nenhuma O.S. some junto (senão o motor voltaria a gerar tudo de novo)
+      for (const planoId of planoIds) {
+        const restantes = await tx.ordemServico.count({ where: { planoId } });
+        if (restantes === 0) await tx.planoManutencao.deleteMany({ where: { id: planoId } });
+      }
     });
   }
 
