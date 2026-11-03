@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Search, X, AlertCircle } from 'lucide-react'
 import { ClienteSelect } from '@/components/ui/cliente-select'
+import { CampoData } from '@/components/ui/campo-data'
 
 type Tecnico  = { id: string; email: string; nome: string | null }
 type Cliente  = { id: string; razaoSocial: string; nomeFantasia: string | null }
@@ -161,22 +162,17 @@ export function OsFilterBar({
         <div className="min-w-[220px]"><ClienteSelect ariaLabel="Filtrar por cliente" clientes={clientes} value={currentClienteId ?? ''} vazio="Todos os clientes"
           onChange={(id) => router.push(buildUrl({ clienteId: id || undefined }))} className="!py-1.5" /></div>
 
-        <div className="flex items-center gap-1">
-          <input
-            type="date"
-            aria-label="Data inicial"
-            value={currentDataInicio ?? ''}
-            onChange={(e) => router.push(buildUrl({ dataInicio: e.target.value || undefined, atrasadas: undefined }))}
-            className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-          />
-          <span className="text-xs text-gray-400">até</span>
-          <input
-            type="date"
-            aria-label="Data final"
-            value={currentDataFim ?? ''}
-            onChange={(e) => router.push(buildUrl({ dataFim: e.target.value || undefined, atrasadas: undefined }))}
-            className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
-          />
+        {/* digite só os números (05112026) ou use o calendário; o filtro só muda com a data completa */}
+        <div className="flex items-start gap-1">
+          <div className="w-40 [&_p]:hidden">
+            <CampoData ariaLabel="Data inicial" value={currentDataInicio ?? ''}
+              onChange={(v) => { if (v !== (currentDataInicio ?? '')) router.push(buildUrl({ dataInicio: v || undefined, atrasadas: undefined })) }} />
+          </div>
+          <span className="text-xs text-gray-400 pt-3">até</span>
+          <div className="w-40 [&_p]:hidden">
+            <CampoData ariaLabel="Data final" value={currentDataFim ?? ''}
+              onChange={(v) => { if (v !== (currentDataFim ?? '')) router.push(buildUrl({ dataFim: v || undefined, atrasadas: undefined })) }} />
+          </div>
         </div>
       </div>
     </div>
