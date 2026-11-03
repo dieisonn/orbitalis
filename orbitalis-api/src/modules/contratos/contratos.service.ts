@@ -152,6 +152,7 @@ export class ContratosService {
   }
 
   async update(id: string, data: Partial<{
+    clienteId: string;
     descricao: string;
     valorMensal: number | null;
     vigenciaInicio: string;
@@ -160,11 +161,25 @@ export class ContratosService {
     observacoes: string | null;
     ativo: boolean;
   }>) {
-    await this.findOne(id);
+    const atual = await this.findOne(id);
+    if (data.clienteId !== undefined && data.clienteId !== atual.cliente.id) {
+      // Os planos preventivos são do cliente: trocar o cliente do contrato deixaria planos de outro cliente ligados a ele
+      if (atual.planos.length > 0) {
+        throw new BadRequestException('Este contrato tem planos preventivos do cliente atual. Desvincule ou exclua os planos antes de trocar o cliente.');
+      }
+      const novo = await this.prisma.cliente.findFirst({ where: { id: data.clienteId, deletedAt: null }, select: { id: true } });
+      if (!novo) throw new NotFoundException('Cliente não encontrado');
+    }
+    if (data.descricao !== undefined && !data.descricao.trim()) throw new BadRequestException('Informe o nome do contrato');
+    const ini = data.vigenciaInicio !== undefined ? new Date(data.vigenciaInicio) : atual.vigenciaInicio;
+    const fim = data.vigenciaFim !== undefined ? new Date(data.vigenciaFim) : atual.vigenciaFim;
+    if (isNaN(ini.getTime()) || isNaN(fim.getTime())) throw new BadRequestException('Vigência inválida');
+    if (fim <= ini) throw new BadRequestException('O fim da vigência deve ser depois do início');
     return this.prisma.contrato.update({
       where: { id },
       data: {
-        ...(data.descricao !== undefined && { descricao: data.descricao }),
+        ...(data.clienteId !== undefined && { clienteId: data.clienteId }),
+        ...(data.descricao !== undefined && { descricao: data.descricao.trim() }),
         ...(data.valorMensal !== undefined && { valorMensal: data.valorMensal }),
         ...(data.vigenciaInicio !== undefined && { vigenciaInicio: new Date(data.vigenciaInicio) }),
         ...(data.vigenciaFim !== undefined && { vigenciaFim: new Date(data.vigenciaFim) }),
