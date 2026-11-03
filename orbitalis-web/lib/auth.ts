@@ -5,6 +5,17 @@ import { redirect } from 'next/navigation'
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 
+// Módulos liberados para o usuário do escritório: '*' = acesso total (a API é quem de fato barra)
+type CookieStore = Awaited<ReturnType<typeof cookies>>
+function gravarAcesso(store: CookieStore, permissoes: string[] | null | undefined) {
+  store.set('orbitalis_perm', Array.isArray(permissoes) ? permissoes.join(',') || '-' : '*', {
+    httpOnly: false,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 8,
+    path: '/',
+  })
+}
+
 export async function login(email: string, password: string) {
   const res = await fetch(`${BASE}/auth/login`, {
     method: 'POST',
@@ -18,7 +29,7 @@ export async function login(email: string, password: string) {
     throw new Error(body.message ?? 'Credenciais inválidas')
   }
 
-  const { access_token, role } = await res.json()
+  const { access_token, role, permissoes } = await res.json()
   const store = await cookies()
 
   store.set('orbitalis_token', access_token, {
@@ -35,6 +46,7 @@ export async function login(email: string, password: string) {
     maxAge: 60 * 60 * 8,
     path: '/',
   })
+  gravarAcesso(store, permissoes)
 
   // Redireciona pela role diretamente no Server Action
   redirect(
@@ -63,7 +75,7 @@ export async function registrar(
     throw new Error(body.message ?? 'Erro ao criar conta')
   }
 
-  const { access_token, role } = await res.json()
+  const { access_token, role, permissoes } = await res.json()
   const store = await cookies()
 
   store.set('orbitalis_token', access_token, {
@@ -80,6 +92,7 @@ export async function registrar(
     maxAge: 60 * 60 * 8,
     path: '/',
   })
+  gravarAcesso(store, permissoes)
 
   redirect('/dashboard')
 }
@@ -88,6 +101,7 @@ export async function logout() {
   const store = await cookies()
   store.delete('orbitalis_token')
   store.delete('orbitalis_role')
+  store.delete('orbitalis_perm')
   redirect('/login')
 }
 

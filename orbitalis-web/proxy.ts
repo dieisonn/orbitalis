@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { rotaPermitida } from '@/lib/modulos'
 
 // Rotas públicas que não precisam de token
 // /o/ = orçamento público (link enviado ao cliente), /convite/ e /registro = cadastro por convite,
@@ -62,6 +63,15 @@ export function proxy(request: NextRequest) {
     TECNICO_ONLY.some((p) => pathname.startsWith(p))
   )) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Equipe do escritório com acesso restrito: só os módulos liberados (a API também barra)
+  if (role === 'admin') {
+    const perm = request.cookies.get('orbitalis_perm')?.value
+    if (perm && perm !== '*') {
+      const acesso = perm === '-' ? [] : perm.split(',')
+      if (!rotaPermitida(pathname, acesso)) return NextResponse.redirect(new URL('/dashboard?sem-acesso=1', request.url))
+    }
   }
 
   return NextResponse.next()

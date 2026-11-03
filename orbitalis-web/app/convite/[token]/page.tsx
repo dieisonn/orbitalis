@@ -4,7 +4,7 @@ import { ConviteForm } from './convite-form'
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 
 type ConviteInfo = {
-  tipo: 'tecnico' | 'cliente'
+  tipo: 'tecnico' | 'cliente' | 'admin'
   email: string | null
   nomeEmpresa: string | null
   razaoSocialCliente: string | null

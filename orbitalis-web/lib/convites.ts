@@ -35,7 +35,7 @@ export async function aceitarConvite(
     throw new Error(body.message ?? 'Erro ao aceitar convite')
   }
 
-  const { access_token, role } = await res.json()
+  const { access_token, role, permissoes } = await res.json()
   const store = await cookies()
 
   store.set('orbitalis_token', access_token, {
@@ -47,6 +47,12 @@ export async function aceitarConvite(
   })
 
   store.set('orbitalis_role', role, {
+    httpOnly: false,
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 8,
+    path: '/',
+  })
+  store.set('orbitalis_perm', Array.isArray(permissoes) ? permissoes.join(',') || '-' : '*', {
     httpOnly: false,
     sameSite: 'lax',
     maxAge: 60 * 60 * 8,

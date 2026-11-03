@@ -3,6 +3,7 @@ import { getUserId } from '@/lib/auth'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { ConvidarBtn } from '@/components/ui/convidar-btn'
 import { removerMembro, revogarConvite } from './actions'
+import { PERFIS } from '@/lib/modulos'
 import {
   Users, UserCog, User, Clock, Link2, ShieldCheck,
 } from 'lucide-react'
@@ -15,11 +16,12 @@ type Membro = {
   telefone: string | null
   especialidade: string | null
   dataCriacao: string
+  perfilAcesso?: string | null
 }
 
 type ConvitePendente = {
   id: string
-  tipo: 'tecnico' | 'cliente'
+  tipo: 'admin' | 'tecnico' | 'cliente'
   email: string | null
   expiresAt: string
   criadoEm: string
@@ -88,13 +90,16 @@ export default async function EquipePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a href="/equipe/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90 transition-colors">
+            + Adicionar usuário
+          </a>
           <ConvidarBtn tipo="tecnico" />
         </div>
       </div>
 
       {/* Administradores */}
       {admins.length > 0 && (
-        <Section title="Administradores" icon={ShieldCheck} count={admins.length}>
+        <Section title="Escritório (administradores e demais acessos)" icon={ShieldCheck} count={admins.length}>
           <ul className="divide-y divide-border/60">
             {admins.map((m) => (
               <li key={m.id} className="flex items-center gap-3 px-5 py-3.5">
@@ -103,10 +108,19 @@ export default async function EquipePage() {
                   <p className="text-sm font-medium text-gray-900">{m.nome ?? '—'}</p>
                   <p className="text-xs text-gray-400 truncate">{m.email}</p>
                 </div>
+                <span className="text-[10px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full">
+                  {PERFIS[m.perfilAcesso ?? 'administrador']?.label ?? m.perfilAcesso}
+                </span>
                 {m.id === meuId && (
                   <span className="text-[10px] font-semibold text-primary bg-primary/8 px-2 py-0.5 rounded-full">
                     você
                   </span>
+                )}
+                {m.id !== meuId && (
+                  <>
+                    <a href={`/equipe/${m.id}/acesso`} className="text-xs font-semibold text-primary hover:underline">Editar acesso</a>
+                    <DeleteButton action={removerMembro.bind(null, m.id)} label="Remover" />
+                  </>
                 )}
               </li>
             ))}
@@ -182,7 +196,7 @@ export default async function EquipePage() {
         <Section title="Convites pendentes" icon={Link2} count={totalPendentes}>
           <ul className="divide-y divide-border/60">
             {equipe.convitesPendentes.map((c) => {
-              const tipoLabel = c.tipo === 'tecnico' ? 'Técnico' : 'Cliente'
+              const tipoLabel = c.tipo === 'tecnico' ? 'Técnico' : c.tipo === 'admin' ? 'Escritório' : 'Cliente'
               const destino   = c.razaoSocialCliente ?? c.email ?? '—'
               const expira    = new Date(c.expiresAt)
               const hoje      = new Date()
@@ -199,7 +213,7 @@ export default async function EquipePage() {
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${
                         c.tipo === 'tecnico'
                           ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-orange-100 text-orange-700'
+                          : c.tipo === 'admin' ? 'bg-primary/10 text-primary' : 'bg-orange-100 text-orange-700'
                       }`}>{tipoLabel}</span>
                     </div>
                     <p className="text-xs text-gray-400">

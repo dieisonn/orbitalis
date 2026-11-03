@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
+import { rotaPermitida } from '@/lib/modulos'
 
 const NAV_GROUPS: { label: string | null; items: { href: string; label: string; icon: typeof Bell }[] }[] = [
   {
@@ -98,11 +99,17 @@ function isActive(href: string, path: string): boolean {
 }
 
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null } | null
-type UserInfo = { nome: string | null; email: string } | null
+type UserInfo = { nome: string | null; email: string; acesso?: string[] | null } | null
 
 export default function Sidebar({ config, alertasCount = 0, user }: { config?: Config; alertasCount?: number; user?: UserInfo }) {
   const path = usePathname()
   const [open, setOpen] = useState(false)
+
+  // Equipe com acesso restrito só vê os módulos liberados (acesso null = tudo)
+  const acesso = user?.acesso ?? null
+  const grupos = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter((i) => rotaPermitida(i.href, acesso)) }))
+    .filter((g) => g.items.length > 0)
 
   const logoSrc = config?.logoUrl || '/logo.png'
   const nomeExibido = config?.nomeFantasia || config?.nomeEmpresa || 'Orbitalis'
@@ -157,7 +164,7 @@ export default function Sidebar({ config, alertasCount = 0, user }: { config?: C
 
         {/* A navegação rola sozinha; o rodapé nunca some */}
         <nav className="flex-1 min-h-0 px-3 pb-3 overflow-y-auto" aria-label="Principal">
-          {NAV_GROUPS.map((group, gi) => (
+          {grupos.map((group, gi) => (
             <div key={group.label ?? 'inicio'} className={gi > 0 ? 'mt-2' : ''}>
               {group.label && (
                 <p className="px-2 pb-1 text-xs font-semibold text-gray-500 select-none">{group.label}</p>

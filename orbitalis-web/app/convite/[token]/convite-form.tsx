@@ -7,7 +7,7 @@ import { User, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
 
 type Props = {
   token: string
-  tipo: 'tecnico' | 'cliente'
+  tipo: 'tecnico' | 'cliente' | 'admin'
   emailPreenchido: string | null
   nomeEmpresa: string | null
   razaoSocialCliente: string | null
@@ -17,8 +17,8 @@ export function ConviteForm({ token, tipo, emailPreenchido, nomeEmpresa, razaoSo
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  const tipoLabel = tipo === 'tecnico' ? 'técnico' : 'cliente'
-  const destino = tipo === 'tecnico' ? 'Portal do Técnico' : 'Portal do Cliente'
+  const tipoLabel = tipo === 'tecnico' ? 'técnico' : tipo === 'admin' ? 'usuário do escritório' : 'cliente'
+  const destino = tipo === 'tecnico' ? 'Portal do Técnico' : tipo === 'admin' ? 'Painel da empresa' : 'Portal do Cliente'
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

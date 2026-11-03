@@ -4,7 +4,7 @@ import { SearchPalette } from '@/components/ui/search-palette'
 import { AvisosAgendaNotificador } from '@/components/layout/avisos-agenda'
 
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null }
-type UserInfo = { nome: string | null; email: string }
+type UserInfo = { nome: string | null; email: string; acesso?: string[] | null }
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const [config, alertasCount, user] = await Promise.all([
