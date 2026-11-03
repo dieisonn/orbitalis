@@ -65,9 +65,7 @@ export default async function ContratoPage({ params }: Props) {
           <ContratoActions contratoId={id} ativo={contrato.ativo} />
         </div>
 
-        {contrato.renovacoes.length === 0 && (
-          <div className="mb-5"><RenovarContrato contratoId={id} /></div>
-        )}
+        <div className="mb-5"><RenovarContrato contratoId={id} /></div>
 
         {/* Histórico de renovações */}
         {(contrato.renovadoDe || contrato.renovacoes.length > 0) && (

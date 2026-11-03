@@ -98,7 +98,6 @@ export function RenovarContrato({ contratoId }: { contratoId: string }) {
 
             <div className="px-5 py-4 overflow-y-auto space-y-5">
               {!dados && !erro && <p className="text-sm text-gray-500 flex items-center gap-2"><Loader2 size={14} className="animate-spin" /> Carregando…</p>}
-              {dados?.jaRenovado && <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">Este contrato já foi renovado.</p>}
 
               {dados && (
                 <>
@@ -190,7 +189,7 @@ export function RenovarContrato({ contratoId }: { contratoId: string }) {
 
             <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
               <button type="button" onClick={() => setAberto(false)} disabled={pendente} className="px-4 py-2 text-sm font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface">Cancelar</button>
-              <button type="submit" disabled={pendente || !dados || dados.jaRenovado}
+              <button type="submit" disabled={pendente || !dados}
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:opacity-90 disabled:opacity-50">
                 {pendente && <Loader2 size={14} className="animate-spin" />} Renovar
               </button>
