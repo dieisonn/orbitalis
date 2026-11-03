@@ -10,7 +10,7 @@ const PUBLIC = ['/login', '/e/', '/o/', '/convite/', '/registro', '/privacidade'
 const ADMIN_ONLY = [
   '/dashboard', '/clientes', '/ambientes', '/equipamentos', '/ordens-servico', '/planos-manutencao',
   '/usuarios', '/checklists', '/alertas', '/orcamentos', '/contratos', '/equipe', '/financeiro',
-  '/relatorios', '/servicos', '/tecnicos', '/configuracoes', '/agenda',
+  '/relatorios', '/servicos', '/tecnicos', '/configuracoes', '/agenda', '/auditoria',
 ]
 const CLIENT_ONLY = ['/meus-ambientes', '/abrir-chamado', '/historico', '/meu-painel', '/meus-orcamentos']
 const TECNICO_ONLY = ['/minhas-os', '/minha-agenda']

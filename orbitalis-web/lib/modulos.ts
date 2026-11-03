@@ -22,7 +22,8 @@ export const PERFIS: Record<string, { label: string; desc: string; modulos: Modu
 }
 
 // prefixo da rota → módulo (vale o prefixo mais específico). Painel, alertas e perfil são livres.
-const ROTAS: [string, ModuloKey][] = [
+// '/auditoria' usa um módulo que nenhum perfil restrito possui: só administrador com acesso total
+const ROTAS: [string, string][] = [
   ['/agenda', 'agenda'],
   ['/ordens-servico', 'ordens_servico'],
   ['/clientes', 'clientes'], ['/ambientes', 'clientes'], ['/equipamentos', 'clientes'],
@@ -33,10 +34,11 @@ const ROTAS: [string, ModuloKey][] = [
   ['/relatorios', 'relatorios'],
   ['/usuarios', 'equipe'], ['/equipe', 'equipe'], ['/tecnicos', 'equipe'],
   ['/configuracoes', 'configuracoes'], ['/checklists', 'configuracoes'], ['/servicos', 'configuracoes'],
+  ['/auditoria', 'auditoria'],
 ]
 
-export function moduloDaRota(path: string): ModuloKey | null {
-  let melhor: [string, ModuloKey] | null = null
+export function moduloDaRota(path: string): string | null {
+  let melhor: [string, string] | null = null
   for (const r of ROTAS) {
     if ((path === r[0] || path.startsWith(r[0] + '/')) && (!melhor || r[0].length > melhor[0].length)) melhor = r
   }

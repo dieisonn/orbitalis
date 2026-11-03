@@ -26,6 +26,7 @@ import {
   ReceiptText,
   TrendingUp,
   UsersRound,
+  History,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
@@ -78,6 +79,7 @@ const NAV_GROUPS: { label: string | null; items: { href: string; label: string; 
       { href: '/checklists',    label: 'Modelos de checklist', icon: ClipboardCheck },
       { href: '/servicos',      label: 'Tipos de serviço',     icon: Briefcase },
       { href: '/configuracoes', label: 'Empresa e marca',      icon: Settings },
+      { href: '/auditoria',     label: 'Registro de atividades', icon: History },
     ],
   },
 ]
