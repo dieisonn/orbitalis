@@ -813,7 +813,6 @@ export class OrdensServicoService {
     if (!v) return undefined;
     const d = new Date(v);
     if (isNaN(d.getTime())) throw new BadRequestException('Data inválida');
-    if (d.getTime() > Date.now() + 5 * 60_000) throw new BadRequestException('A data não pode estar no futuro');
     return d;
   }
 

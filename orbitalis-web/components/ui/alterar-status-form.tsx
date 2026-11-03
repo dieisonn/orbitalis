@@ -17,6 +17,11 @@ const LABELS: Record<OsStatus, string> = {
 const ALL: OsStatus[] = ['aberta', 'agendada', 'em_andamento', 'concluida', 'cancelada']
 
 // data/hora atual de Brasília no formato do campo datetime-local
+function dataDiferente(local: string) {
+  if (!local) return false
+  return Math.abs(new Date(`${local}:00-03:00`).getTime() - Date.now()) > 30 * 60_000
+}
+
 function agoraLocal() {
   return new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 16)
 }
@@ -74,8 +79,13 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
               <label className="block text-xs text-gray-500 mb-1">
                 {selected === 'concluida' ? 'Concluída em' : selected === 'em_andamento' ? 'Iniciada em' : 'Cancelada em'}
               </label>
-              <input type="datetime-local" value={quando} max={agoraLocal()} onChange={(e) => setQuando(e.target.value)}
+              <input type="datetime-local" value={quando} onChange={(e) => setQuando(e.target.value)}
                 className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              {dataDiferente(quando) && (
+                <p role="alert" className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                  Atenção: a data é {new Date(`${quando}:00-03:00`).getTime() > Date.now() ? 'no futuro' : 'diferente de agora'}. Isso é permitido, mas o ideal é registrar o status quando ele acontece; o histórico mostrará a data informada e quando foi registrado.
+                </p>
+              )}
             </div>
           )}
           {changed && (

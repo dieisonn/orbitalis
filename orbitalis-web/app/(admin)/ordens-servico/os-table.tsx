@@ -254,6 +254,11 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
               className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 border border-white/20 focus:outline-none [color-scheme:dark]"
             />
           )}
+          {bulkQuando && Math.abs(new Date(`${bulkQuando}:00-03:00`).getTime() - Date.now()) > 30 * 60_000 && (
+            <span role="alert" className="text-xs text-amber-300 max-w-48 leading-tight">
+              Data diferente de agora: permitido, mas o ideal é registrar quando acontece.
+            </span>
+          )}
           <button
             onClick={aplicarLote}
             disabled={isPending}
