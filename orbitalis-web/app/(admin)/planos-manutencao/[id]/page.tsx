@@ -75,6 +75,9 @@ export default async function DetalhePlanoPage({ params }: Props) {
   const proxData = new Date(plano.proximaGeracao)
   const agora = new Date()
   const elegivel = plano.ativo && proxData <= agora
+  // Ao gerar a última visita o motor encerra a geração (ativo=false), mas o plano segue em andamento até as O.S. terminarem
+  const pendentes = os.filter((o) => !['concluida', 'cancelada'].includes(o.status)).length
+  const emAndamento = plano.ativo || pendentes > 0
 
   const dispararAction = gerarOsPlano.bind(null, id)
 
@@ -116,7 +119,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap sm:justify-end">
-            {plano.ativo
+            {emAndamento
               ? <span className="flex items-center gap-1.5 text-xs font-semibold text-action bg-action/10 px-2.5 py-1 rounded-full"><CheckCircle size={12} />Ativo</span>
               : <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full"><XCircle size={12} />Inativo</span>
             }

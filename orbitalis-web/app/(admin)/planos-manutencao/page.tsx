@@ -12,7 +12,7 @@ type Plano = {
   ultimaGeracao: string | null
   cliente: { razaoSocial: string; nomeFantasia: string | null }
   tecnico: { email: string; nome: string | null } | null
-  _count: { equipamentosConfig: number }
+  _count: { equipamentosConfig: number; ordensServico?: number }
 }
 
 type ApiResponse = { data: Plano[]; total: number; page: number; perPage: number }
@@ -88,7 +88,8 @@ export default async function PlanosPage({ searchParams }: Props) {
                     {new Date(p.proximaGeracao).toLocaleDateString('pt-BR')}
                   </td>
                   <td className="px-4 py-3">
-                    {p.ativo
+                    {/* plano que já gerou todas as visitas fica "ativo" enquanto houver O.S. a executar */}
+                    {p.ativo || (p._count?.ordensServico ?? 0) > 0
                       ? <CheckCircle size={16} className="text-action" />
                       : <XCircle size={16} className="text-destructive" />}
                   </td>
