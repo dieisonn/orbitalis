@@ -18,12 +18,15 @@ export default async function EditarClientePage({ params }: Props) {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-primary">Editar Cliente</h1>
-        <p className="text-gray-500 text-sm mt-1">{cliente.razaoSocial}</p>
+    <div>
+      <div className="flex items-center gap-2 mb-8">
+        <a href="/clientes" className="text-sm text-gray-500 hover:text-primary transition-colors">← Clientes</a>
+        <span className="text-gray-300">/</span>
+        <h1 className="text-xl font-semibold text-gray-900">Editar Cliente</h1>
+        <span className="text-sm text-gray-500">· {cliente.razaoSocial}</span>
       </div>
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-border">
+      <div className="max-w-xl">
+        <div className="bg-white rounded-xl border border-border p-6">
         <EditarClienteForm
           id={cliente.id}
           documento={cliente.documento}
@@ -36,6 +39,7 @@ export default async function EditarClientePage({ params }: Props) {
           endereco={cliente.endereco}
           telefone={cliente.telefone}
         />
+        </div>
       </div>
     </div>
   )
