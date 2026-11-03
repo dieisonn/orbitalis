@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AgendaService } from '../agenda/agenda.service';
 import { BadRequestException } from '@nestjs/common';
 import { CreateClienteDto, ImportarClientesDto, UpdateClienteDto } from './dto/create-cliente.dto';
 
@@ -24,7 +25,7 @@ export type ResultadoImportacao = {
 
 @Injectable()
 export class ClientesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly agenda: AgendaService) {}
 
   async create(dto: CreateClienteDto) {
     const documento = soDigitos(dto.documento) || null;
@@ -305,7 +306,16 @@ export class ClientesService {
       }
       data.documento = documento || null;
     }
-    return this.prisma.cliente.update({ where: { id }, data });
+    const atualizado = await this.prisma.cliente.update({ where: { id }, data });
+    // Contratos, planos, ambientes e O.S. apontam para o cliente por vínculo e já refletem a mudança.
+    // Só os textos dos eventos da agenda (título/local) são cópias: refaz os das O.S. ainda em aberto.
+    const abertas = await this.prisma.ordemServico.findMany({
+      where: { ambiente: { clienteId: id }, status: { in: ['aberta', 'agendada'] } },
+      select: { id: true },
+      take: 1000,
+    });
+    for (const o of abertas) await this.agenda.sincronizarOs(o.id);
+    return atualizado;
   }
 
   // GET /clientes/meu-perfil — retorna o perfil do cliente autenticado com seus ambientes
