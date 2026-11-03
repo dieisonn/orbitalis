@@ -100,7 +100,7 @@ export class PlanosManutencaoService {
           cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
           tecnico: { select: { email: true, nome: true } },
           tipoServico: { select: { sigla: true, corHex: true } },
-          _count: { select: { equipamentosConfig: true } },
+          _count: { select: { equipamentosConfig: true, ordensServico: { where: { status: { notIn: ['concluida', 'cancelada'] } } } } },
         },
         orderBy: [{ cliente: { razaoSocial: 'asc' } }, { proximaGeracao: 'asc' }],
         skip,
