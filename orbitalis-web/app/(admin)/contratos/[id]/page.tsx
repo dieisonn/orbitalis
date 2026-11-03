@@ -125,7 +125,7 @@ export default async function ContratoPage({ params }: Props) {
               <Link href={`/contratos/${id}/calendario`} className="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline">
                 <CalendarDays size={12} aria-hidden="true" /> Calendário (PDF)
               </Link>
-              <a href="/planos-manutencao/novo" className="text-xs text-primary font-semibold hover:underline">+ Plano preventivo</a>
+              <a href={`/planos-manutencao/novo?contratoId=${id}`} className="text-xs text-primary font-semibold hover:underline">+ Plano preventivo</a>
             </div>
           </div>
           {contrato.consumo.planos === 0 ? (

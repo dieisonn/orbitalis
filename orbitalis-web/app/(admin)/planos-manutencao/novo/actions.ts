@@ -19,6 +19,7 @@ export async function criarPlano(data: {
   horaInicio?: string
   horaFim?: string
   equipamentosConfig: EquipConfig[]
+  voltarPara?: string
 }) {
   await api.post('/planos-manutencao', {
     clienteId: data.clienteId,
@@ -36,5 +37,5 @@ export async function criarPlano(data: {
     ativo: true,
     equipamentosConfig: data.equipamentosConfig,
   })
-  redirect('/planos-manutencao')
+  redirect(data.voltarPara && /^\/contratos\/[\w-]+$/.test(data.voltarPara) ? data.voltarPara : '/planos-manutencao')
 }

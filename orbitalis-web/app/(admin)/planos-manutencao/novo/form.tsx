@@ -48,6 +48,7 @@ export function NovoPlanoForm({
   checklists,
   tiposServico,
   contratos,
+  contratoInicialId,
 }: {
   clientes: { id: string; razaoSocial: string; nomeFantasia: string | null }[]
   ambientes: Ambiente[]
@@ -55,18 +56,26 @@ export function NovoPlanoForm({
   checklists: Checklist[]
   tiposServico: TipoServico[]
   contratos: ContratoOpcao[]
+  contratoInicialId?: string
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [clienteId, setClienteId] = useState('')
-  const [tipoServicoId, setTipoServicoId] = useState('')
-  const [contratoId, setContratoId] = useState('')
+  // Vindo de um contrato: cliente, contrato e tipo (preventiva) já vêm preenchidos
+  const inicial = contratos.find((c) => c.id === contratoInicialId)
+  const [clienteId, setClienteId] = useState(inicial?.clienteId ?? '')
+  const [tipoServicoId, setTipoServicoId] = useState(() =>
+    inicial ? (tiposServico.find((t) => /preventiv/i.test(t.nome))?.id ?? '') : '')
+  const [contratoId, setContratoId] = useState(inicial?.id ?? '')
   const [visitas, setVisitas] = useState('')
   const [freq, setFreq] = useState(30)
   const [prox, setProx] = useState(() => hojeISO())
-  const [limite, setLimite] = useState('')
+  const [limite, setLimite] = useState(inicial?.vigenciaFim?.slice(0, 10) ?? '')
   // { equipamentoId: modeloChecklistId | '' }
-  const [checklistPorEquip, setChecklistPorEquip] = useState<Record<string, string>>({})
+  const [checklistPorEquip, setChecklistPorEquip] = useState<Record<string, string>>(() => {
+    const configs: Record<string, string> = {}
+    if (inicial) for (const a of ambientes) if (a.clienteId === inicial.clienteId) for (const eq of a.equipamentos) configs[eq.id] = ''
+    return configs
+  })
 
   const hoje = hojeISO()
   const base = prox || hoje
@@ -137,6 +146,7 @@ export function NovoPlanoForm({
           horaInicio: fd.get('horaInicio') as string,
           horaFim: fd.get('horaFim') as string,
           equipamentosConfig,
+          voltarPara: inicial ? `/contratos/${inicial.id}` : undefined,
         })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar plano'
@@ -152,14 +162,27 @@ export function NovoPlanoForm({
         <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Configurações do Plano</h2>
 
         {/* Cliente */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Cliente <span className="text-destructive">*</span>
-          </label>
-          <ClienteSelect clientes={clientes} value={clienteId} onChange={handleClienteChange} required ariaLabel="Cliente" />
-        </div>
+        {inicial ? (
+          <div className="rounded-lg bg-surface border border-border px-4 py-3 text-sm">
+            <p className="text-xs text-gray-500">Cliente</p>
+            <p className="font-semibold text-gray-900">
+              {(() => { const c = clientes.find((x) => x.id === inicial.clienteId); return c ? (c.nomeFantasia ?? c.razaoSocial) : '—' })()}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">Contrato</p>
+            <p className="font-semibold text-gray-900">{inicial.descricao}</p>
+          </div>
+        ) : (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cliente <span className="text-destructive">*</span>
+              </label>
+              <ClienteSelect clientes={clientes} value={clienteId} onChange={handleClienteChange} required ariaLabel="Cliente" />
+            </div>
 
-        <ContratoSelect contratos={contratos} clienteId={clienteId} value={contratoId} onChange={setContratoId} />
+            <ContratoSelect contratos={contratos} clienteId={clienteId} value={contratoId} onChange={setContratoId} />
+          </>
+        )}
 
         {/* Tipo de Serviço */}
         {tiposServico.length > 0 && (

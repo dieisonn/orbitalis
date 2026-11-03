@@ -25,7 +25,8 @@ type Tecnico     = { id: string; email: string; nome: string | null }
 type Checklist   = { id: string; nome: string }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
-export default async function NovoPlanoPage() {
+export default async function NovoPlanoPage({ searchParams }: { searchParams: Promise<{ contratoId?: string }> }) {
+  const { contratoId } = await searchParams
   const [clientesRes, ambientesRes, tecnicosRes, checklistsRes, tiposRes, contratosRes] = await Promise.all([
     api.get<{ data: ClienteOpcao[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as ClienteOpcao[] })),
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
@@ -63,7 +64,7 @@ export default async function NovoPlanoPage() {
           </p>
         </div>
       ) : (
-        <NovoPlanoForm clientes={clientesRes.data} ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} tiposServico={tiposServico} contratos={contratos} />
+        <NovoPlanoForm clientes={clientesRes.data} ambientes={ambientes} tecnicos={tecnicos} checklists={checklists} tiposServico={tiposServico} contratos={contratos} contratoInicialId={contratoId} />
       )}
     </div>
   )
