@@ -58,6 +58,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('concluida')
+  const [bulkQuando, setBulkQuando] = useState('')
   const [isPending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
   const [excluindo, setExcluindo] = useState(false)
@@ -87,7 +88,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
     setErro(null)
     const ids = Array.from(selected)
     startTransition(async () => {
-      const res = await alterarStatusLote(ids, bulkStatus)
+      const res = await alterarStatusLote(ids, bulkStatus, bulkStatus === 'concluida' || bulkStatus === 'em_andamento' ? bulkQuando || undefined : undefined)
       if (!res.ok) {
         setErro(res.error ?? 'Erro desconhecido')
         return
@@ -243,6 +244,16 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {(bulkStatus === 'concluida' || bulkStatus === 'em_andamento') && (
+            <input
+              type="datetime-local"
+              value={bulkQuando}
+              onChange={(e) => setBulkQuando(e.target.value)}
+              title="Quando aconteceu (vazio = agora)"
+              aria-label="Quando aconteceu (vazio = agora)"
+              className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 border border-white/20 focus:outline-none [color-scheme:dark]"
+            />
+          )}
           <button
             onClick={aplicarLote}
             disabled={isPending}

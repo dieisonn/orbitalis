@@ -57,7 +57,19 @@ type OrdemServico = {
   }
   tecnico: Tecnico | null
   itens: OsItem[]
+  dataCriacao?: string
+  historico?: {
+    id: string; deStatus: string | null; paraStatus: string; ocorridoEm: string; registradoEm: string
+    usuarioNome: string | null; observacao: string | null
+  }[]
 }
+
+const STATUS_LABEL: Record<string, string> = {
+  aberta: 'Aberta', agendada: 'Agendada', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada',
+}
+
+const fmtDataHora = (d: string) =>
+  new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 
 const ORIGEM_LABEL: Record<string, string> = {
   manual_admin:          'Manual (Admin)',
@@ -216,7 +228,7 @@ export default async function OsDetailPage({ params }: Props) {
             <p className="text-xs text-gray-400 mb-1 flex items-center gap-1">
               <Clock size={10} /> Conclusão
             </p>
-            <p className="text-sm font-semibold text-gray-800">{fmtDate(os.dataConclusao)}</p>
+            <p className="text-sm font-semibold text-gray-800">{os.dataConclusao ? fmtDataHora(os.dataConclusao) : '—'}</p>
           </div>
         </div>
 
@@ -251,6 +263,37 @@ export default async function OsDetailPage({ params }: Props) {
           </div>
         </div>
       )}
+
+      {/* Histórico de status */}
+      <div className="bg-white rounded-xl border border-border p-5 mb-4">
+        <h2 className="text-base font-bold text-gray-800 mb-3">Histórico</h2>
+        <ol className="space-y-3">
+          {os.dataCriacao && (
+            <li className="flex gap-3 text-sm">
+              <span className="mt-1.5 w-2 h-2 rounded-full bg-gray-300 shrink-0" aria-hidden="true" />
+              <div><p className="font-semibold text-gray-800">O.S. criada</p><p className="text-xs text-gray-500">{fmtDataHora(os.dataCriacao)}</p></div>
+            </li>
+          )}
+          {(os.historico ?? []).map((h) => (
+            <li key={h.id} className="flex gap-3 text-sm">
+              <span className="mt-1.5 w-2 h-2 rounded-full bg-action shrink-0" aria-hidden="true" />
+              <div>
+                <p className="font-semibold text-gray-800">
+                  {h.deStatus ? `${STATUS_LABEL[h.deStatus] ?? h.deStatus} → ` : ''}{STATUS_LABEL[h.paraStatus] ?? h.paraStatus}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {fmtDataHora(h.ocorridoEm)}{h.usuarioNome ? ` · por ${h.usuarioNome}` : ''}
+                  {Math.abs(new Date(h.registradoEm).getTime() - new Date(h.ocorridoEm).getTime()) > 10 * 60_000 && ` · registrado em ${fmtDataHora(h.registradoEm)}`}
+                </p>
+                {h.observacao && <p className="text-xs text-gray-600 mt-0.5">{h.observacao}</p>}
+              </div>
+            </li>
+          ))}
+        </ol>
+        {(os.historico ?? []).length === 0 && (
+          <p className="text-xs text-gray-400 mt-2">Mudanças de status feitas daqui em diante ficam registradas aqui, com data, hora e responsável.</p>
+        )}
+      </div>
 
       {/* Itens / Checklist por equipamento */}
       <div>

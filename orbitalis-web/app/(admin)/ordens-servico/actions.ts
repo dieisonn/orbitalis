@@ -19,9 +19,12 @@ export async function cancelarOs(osId: string) {
   }
 }
 
-export async function alterarStatusOs(osId: string, status: string) {
+// "2026-11-03T14:30" (horário de Brasília, digitado no campo) → instante em UTC
+const paraInstante = (local?: string) => (local ? new Date(`${local}:00-03:00`).toISOString() : undefined)
+
+export async function alterarStatusOs(osId: string, status: string, quando?: string, observacao?: string) {
   try {
-    await api.patch(`/ordens-servico/${osId}/status`, { status })
+    await api.patch(`/ordens-servico/${osId}/status`, { status, dataOcorrencia: paraInstante(quando), observacao: observacao?.trim() || undefined })
     return { ok: true as const }
   } catch (err) {
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao alterar status' }
@@ -40,9 +43,9 @@ export async function concluirOs(
   }
 }
 
-export async function alterarStatusLote(ids: string[], status: string) {
+export async function alterarStatusLote(ids: string[], status: string, quando?: string, observacao?: string) {
   try {
-    const res = await api.patch<{ atualizadas: number }>('/ordens-servico/bulk-status', { ids, status })
+    const res = await api.patch<{ atualizadas: number }>('/ordens-servico/bulk-status', { ids, status, dataOcorrencia: paraInstante(quando), observacao: observacao?.trim() || undefined })
     return { ok: true as const, atualizadas: res.atualizadas }
   } catch (err) {
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao alterar status em lote' }

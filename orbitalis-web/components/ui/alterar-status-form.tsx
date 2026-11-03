@@ -16,11 +16,18 @@ const LABELS: Record<OsStatus, string> = {
 
 const ALL: OsStatus[] = ['aberta', 'agendada', 'em_andamento', 'concluida', 'cancelada']
 
+// data/hora atual de Brasília no formato do campo datetime-local
+function agoraLocal() {
+  return new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 16)
+}
+
 export function AlterarStatusForm({ osId, status }: { osId: string; status: OsStatus }) {
   const [pending, startTransition] = useTransition()
   const [selected, setSelected] = useState<OsStatus>(status)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [quando, setQuando] = useState(agoraLocal)
+  const [obs, setObs] = useState('')
   const router = useRouter()
 
   // Não exibe para status 'aberta' — o TriarForm já cuida dessa transição
@@ -32,7 +39,7 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
     if (!changed) return
     setError(null)
     startTransition(async () => {
-      const result = await alterarStatusOs(osId, selected)
+      const result = await alterarStatusOs(osId, selected, quando, obs)
       if (!result.ok) { setError(result.error ?? 'Erro'); return }
       setOpen(false)
       router.refresh()
@@ -43,7 +50,7 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
     <div className="text-right">
       <button
         type="button"
-        onClick={() => { setOpen((v) => !v); setSelected(status); setError(null) }}
+        onClick={() => { setOpen((v) => !v); setSelected(status); setError(null); setQuando(agoraLocal()); setObs('') }}
         className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
       >
         <RefreshCw size={11} />
@@ -51,7 +58,7 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
       </button>
 
       {open && (
-        <div className="mt-2 p-3 bg-white border border-border rounded-xl shadow-md text-left w-48 space-y-2">
+        <div className="mt-2 p-3 bg-white border border-border rounded-xl shadow-md text-left w-64 space-y-2">
           <p className="text-xs font-semibold text-gray-600">Novo status:</p>
           <select
             value={selected}
@@ -62,6 +69,19 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
               <option key={s} value={s}>{LABELS[s]}</option>
             ))}
           </select>
+          {changed && selected !== 'aberta' && selected !== 'agendada' && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">
+                {selected === 'concluida' ? 'Concluída em' : selected === 'em_andamento' ? 'Iniciada em' : 'Cancelada em'}
+              </label>
+              <input type="datetime-local" value={quando} max={agoraLocal()} onChange={(e) => setQuando(e.target.value)}
+                className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
+          )}
+          {changed && (
+            <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} placeholder="Observação (opcional)"
+              className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          )}
           {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2">
             <button
