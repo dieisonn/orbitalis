@@ -61,3 +61,21 @@ export async function renovarContrato(id: string, body: {
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao renovar' }
   }
 }
+
+export async function editarContrato(id: string, formData: FormData) {
+  const num = (k: string) => { const v = (formData.get(k) as string | null)?.replace(',', '.').trim(); return v ? Number(v) : null }
+  try {
+    await api.patch(`/contratos/${id}`, {
+      clienteId: formData.get('clienteId') as string,
+      descricao: formData.get('descricao') as string,
+      valorMensal: num('valorMensal'),
+      numOsIncluidas: num('numOsIncluidas'),
+      vigenciaInicio: formData.get('vigenciaInicio') as string,
+      vigenciaFim: formData.get('vigenciaFim') as string,
+      observacoes: ((formData.get('observacoes') as string) || '').trim() || null,
+    })
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar' }
+  }
+  redirect(`/contratos/${id}`)
+}

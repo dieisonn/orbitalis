@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { MoreVertical, PowerOff, Trash2 } from 'lucide-react'
+import { MoreVertical, Pencil, PowerOff, Trash2 } from 'lucide-react'
 import { atualizarContrato, excluirContrato } from '../actions'
 
 export function ContratoActions({ contratoId, ativo }: { contratoId: string; ativo: boolean }) {
@@ -37,6 +37,10 @@ export function ContratoActions({ contratoId, ativo }: { contratoId: string; ati
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-9 z-50 bg-white border border-border rounded-xl shadow-xl w-48 overflow-hidden py-1">
+            <a href={`/contratos/${contratoId}/editar`}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-surface transition-colors">
+              <Pencil size={14} className="text-gray-400" /> Editar contrato
+            </a>
             <button onClick={toggleAtivo} disabled={pending}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-surface transition-colors">
               <PowerOff size={14} className="text-gray-400" />

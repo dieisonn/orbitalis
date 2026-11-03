@@ -1,6 +1,6 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
-import { FileText, AlertTriangle, CheckCircle } from 'lucide-react'
+import { FileText, AlertTriangle, CheckCircle, Pencil } from 'lucide-react'
 import { ContratoActions } from './contrato-actions'
 import { RenovarContrato } from './renovar-contrato'
 import { CalendarDays } from 'lucide-react'
@@ -65,7 +65,12 @@ export default async function ContratoPage({ params }: Props) {
           <ContratoActions contratoId={id} ativo={contrato.ativo} />
         </div>
 
-        <div className="mb-5"><RenovarContrato contratoId={id} /></div>
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <RenovarContrato contratoId={id} />
+          <Link href={`/contratos/${id}/editar`} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface transition-colors">
+            <Pencil size={14} aria-hidden="true" /> Editar
+          </Link>
+        </div>
 
         {/* Histórico de renovações */}
         {(contrato.renovadoDe || contrato.renovacoes.length > 0) && (
