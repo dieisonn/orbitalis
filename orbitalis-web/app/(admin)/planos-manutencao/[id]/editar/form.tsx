@@ -10,14 +10,6 @@ import { CamposVisita } from '../../campos-visita'
 import { Building2 } from 'lucide-react'
 import { textoSobre } from '@/lib/cor'
 
-const FREQUENCIAS = [
-  { label: 'Mensal',      value: 30 },
-  { label: 'Bimestral',   value: 60 },
-  { label: 'Trimestral',  value: 90 },
-  { label: 'Semestral',  value: 180 },
-  { label: 'Anual',      value: 365 },
-]
-
 type Equipamento = {
   id: string
   nome: string
@@ -228,12 +220,7 @@ export function EditarPlanoForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Frequência <span className="text-destructive">*</span>
             </label>
-            <select name="frequenciaDias" required defaultValue={frequenciaDias} onChange={(e) => setFreq(Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white">
-              {FREQUENCIAS.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </select>
+            <CampoFrequencia valorInicial={frequenciaDias} onChange={setFreq} />
           </div>
 
           {/* Próxima geração */}

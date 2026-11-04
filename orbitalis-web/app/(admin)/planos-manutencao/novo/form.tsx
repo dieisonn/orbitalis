@@ -6,6 +6,7 @@ import { criarPlano } from './actions'
 import { CampoVisitas } from '../campo-visitas'
 import { CamposVisita } from '../campos-visita'
 import { Building2, Cpu } from 'lucide-react'
+import { CampoFrequencia } from '@/components/ui/campo-frequencia'
 import { textoSobre } from '@/lib/cor'
 import { CampoData } from '@/components/ui/campo-data'
 import { hojeISO, somarDiasISO, somarMesesISO, proximoDiaDaSemana } from '@/lib/datas'
@@ -32,14 +33,6 @@ type Ambiente = {
 type Tecnico     = { id: string; email: string; nome: string | null }
 type Checklist   = { id: string; nome: string }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
-
-const FREQUENCIAS = [
-  { label: 'Mensal',      value: 30 },
-  { label: 'Bimestral',   value: 60 },
-  { label: 'Trimestral',  value: 90 },
-  { label: 'Semestral',  value: 180 },
-  { label: 'Anual',      value: 365 },
-]
 
 export function NovoPlanoForm({
   clientes: clientesCadastro,
@@ -232,17 +225,7 @@ export function NovoPlanoForm({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Frequência <span className="text-destructive">*</span>
             </label>
-            <select
-              name="frequenciaDias"
-              required
-              defaultValue={30}
-              onChange={(e) => setFreq(Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-            >
-              {FREQUENCIAS.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </select>
+            <CampoFrequencia valorInicial={30} onChange={setFreq} />
           </div>
 
           {/* Primeira geração */}
