@@ -24,26 +24,39 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto) {
-    // findUnique não passa pelo tenant filter — busca em todos os tenants
-    const usuario = await this.prisma.usuario.findUnique({
-      where: { email: dto.email },
-      select: {
-        id: true,
-        email: true,
-        senhaHash: true,
-        tipo: true,
-        empresaId: true,
-        perfilAcesso: true,
-        permissoes: true,
-      },
-    });
+    // O mesmo e-mail pode existir em empresas diferentes: busca todas as contas com esse e-mail (sem tenant filter)
+    // e fica com as que batem com a senha informada.
+    const email = dto.email.trim().toLowerCase();
+    const candidatos = await this.prisma.$queryRaw<
+      { id: string; email: string; senhaHash: string; tipo: UsuarioTipo; empresaId: string | null; perfilAcesso: string | null; permissoes: string[] }[]
+    >`SELECT id, email, senha_hash AS "senhaHash", tipo, empresa_id AS "empresaId", perfil_acesso AS "perfilAcesso", permissoes
+      FROM usuarios WHERE lower(email) = ${email} AND empresa_id IS NOT NULL`;
 
-    if (!usuario) throw new UnauthorizedException('Credenciais inválidas');
+    if (candidatos.length === 0) throw new UnauthorizedException('Credenciais inválidas');
 
-    const senhaValida = await bcrypt.compare(dto.senha, usuario.senhaHash);
-    if (!senhaValida) {
-      await this.registrarAcesso(usuario, 'login_falha', 'Tentativa de login com senha incorreta');
+    const validos: typeof candidatos = [];
+    for (const c of candidatos) {
+      if (await bcrypt.compare(dto.senha, c.senhaHash)) validos.push(c);
+    }
+    if (validos.length === 0) {
+      await this.registrarAcesso(candidatos[0], 'login_falha', 'Tentativa de login com senha incorreta');
       throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    let usuario = validos[0];
+    if (dto.empresaId) {
+      const escolhido = validos.find((v) => v.empresaId === dto.empresaId);
+      if (!escolhido) throw new UnauthorizedException('Credenciais inválidas');
+      usuario = escolhido;
+    } else if (validos.length > 1) {
+      const empresas = await this.prisma.empresa.findMany({
+        where: { id: { in: validos.map((v) => v.empresaId as string) } },
+        select: { id: true, nomeEmpresa: true, nomeFantasia: true },
+      });
+      throw new ConflictException({
+        message: 'Este e-mail tem acesso a mais de uma empresa. Escolha qual deseja acessar.',
+        empresas: empresas.map((e) => ({ id: e.id, nome: e.nomeFantasia || e.nomeEmpresa })),
+      });
     }
 
     // Cliente excluído (soft delete) perde o acesso ao portal
@@ -87,12 +100,6 @@ export class AuthService {
       where: { slug: dto.slug },
     });
     if (slugExiste) throw new ConflictException('Slug já está em uso');
-
-    // Verifica unicidade de e-mail (sem tenant filter)
-    const emailExiste = await this.prisma.usuario.findUnique({
-      where: { email: dto.email },
-    });
-    if (emailExiste) throw new ConflictException('E-mail já cadastrado');
 
     // Cria empresa
     const empresa = await this.prisma.empresa.create({

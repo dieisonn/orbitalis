@@ -95,9 +95,9 @@ export class UsuariosController {
   @Modulo('equipe')
   async criarTecnico(@Body() body: { email: string; senha: string; nome?: string; telefone?: string; especialidade?: string; crea?: string }) {
     if (!body.email || !body.senha) throw new BadRequestException('Email e senha são obrigatórios');
-    // e-mail é único no sistema todo (não só nesta empresa): confere sem o filtro de empresa
-    const emUso = await this.prisma.$queryRaw<{ id: string }[]>`SELECT id FROM usuarios WHERE lower(email) = ${body.email.trim().toLowerCase()} LIMIT 1`;
-    if (emUso.length > 0) throw new BadRequestException('Este e-mail já tem cadastro no sistema');
+    // o e-mail só não pode repetir dentro desta empresa (findFirst já filtra pela empresa)
+    const emUso = await this.prisma.usuario.findFirst({ where: { email: { equals: body.email.trim(), mode: 'insensitive' } }, select: { id: true } });
+    if (emUso) throw new BadRequestException('Este e-mail já tem cadastro nesta empresa');
     if ((body.telefone ?? '').length > 20) throw new BadRequestException('O telefone pode ter no máximo 20 caracteres');
     const senhaHash = await bcrypt.hash(body.senha, 10);
     return this.prisma.usuario.create({

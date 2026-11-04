@@ -114,7 +114,8 @@ model Convite {
 // ─────────────────────────────────────────
 model Usuario {
   id            String      @id @default(uuid()) @db.Uuid
-  email         String      @unique @db.VarChar(255)
+  // único por empresa (índice parcial em lower(email)+empresa_id, criado na migration): o mesmo e-mail pode existir em empresas diferentes
+  email         String      @db.VarChar(255)
   senhaHash     String      @map("senha_hash") @db.VarChar(255)
   tipo          UsuarioTipo
   nome          String?     @db.VarChar(150)
@@ -136,6 +137,7 @@ model Usuario {
   orcamentosCriados              Orcamento[]       @relation("OrcamentoCriadoPor")
   eventosComoTecnico             EventoAgenda[]    @relation("EventoTecnico")
 
+  @@index([email])
   @@map("usuarios")
 }
 

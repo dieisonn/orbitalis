@@ -101,8 +101,9 @@ export class ConvitesService {
     const email = dto.email ?? convite.email;
     if (!email) throw new BadRequestException('E-mail é obrigatório');
 
-    const existe = await this.prisma.usuario.findUnique({ where: { email } });
-    if (existe) throw new ConflictException('E-mail já cadastrado');
+    // o e-mail só não pode repetir dentro da mesma empresa (outras empresas são sistemas independentes)
+    const existe = await this.prisma.$queryRaw<{ id: string }[]>`SELECT id FROM usuarios WHERE lower(email) = ${email.trim().toLowerCase()} AND empresa_id = ${convite.empresaId}::uuid LIMIT 1`;
+    if (existe.length > 0) throw new ConflictException('Este e-mail já tem cadastro nesta empresa');
 
     const senhaHash = await bcrypt.hash(dto.senha, 10);
     const tipo =

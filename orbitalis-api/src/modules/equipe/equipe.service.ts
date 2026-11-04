@@ -86,9 +86,9 @@ export class EquipeService {
 
     if (nome.length > 150) throw new BadRequestException('O nome pode ter no máximo 150 caracteres');
     if ((dto.telefone ?? '').trim().length > 20) throw new BadRequestException('O telefone pode ter no máximo 20 caracteres');
-    // e-mail é único no sistema todo (não só nesta empresa): confere sem o filtro de empresa
-    const emUso = await this.prisma.$queryRaw<{ id: string }[]>`SELECT id FROM usuarios WHERE lower(email) = ${email} LIMIT 1`;
-    if (emUso.length > 0) throw new ConflictException('Este e-mail já tem cadastro no sistema');
+    // o e-mail só não pode repetir dentro desta empresa (findFirst já filtra pela empresa)
+    const emUso = await this.prisma.usuario.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, select: { id: true } });
+    if (emUso) throw new ConflictException('Este e-mail já tem cadastro nesta empresa');
 
     const criado = await this.prisma.usuario.create({
       data: {
@@ -148,9 +148,14 @@ export class EquipeService {
       }
     }
 
-    await this.prisma.usuario.update({
-      where: { id: userId },
-      data: { empresaId: null },
-    });
+    // Remove o acesso mas mantém o registro (histórico de O.S., agenda e log). O e-mail e a senha são
+    // invalidados para que o e-mail fique livre para um novo cadastro e a conta antiga não consiga mais entrar.
+    await this.prisma.$transaction([
+      this.prisma.cliente.updateMany({ where: { usuarioId: userId }, data: { usuarioId: null } }),
+      this.prisma.usuario.update({
+        where: { id: userId },
+        data: { empresaId: null, email: `removido+${userId}@removido.invalid`, senhaHash: '!' },
+      }),
+    ]);
   }
 }
