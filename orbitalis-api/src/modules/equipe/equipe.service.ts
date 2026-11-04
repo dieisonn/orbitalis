@@ -84,8 +84,11 @@ export class EquipeService {
     if (!dto.senha || dto.senha.length < 6) throw new BadRequestException('A senha precisa ter ao menos 6 caracteres');
     const acesso = this.acessoOuErro(dto.perfilAcesso, dto.permissoes, quem);
 
-    const existe = await this.prisma.usuario.findUnique({ where: { email } });
-    if (existe) throw new ConflictException('E-mail já cadastrado');
+    if (nome.length > 150) throw new BadRequestException('O nome pode ter no máximo 150 caracteres');
+    if ((dto.telefone ?? '').trim().length > 20) throw new BadRequestException('O telefone pode ter no máximo 20 caracteres');
+    // e-mail é único no sistema todo (não só nesta empresa): confere sem o filtro de empresa
+    const emUso = await this.prisma.$queryRaw<{ id: string }[]>`SELECT id FROM usuarios WHERE lower(email) = ${email} LIMIT 1`;
+    if (emUso.length > 0) throw new ConflictException('Este e-mail já tem cadastro no sistema');
 
     const criado = await this.prisma.usuario.create({
       data: {

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { TenantInterceptor } from './common/interceptors/tenant.interceptor';
 import { AuditoriaInterceptor } from './common/interceptors/auditoria.interceptor';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
@@ -32,6 +33,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
 @Module({
   controllers: [HealthController],
   providers: [
+    { provide: APP_FILTER, useClass: PrismaExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: TenantInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor },
   ],
