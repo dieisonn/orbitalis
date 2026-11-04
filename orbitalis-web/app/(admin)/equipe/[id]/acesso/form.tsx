@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { AcessoFields } from '../../acesso-fields'
@@ -8,19 +8,20 @@ import { atualizarAcessoUsuario } from '../../actions'
 
 export function EditarAcessoForm({ userId, perfil, modulos }: { userId: string; perfil: string; modulos: string[] }) {
   const router = useRouter()
-  const [pendente, start] = useTransition()
+  const [pendente, setPendente] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
   function salvar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
     setErro(null)
-    start(async () => {
-      const r = await atualizarAcessoUsuario(userId, { perfilAcesso: fd.get('perfilAcesso') as string, permissoes: fd.getAll('modulo') as string[] })
-      if (!r.ok) { setErro(r.error); return }
-      router.push('/equipe')
-      router.refresh()
-    })
+    setPendente(true)
+    atualizarAcessoUsuario(userId, { perfilAcesso: fd.get('perfilAcesso') as string, permissoes: fd.getAll('modulo') as string[] })
+      .then((r) => {
+        if (!r.ok) { setErro(r.error); setPendente(false); return }
+        router.push('/equipe') // página dinâmica: já carrega os dados novos
+      })
+      .catch((err) => { setErro(err instanceof Error ? err.message : 'Não foi possível salvar'); setPendente(false) })
   }
 
   return (

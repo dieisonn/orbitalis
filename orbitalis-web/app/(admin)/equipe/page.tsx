@@ -4,6 +4,7 @@ import { DeleteButton } from '@/components/ui/delete-button'
 import { ConvidarBtn } from '@/components/ui/convidar-btn'
 import { removerMembro, revogarConvite } from './actions'
 import { PERFIS } from '@/lib/modulos'
+import { CopiarConvite } from './copiar-convite'
 import {
   Users, UserCog, User, Clock, Link2, ShieldCheck,
 } from 'lucide-react'
@@ -25,6 +26,8 @@ type ConvitePendente = {
   email: string | null
   expiresAt: string
   criadoEm: string
+  token?: string
+  perfilAcesso?: string | null
   razaoSocialCliente: string | null
 }
 
@@ -197,7 +200,7 @@ export default async function EquipePage() {
           <ul className="divide-y divide-border/60">
             {equipe.convitesPendentes.map((c) => {
               const tipoLabel = c.tipo === 'tecnico' ? 'Técnico' : c.tipo === 'admin' ? 'Escritório' : 'Cliente'
-              const destino   = c.razaoSocialCliente ?? c.email ?? '—'
+              const destino   = c.razaoSocialCliente ?? c.email ?? (c.tipo === 'admin' ? `Perfil: ${PERFIS[c.perfilAcesso ?? '']?.label ?? 'Escritório'}` : '—')
               const expira    = new Date(c.expiresAt)
               const hoje      = new Date()
               const diasRestantes = Math.ceil((expira.getTime() - hoje.getTime()) / 86_400_000)
@@ -220,6 +223,7 @@ export default async function EquipePage() {
                       Expira em {diasRestantes} dia{diasRestantes !== 1 ? 's' : ''}
                     </p>
                   </div>
+                  {c.token && <CopiarConvite token={c.token} />}
                   <DeleteButton
                     action={revogarConvite.bind(null, c.id)}
                     label="Revogar"
