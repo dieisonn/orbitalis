@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { textoSobre } from '@/lib/cor'
 import { notFound } from 'next/navigation'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
@@ -56,6 +57,8 @@ type OrdemServico = {
     cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
   }
   tecnico: Tecnico | null
+  tipoServico?: { sigla: string; nome: string; corHex: string } | null
+  tiposServicoExtrasInfo?: { id: string; sigla: string; nome: string; corHex: string }[]
   itens: OsItem[]
   dataCriacao?: string
   historico?: {
@@ -171,6 +174,13 @@ export default async function OsDetailPage({ params }: Props) {
                 <StatusBadge status={os.status} data={os.dataAgendamento} />
               </div>
               <p className="text-sm text-gray-500">{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
+              {(os.tipoServico || !!os.tiposServicoExtrasInfo?.length) && (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {[os.tipoServico, ...(os.tiposServicoExtrasInfo ?? [])].filter((t): t is NonNullable<typeof t> => !!t).map((t) => (
+                    <span key={t.sigla + t.nome} className="text-xs font-semibold px-2 py-0.5 rounded" style={{ backgroundColor: t.corHex, color: textoSobre(t.corHex) }}>{t.nome}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

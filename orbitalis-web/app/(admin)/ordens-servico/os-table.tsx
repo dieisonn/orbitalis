@@ -1,5 +1,6 @@
 'use client'
 
+import { textoSobre } from '@/lib/cor'
 import { useState, useTransition, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { StatusBadge } from '@/components/ui/status-badge'
@@ -24,6 +25,7 @@ type OrdemServico = {
   }
   tecnico: { id: string; email: string; nome: string | null } | null
   tipoServico: { sigla: string; nome: string; corHex: string } | null
+  tiposServicoExtrasInfo?: { id: string; sigla: string; nome: string; corHex: string }[]
   itens: { id: string; statusItem: string }[]
   valorMaoObra: number | null
   valorPecas: number | null
@@ -152,6 +154,13 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                       )}
                       {os.tipoServico?.sigla ?? 'OS'}-{numero}
                     </a>
+                    {!!os.tiposServicoExtrasInfo?.length && (
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {os.tiposServicoExtrasInfo.map((t) => (
+                          <span key={t.id} title={t.nome} className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: t.corHex, color: textoSobre(t.corHex) }}>{t.sigla}</span>
+                        ))}
+                      </div>
+                    )}
                     <div className="text-xs text-gray-500 mt-0.5">{ORIGEM_LABEL[os.origem] ?? os.origem}</div>
                   </td>
                   <td className="px-3 py-3">

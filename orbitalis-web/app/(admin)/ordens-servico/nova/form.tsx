@@ -6,6 +6,7 @@ import { ChecklistSelect, NENHUM_CHECKLIST } from '@/components/ui/checklist-sel
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 import { textoSobre } from '@/lib/cor'
 import { ClienteSelect } from '@/components/ui/cliente-select'
+import { SeletorTiposServico } from '@/components/ui/seletor-tipos-servico'
 import { ClienteRapidoModal } from '@/components/ui/cliente-rapido-modal'
 import { AmbienteRapidoModal } from '@/components/ui/ambiente-rapido-modal'
 
@@ -39,7 +40,9 @@ export function NovaOsForm({
   const [clienteId, setClienteId]   = useState('')
   const [ambienteId, setAmbienteId] = useState('')
   const [equipamentoId, setEquipamentoId] = useState('')
-  const [tipoServicoId, setTipoServicoId] = useState('')
+  // tipos de serviço marcados: o primeiro é o principal
+  const [tiposIds, setTiposIds] = useState<string[]>([])
+  const tipoServicoId = tiposIds[0] ?? ''
   const [tipo, setTipo]                   = useState<TipoOs | null>(null)
   const [modeloChecklistId, setModeloChecklistId] = useState('')
   const [ambientes, setAmbientes] = useState<Ambiente[]>(ambientesIniciais)   // cresce com o cadastro rápido
@@ -86,6 +89,7 @@ export function NovaOsForm({
           modeloChecklistId: modeloChecklistId === NENHUM_CHECKLIST ? '' : modeloChecklistId,
           semChecklist: modeloChecklistId === NENHUM_CHECKLIST,
           tipoServicoId,
+          tiposServicoExtras: tiposIds.slice(1),
           equipamentoId,
           horaInicio,
           horaFim,
@@ -128,29 +132,7 @@ export function NovaOsForm({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Tipo de Serviço <span className="ml-1 text-xs font-normal text-gray-500">(opcional)</span>
         </label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {tiposServico.map((ts) => (
-            <button
-              key={ts.id}
-              type="button"
-              onClick={() => setTipoServicoId(tipoServicoId === ts.id ? '' : ts.id)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-semibold transition-all text-left ${
-                tipoServicoId === ts.id
-                  ? 'border-transparent text-white shadow-sm'
-                  : 'border-border text-gray-600 hover:bg-surface'
-              }`}
-              style={tipoServicoId === ts.id ? { backgroundColor: ts.corHex, color: textoSobre(ts.corHex) } : {}}
-            >
-              <span
-                className="shrink-0 text-xs font-bold w-7 text-center py-0.5 rounded text-white"
-                style={{ backgroundColor: tipoServicoId === ts.id ? 'transparent' : ts.corHex, boxShadow: tipoServicoId === ts.id ? 'inset 0 0 0 1px currentColor' : undefined, color: tipoServicoId === ts.id ? 'inherit' : textoSobre(ts.corHex) }}
-              >
-                {ts.sigla}
-              </span>
-              <span className="text-xs leading-tight text-left">{ts.nome}</span>
-            </button>
-          ))}
-        </div>
+        <SeletorTiposServico tipos={tiposServico} value={tiposIds} onChange={setTiposIds} />
         {tiposServico.length === 0 && (
           <p className="text-xs text-gray-400 mt-1">
             Nenhum tipo cadastrado.{' '}
@@ -161,9 +143,15 @@ export function NovaOsForm({
 
       {/* Cliente */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Cliente <span className="text-destructive">*</span>
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium text-gray-700">
+            Cliente <span className="text-destructive">*</span>
+          </label>
+          <button type="button" onClick={() => setCadastrando('')}
+            className="text-sm font-semibold text-action hover:underline">
+            + Novo cliente
+          </button>
+        </div>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
           onCriar={(busca) => setCadastrando(busca)}
           onChange={(id) => { setClienteId(id); setAmbienteId(''); setEquipamentoId('') }} />

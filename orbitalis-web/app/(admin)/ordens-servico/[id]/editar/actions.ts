@@ -11,6 +11,7 @@ export async function editarOs(
     tecnicoId: string
     tipo: string
     tipoServicoId: string
+    tiposServicoExtras?: string[]
     horaInicio: string
     horaFim: string
     clienteId?: string       // só enviado quando cliente/ambiente mudaram
@@ -24,6 +25,7 @@ export async function editarOs(
       tecnicoId: data.tecnicoId || null,
       tipo: data.tipo,
       tipoServicoId: data.tipoServicoId || null,
+      tiposServicoExtras: data.tiposServicoExtras ?? [],
       horaInicio: data.horaInicio || null,
       horaFim: data.horaFim || null,
       ...(data.ambienteId ? { ambienteId: data.ambienteId } : data.clienteId ? { clienteId: data.clienteId } : {}),

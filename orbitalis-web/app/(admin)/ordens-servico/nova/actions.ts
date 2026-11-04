@@ -13,6 +13,7 @@ export async function criarOs(params: {
   modeloChecklistId?: string
   semChecklist?: boolean
   tipoServicoId: string
+  tiposServicoExtras?: string[]
   equipamentoId: string
   horaInicio: string
   horaFim: string
@@ -25,6 +26,7 @@ export async function criarOs(params: {
     modeloChecklistId: params.semChecklist ? undefined : params.modeloChecklistId || undefined,
     ...(params.semChecklist ? { semChecklist: true } : {}),
     tipoServicoId:     params.tipoServicoId    || undefined,
+    ...(params.tiposServicoExtras?.length ? { tiposServicoExtras: params.tiposServicoExtras } : {}),
     equipamentoId:     params.equipamentoId    || undefined,
     origem:            'manual_admin',
     dataAgendamento:   params.dataAgendamento,
