@@ -1,4 +1,5 @@
 ﻿import { Suspense } from 'react'
+import { rotuloFrequencia } from '@/lib/frequencia'
 import { api } from '@/lib/api'
 import { DeletePlanoButton } from '@/components/ui/delete-plano-button'
 import { ListPagination } from '@/components/ui/list-pagination'
@@ -18,10 +19,6 @@ type Plano = {
 type ApiResponse = { data: Plano[]; total: number; page: number; perPage: number }
 
 type Props = { searchParams: Promise<{ page?: string }> }
-
-const FREQ: Record<number, string> = {
-  30: 'Mensal', 60: 'Bimestral', 90: 'Trimestral', 180: 'Semestral', 365: 'Anual',
-}
 
 export default async function PlanosPage({ searchParams }: Props) {
   const { page } = await searchParams
@@ -82,7 +79,7 @@ export default async function PlanosPage({ searchParams }: Props) {
                   </td>
                   <td className="hidden @xl:table-cell px-4 py-3 text-gray-600 text-xs">{p._count?.equipamentosConfig ?? 0} eq.</td>
                   <td className="hidden @3xl:table-cell px-4 py-3 text-gray-600 text-xs">
-                    {FREQ[p.frequenciaDias] ?? `${p.frequenciaDias}d`}
+                    {rotuloFrequencia(p.frequenciaDias)}
                   </td>
                   <td className="hidden @3xl:table-cell px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                     {new Date(p.proximaGeracao).toLocaleDateString('pt-BR')}

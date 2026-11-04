@@ -1,6 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+import { rotuloFrequencia } from '@/lib/frequencia'
 import { Printer } from 'lucide-react'
 
 type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: string }
@@ -121,12 +122,7 @@ export function PrintPMOC({ plano, config }: { plano: Plano; config: Config }) {
   const meses = Array.from(new Set(plano.ordensServico.map((os) => os.dataAgendamento.slice(0, 7)))).sort()
   const nMeses = meses.length || 12
 
-  const freq = plano.frequenciaDias === 30  ? 'Mensal'
-             : plano.frequenciaDias === 60  ? 'Bimestral'
-             : plano.frequenciaDias === 90  ? 'Trimestral'
-             : plano.frequenciaDias === 180 ? 'Semestral'
-             : plano.frequenciaDias === 365 ? 'Anual'
-             : `A cada ${plano.frequenciaDias} dias`
+  const freq = rotuloFrequencia(plano.frequenciaDias)
 
   const dataInicioPMOC = plano.ordensServico.length > 0
     ? plano.ordensServico[0].dataAgendamento

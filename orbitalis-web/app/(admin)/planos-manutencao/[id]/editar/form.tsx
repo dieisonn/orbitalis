@@ -8,6 +8,7 @@ import { editarPlano } from './actions'
 import { CampoVisitas } from '../../campo-visitas'
 import { CamposVisita } from '../../campos-visita'
 import { Building2 } from 'lucide-react'
+import { CampoFrequencia } from '@/components/ui/campo-frequencia'
 import { textoSobre } from '@/lib/cor'
 
 type Equipamento = {

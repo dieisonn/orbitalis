@@ -1,4 +1,5 @@
 import { api } from '@/lib/api'
+import { rotuloFrequencia } from '@/lib/frequencia'
 import { notFound } from 'next/navigation'
 import { CalendarClock, CheckCircle, XCircle, Clock, ClipboardList, Pencil, FileText, Building2, Cpu } from 'lucide-react'
 import { gerarOsPlano } from '../actions'
@@ -54,10 +55,6 @@ const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
   cancelada:    { label: 'Cancelada',    cls: 'bg-red-100    text-red-700'    },
 }
 
-const FREQ: Record<number, string> = {
-  30: 'Mensal', 60: 'Bimestral', 90: 'Trimestral', 180: 'Semestral', 365: 'Anual',
-}
-
 export default async function DetalhePlanoPage({ params }: Props) {
   const { id } = await params
 
@@ -69,7 +66,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
   }
 
   const clienteLabel = plano.cliente?.nomeFantasia ?? plano.cliente?.razaoSocial ?? '—'
-  const freq = FREQ[plano.frequenciaDias] ?? `A cada ${plano.frequenciaDias} dias`
+  const freq = rotuloFrequencia(plano.frequenciaDias)
 
   const os = plano.ordensServico ?? []
   const proxData = new Date(plano.proximaGeracao)
