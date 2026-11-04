@@ -14,6 +14,8 @@ const FEATURES = [
 export default function LoginPage() {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  // quando o e-mail tem conta em mais de uma empresa, o usuário escolhe em qual entrar
+  const [empresas, setEmpresas] = useState<{ id: string; nome: string }[] | null>(null)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -21,11 +23,14 @@ export default function LoginPage() {
     const email    = (form.elements.namedItem('email')    as HTMLInputElement).value
     const password = (form.elements.namedItem('password') as HTMLInputElement).value
 
+    const empresaId = (form.elements.namedItem('empresaId') as HTMLSelectElement | null)?.value || undefined
+
     setError(null)
     startTransition(async () => {
       try {
-        const r = await login(email, password)
-        if (r?.error) setError(r.error)
+        const r = await login(email, password, empresaId)
+        if (r?.empresas) { setEmpresas(r.empresas); setError(null) }
+        else if (r?.error) setError(r.error)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Erro ao fazer login'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)
@@ -118,6 +123,21 @@ export default function LoginPage() {
                 />
               </div>
             </div>
+
+            {empresas && (
+              <div>
+                <label htmlFor="empresaId" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Esse e-mail tem acesso a mais de uma empresa. Qual deseja acessar?
+                </label>
+                <select
+                  id="empresaId" name="empresaId" required defaultValue=""
+                  className="w-full px-3 py-3 border border-border rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                >
+                  <option value="" disabled>Selecione a empresa</option>
+                  {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+                </select>
+              </div>
+            )}
 
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 px-3 py-2.5 rounded-md">

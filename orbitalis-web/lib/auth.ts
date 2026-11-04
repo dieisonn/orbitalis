@@ -17,17 +17,23 @@ function gravarAcesso(store: CookieStore, permissoes: string[] | null | undefine
 }
 
 // Em produção o Next esconde o texto de erros lançados por server actions; por isso as falhas voltam como valor.
-export async function login(email: string, password: string): Promise<{ error: string } | undefined> {
+export async function login(
+  email: string,
+  password: string,
+  empresaId?: string,
+): Promise<{ error: string; empresas?: { id: string; nome: string }[] } | undefined> {
   const res = await fetch(`${BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, senha: password }),
+    body: JSON.stringify({ email, senha: password, ...(empresaId ? { empresaId } : {}) }),
     cache: 'no-store',
   })
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    return { error: Array.isArray(body.message) ? body.message[0] : (body.message ?? 'Credenciais inválidas') }
+    const msg = Array.isArray(body.message) ? body.message[0] : (body.message ?? 'Credenciais inválidas')
+    if (Array.isArray(body.empresas) && body.empresas.length > 0) return { error: msg, empresas: body.empresas }
+    return { error: msg }
   }
 
   const { access_token, role, permissoes } = await res.json()
