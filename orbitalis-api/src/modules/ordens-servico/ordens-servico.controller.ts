@@ -171,6 +171,7 @@ export class OrdensServicoController {
       tecnicoId?: string | null;
       tipo?: string;
       tipoServicoId?: string | null;
+      tiposServicoExtras?: string[];
       horaInicio?: string | null;
       horaFim?: string | null;
       ambienteId?: string;

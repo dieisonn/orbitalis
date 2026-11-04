@@ -326,6 +326,8 @@ model OrdemServico {
   valorMaoObra          Decimal? @map("valor_mao_obra") @db.Decimal(10, 2)
   valorPecas            Decimal? @map("valor_pecas") @db.Decimal(10, 2)
   tipoServicoId         String?  @map("tipo_servico_id") @db.Uuid
+  // Outros tipos de serviço da mesma O.S. (o principal, em tipoServicoId, define cor, sigla e checklist sugerido)
+  tiposServicoExtras    String[] @default([]) @map("tipos_servico_extras") @db.Uuid
   horaInicio            String?  @map("hora_inicio") @db.VarChar(5)
   horaFim               String?  @map("hora_fim") @db.VarChar(5)
   dataCriacao           DateTime @default(now()) @map("data_criacao")

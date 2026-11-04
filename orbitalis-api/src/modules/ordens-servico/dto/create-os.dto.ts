@@ -8,6 +8,8 @@ import {
   IsUUID,
   Matches,
   ValidateIf,
+  IsArray,
+  ArrayMaxSize,
 } from 'class-validator';
 
 export class CreateOrdemServicoDto {
@@ -35,6 +37,13 @@ export class CreateOrdemServicoDto {
   @IsOptional()
   @IsUUID()
   tipoServicoId?: string;
+
+  // Demais tipos de serviço da O.S. (além do principal)
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @IsUUID('all', { each: true })
+  tiposServicoExtras?: string[];
 
   @IsOptional()
   @IsUUID()

@@ -119,6 +119,7 @@ export class OrdensServicoService {
           dataAgendamento:   new Date(dto.dataAgendamento),
           observacoesGerais: dto.observacoesGerais,
           tipoServicoId:     dto.tipoServicoId ?? null,
+          tiposServicoExtras: this.extrasValidos(dto.tipoServicoId, dto.tiposServicoExtras),
           horaInicio:        dto.horaInicio ?? null,
           horaFim:           dto.horaFim ?? null,
         },
@@ -675,7 +676,25 @@ export class OrdensServicoService {
       this.prisma.ordemServico.count({ where }),
     ]);
 
-    return { data, total, page, perPage };
+    return { data: await this.comTiposExtras(data), total, page, perPage };
+  }
+
+  // Sem repetidos e sem o próprio tipo principal
+  private extrasValidos(principal: string | null | undefined, extras?: string[] | null): string[] {
+    return [...new Set(extras ?? [])].filter((id) => id && id !== principal).slice(0, 8);
+  }
+
+  // Anexa os dados (sigla, nome, cor) dos tipos extras para as telas exibirem
+  private async comTiposExtras<T extends { tiposServicoExtras?: string[] }>(lista: T[]): Promise<(T & { tiposServicoExtrasInfo: { id: string; sigla: string; nome: string; corHex: string }[] })[]> {
+    const ids = [...new Set(lista.flatMap((o) => o.tiposServicoExtras ?? []))];
+    const tipos = ids.length
+      ? await this.prisma.tipoServico.findMany({ where: { id: { in: ids } }, select: { id: true, sigla: true, nome: true, corHex: true } })
+      : [];
+    const mapa = new Map(tipos.map((t) => [t.id, t]));
+    return lista.map((o) => ({
+      ...o,
+      tiposServicoExtrasInfo: (o.tiposServicoExtras ?? []).map((id) => mapa.get(id)).filter((t): t is NonNullable<typeof t> => !!t),
+    }));
   }
 
   private resolveOrderBy(orderBy: string): object {
@@ -711,8 +730,9 @@ export class OrdensServicoService {
     }
 
     // o histórico interno (quem mexeu, observações) não vai para o portal do cliente
-    if (user?.role === 'cliente') return { ...os, historico: [] };
-    return os;
+    const [comExtras] = await this.comTiposExtras([os]);
+    if (user?.role === 'cliente') return { ...comExtras, historico: [] };
+    return comExtras;
   }
 
   // PATCH /ordens-servico/:id/triar — Admin despacha a O.S. para o técnico (§US07)
@@ -990,6 +1010,7 @@ export class OrdensServicoService {
     tecnicoId?: string | null;
     tipo?: string;
     tipoServicoId?: string | null;
+    tiposServicoExtras?: string[];
     horaInicio?: string | null;
     horaFim?: string | null;
     ambienteId?: string;
@@ -1044,6 +1065,9 @@ export class OrdensServicoService {
         ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
         ...(dto.tipo ? { tipo: dto.tipo as any } : {}),
         ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId || null } : {}),
+        ...(dto.tipoServicoId !== undefined || dto.tiposServicoExtras !== undefined
+          ? { tiposServicoExtras: this.extrasValidos(dto.tipoServicoId !== undefined ? dto.tipoServicoId : os.tipoServicoId, dto.tiposServicoExtras ?? os.tiposServicoExtras) }
+          : {}),
         ...(dto.horaInicio !== undefined ? { horaInicio: dto.horaInicio || null } : {}),
         ...(dto.horaFim !== undefined ? { horaFim: dto.horaFim || null } : {}),
       },
