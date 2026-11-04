@@ -49,7 +49,8 @@ export default function RegistroPage() {
     setError(null)
     startTransition(async () => {
       try {
-        await registrar(nomeEmpresa, slugVal, nomeAdmin, email, senha)
+        const r = await registrar(nomeEmpresa, slugVal, nomeAdmin, email, senha)
+        if (r?.error) setError(r.error)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar conta'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)

@@ -16,7 +16,8 @@ function gravarAcesso(store: CookieStore, permissoes: string[] | null | undefine
   })
 }
 
-export async function login(email: string, password: string) {
+// Em produção o Next esconde o texto de erros lançados por server actions; por isso as falhas voltam como valor.
+export async function login(email: string, password: string): Promise<{ error: string } | undefined> {
   const res = await fetch(`${BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,7 +27,7 @@ export async function login(email: string, password: string) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message ?? 'Credenciais inválidas')
+    return { error: Array.isArray(body.message) ? body.message[0] : (body.message ?? 'Credenciais inválidas') }
   }
 
   const { access_token, role, permissoes } = await res.json()
@@ -62,7 +63,7 @@ export async function registrar(
   nomeAdmin: string,
   email: string,
   password: string,
-) {
+): Promise<{ error: string } | undefined> {
   const res = await fetch(`${BASE}/auth/registrar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -72,7 +73,7 @@ export async function registrar(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message ?? 'Erro ao criar conta')
+    return { error: Array.isArray(body.message) ? body.message[0] : (body.message ?? 'Erro ao criar conta') }
   }
 
   const { access_token, role, permissoes } = await res.json()

@@ -21,8 +21,9 @@ export function ConvidarBtn({ tipo, clienteId, label, variant = 'button' }: Prop
     setError(null)
     startTransition(async () => {
       try {
-        const token = await gerarConvite(tipo, clienteId)
-        setLink(`${window.location.origin}/convite/${token}`)
+        const r = await gerarConvite(tipo, clienteId)
+        if ('error' in r) { setError(r.error); return }
+        setLink(`${window.location.origin}/convite/${r.token}`)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao gerar convite')
       }

@@ -24,7 +24,8 @@ export default function LoginPage() {
     setError(null)
     startTransition(async () => {
       try {
-        await login(email, password)
+        const r = await login(email, password)
+        if (r?.error) setError(r.error)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Erro ao fazer login'
         if (!msg.includes('NEXT_REDIRECT')) setError(msg)

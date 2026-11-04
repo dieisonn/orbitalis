@@ -9,12 +9,16 @@ const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 export async function gerarConvite(
   tipo: 'tecnico' | 'cliente',
   clienteId?: string,
-): Promise<string> {
-  const result = await api.post<{ token: string }>('/convites', {
-    tipo,
-    ...(clienteId ? { clienteId } : {}),
-  })
-  return result.token
+): Promise<{ token: string } | { error: string }> {
+  try {
+    const result = await api.post<{ token: string }>('/convites', {
+      tipo,
+      ...(clienteId ? { clienteId } : {}),
+    })
+    return { token: result.token }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Erro ao gerar convite' }
+  }
 }
 
 export async function aceitarConvite(
@@ -22,7 +26,7 @@ export async function aceitarConvite(
   nome: string,
   email: string,
   senha: string,
-) {
+): Promise<{ error: string } | undefined> {
   const res = await fetch(`${BASE}/convites/${token}/aceitar`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,7 +36,7 @@ export async function aceitarConvite(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message ?? 'Erro ao aceitar convite')
+    return { error: Array.isArray(body.message) ? body.message[0] : (body.message ?? 'Erro ao aceitar convite') }
   }
 
   const { access_token, role, permissoes } = await res.json()
