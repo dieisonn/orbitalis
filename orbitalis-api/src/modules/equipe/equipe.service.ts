@@ -24,7 +24,7 @@ export class EquipeService {
         where: { usadoEm: null, expiresAt: { gt: new Date() } },
         select: {
           id: true, tipo: true, email: true, clienteId: true,
-          expiresAt: true, criadoEm: true, perfilAcesso: true,
+          expiresAt: true, criadoEm: true, perfilAcesso: true, token: true,
         },
         orderBy: { criadoEm: 'desc' },
       }),
