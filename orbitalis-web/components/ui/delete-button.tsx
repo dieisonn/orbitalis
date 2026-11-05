@@ -7,16 +7,18 @@ import { Trash2 } from 'lucide-react'
 export function DeleteButton({
   action,
   label = 'Excluir',
+  confirmMessage = 'Tem certeza que deseja excluir? Esta ação não pode ser desfeita.',
 }: {
   action: () => Promise<unknown>
   label?: string
+  confirmMessage?: string
 }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   function handleClick() {
-    if (!confirm('Tem certeza que deseja excluir? Esta ação não pode ser desfeita.')) return
+    if (!confirm(confirmMessage)) return
     setError(null)
     startTransition(async () => {
       try {

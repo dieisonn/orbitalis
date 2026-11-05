@@ -1,7 +1,8 @@
 'use client'
 
-import { useTransition, useState, useRef } from 'react'
-import { criarEquipamento } from './actions'
+import { useTransition, useState, useRef, useEffect } from 'react'
+import { criarEquipamento, planosElegiveis, type PlanoElegivel } from './actions'
+import { rotuloFrequencia } from '@/lib/frequencia'
 import { ClienteSelect } from '@/components/ui/cliente-select'
 
 type Ambiente = {
@@ -35,6 +36,15 @@ export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambiente
   const [modelo, setModelo] = useState('')
   const [potencia, setPotencia] = useState('')
   const [criados, setCriados] = useState<string[]>([])
+  // Planos preventivos do cliente: o equipamento novo pode entrar neles (e nas O.S. futuras já geradas)
+  const [planos, setPlanos] = useState<PlanoElegivel[]>([])
+  const [planosSel, setPlanosSel] = useState<string[]>([])
+  useEffect(() => {
+    let vivo = true
+    if (!ambienteId) { setPlanos([]); setPlanosSel([]); return }
+    planosElegiveis(ambienteId).then((p) => { if (vivo) { setPlanos(p); setPlanosSel(p.map((x) => x.id)) } })
+    return () => { vivo = false }
+  }, [ambienteId])
   const formRef = useRef<HTMLFormElement>(null)
   const nomeRef = useRef<HTMLInputElement>(null)
 
@@ -71,6 +81,7 @@ export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambiente
           condicao:           fd.get('condicao') as string,
           diagnosticoInicial: fd.get('diagnosticoInicial') as string,
           valorAquisicao:     valorRaw ? Number(valorRaw) : undefined,
+          planoIds:           planosSel,
         }, continuar)
         if (continuar) {
           setCriados((l) => [...l, fd.get('nome') as string])
@@ -115,6 +126,28 @@ export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambiente
           ))}
         </select>
       </div>
+
+      {planos.length > 0 && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+          <p className="text-sm font-medium text-gray-800">Este cliente tem plano preventivo em andamento. Incluir este equipamento?</p>
+          {planos.map((pl) => (
+            <label key={pl.id} className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={planosSel.includes(pl.id)}
+                onChange={(e) => setPlanosSel((l) => e.target.checked ? [...l, pl.id] : l.filter((x) => x !== pl.id))}
+              />
+              <span>
+                Plano {rotuloFrequencia(pl.frequenciaDias).toLowerCase()}
+                {pl.tipoServico ? ` · ${pl.tipoServico.sigla}` : ''}
+                {pl.contrato?.descricao ? ` · ${pl.contrato.descricao}` : ''}
+                <span className="text-gray-500"> — entra nas {pl._count.ordensServico} O.S. futuras ainda não executadas</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
 
       {/* Nome */}
       <div>

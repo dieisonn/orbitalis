@@ -435,7 +435,7 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                                 >
                                   <Pencil size={11} /><span className="hidden @2xl:inline">Editar</span>
                                 </a>
-                                <DeleteButton action={deletarAction.bind(null, eq.id)} />
+                                <DeleteButton action={deletarAction.bind(null, eq.id)} confirmMessage={'Excluir este equipamento? Ele também sai dos planos preventivos e das O.S. futuras ainda não executadas (O.S. que ficarem vazias são excluídas). O histórico já executado é mantido.'} />
                               </div>
                             </td>
                           </tr>
