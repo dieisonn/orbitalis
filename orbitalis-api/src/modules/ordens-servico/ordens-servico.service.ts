@@ -1,3 +1,4 @@
+import { enderecoDaOs, lerEnderecos } from '../../common/enderecos';
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
@@ -89,6 +90,8 @@ export class OrdensServicoService {
       dto = { ...dto, origem: OsOrigem.portal_cliente, tecnicoId: undefined };
     }
 
+    const enderecoValido = await this.validarEndereco(ambiente.clienteId, dto.enderecoId);
+
     // Com técnico definido já nasce agendada (não precisa passar pela triagem)
     const statusInicial: OsStatus = dto.tecnicoId ? 'agendada' : 'aberta';
 
@@ -120,6 +123,7 @@ export class OrdensServicoService {
           observacoesGerais: dto.observacoesGerais,
           tipoServicoId:     dto.tipoServicoId ?? null,
           tiposServicoExtras: this.extrasValidos(dto.tipoServicoId, dto.tiposServicoExtras),
+          enderecoId:        enderecoValido ?? null,
           horaInicio:        dto.horaInicio ?? null,
           horaFim:           dto.horaFim ?? null,
         },
@@ -662,7 +666,7 @@ export class OrdensServicoService {
           ambiente: {
             select: {
               nome: true,
-              cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+              cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true, endereco: true, enderecosExtras: true } },
             },
           },
           tecnico:     { select: { id: true, email: true, nome: true } },
@@ -676,7 +680,16 @@ export class OrdensServicoService {
       this.prisma.ordemServico.count({ where }),
     ]);
 
-    return { data: await this.comTiposExtras(data), total, page, perPage };
+    const comTipos = await this.comTiposExtras(data);
+    return { data: comTipos.map((o) => ({ ...o, enderecoServico: enderecoDaOs(o.ambiente.cliente, o.enderecoId) })), total, page, perPage };
+  }
+
+  // O endereço escolhido precisa existir no cadastro do cliente da O.S.
+  private async validarEndereco(clienteId: string, enderecoId?: string | null): Promise<string | undefined> {
+    if (!enderecoId) return undefined;
+    const c = await this.prisma.cliente.findFirst({ where: { id: clienteId }, select: { enderecosExtras: true } });
+    if (!lerEnderecos(c?.enderecosExtras).some((e) => e.id === enderecoId)) throw new BadRequestException('Endereço não encontrado no cadastro do cliente');
+    return enderecoId;
   }
 
   // Sem repetidos e sem o próprio tipo principal
@@ -730,7 +743,8 @@ export class OrdensServicoService {
     }
 
     // o histórico interno (quem mexeu, observações) não vai para o portal do cliente
-    const [comExtras] = await this.comTiposExtras([os]);
+    const [comExtrasBase] = await this.comTiposExtras([os]);
+    const comExtras = { ...comExtrasBase, enderecoServico: enderecoDaOs(os.ambiente.cliente, os.enderecoId) };
     if (user?.role === 'cliente') return { ...comExtras, historico: [] };
     return comExtras;
   }
@@ -1011,6 +1025,7 @@ export class OrdensServicoService {
     tipo?: string;
     tipoServicoId?: string | null;
     tiposServicoExtras?: string[];
+    enderecoId?: string | null;
     horaInicio?: string | null;
     horaFim?: string | null;
     ambienteId?: string;
@@ -1041,6 +1056,19 @@ export class OrdensServicoService {
       snapshotAtual = itensAtuais[0]?.checklistSnapshot ?? null;
     }
 
+    // Endereço do serviço: trocar de cliente zera a escolha (a menos que venha uma nova); senão só muda se informado
+    let enderecoNovo: string | null | undefined;
+    if (dto.enderecoId !== undefined || novoAmbienteId) {
+      const alvoAmb = await this.prisma.ambiente.findUnique({ where: { id: novoAmbienteId ?? os.ambienteId }, select: { clienteId: true } });
+      enderecoNovo = dto.enderecoId
+        ? ((await this.validarEndereco(alvoAmb?.clienteId ?? '', dto.enderecoId)) ?? null)
+        : dto.enderecoId === undefined && !novoAmbienteId ? undefined : null;
+      if (dto.enderecoId === undefined && novoAmbienteId && alvoAmb) {
+        const clienteAntigo = await this.prisma.ambiente.findUnique({ where: { id: os.ambienteId }, select: { clienteId: true } });
+        if (clienteAntigo?.clienteId === alvoAmb.clienteId) enderecoNovo = undefined; // mesmo cliente: mantém
+      }
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
       if (novoAmbienteId && novoAmbiente) {
         await tx.ordemServicoItem.deleteMany({ where: { ordemServicoId: id } });
@@ -1068,6 +1096,7 @@ export class OrdensServicoService {
         ...(dto.tipoServicoId !== undefined || dto.tiposServicoExtras !== undefined
           ? { tiposServicoExtras: this.extrasValidos(dto.tipoServicoId !== undefined ? dto.tipoServicoId : os.tipoServicoId, dto.tiposServicoExtras ?? os.tiposServicoExtras) }
           : {}),
+        ...(enderecoNovo !== undefined ? { enderecoId: enderecoNovo } : {}),
         ...(dto.horaInicio !== undefined ? { horaInicio: dto.horaInicio || null } : {}),
         ...(dto.horaFim !== undefined ? { horaFim: dto.horaFim || null } : {}),
       },

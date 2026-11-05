@@ -37,6 +37,12 @@ class ContatoClienteDto {
   @IsString()
   @Length(2, 2)
   uf?: string;
+
+  // Outros endereços (Casa, Loja, Trabalho…): [{ id?, rotulo, endereco }]; a lista enviada substitui a anterior
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  enderecosExtras?: { id?: string; rotulo: string; endereco: string }[];
 }
 
 export class CreateClienteDto extends ContatoClienteDto {

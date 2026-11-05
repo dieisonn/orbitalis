@@ -1,3 +1,4 @@
+import { enderecoDaOs } from '../../common/enderecos';
 import {
   BadRequestException, ConflictException, ForbiddenException, Injectable, Logger,
   NotFoundException, OnApplicationBootstrap,
@@ -95,7 +96,7 @@ export class AgendaService implements OnApplicationBootstrap {
       '',
       `Cliente: ${nomeDoCliente(cli)}`,
       cli.telefone ? `Telefone: ${cli.telefone}` : null,
-      `Endereço: ${cli.endereco}`,
+      `Endereço${enderecoDaOs(cli, os.enderecoId).rotulo ? ` (${enderecoDaOs(cli, os.enderecoId).rotulo})` : ''}: ${enderecoDaOs(cli, os.enderecoId).endereco}`,
       ...(ambientesDaOs(os).length > 1
         ? []
         : [`Ambiente: ${os.ambiente.nome}${os.ambiente.localizacaoInterna ? ` — ${os.ambiente.localizacaoInterna}` : ''}`]),
@@ -133,7 +134,7 @@ export class AgendaService implements OnApplicationBootstrap {
     const textos = {
       titulo: this.tituloDaOs(os),
       descricao: this.descricaoDaOs(os, Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / 60000))),
-      local: os.ambiente.cliente.endereco,
+      local: enderecoDaOs(os.ambiente.cliente, os.enderecoId).endereco,
     };
 
     const existente = await this.prisma.eventoAgenda.findFirst({ where: { ordemServicoId: osId } });

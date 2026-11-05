@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  MaxLength,
   IsUUID,
   Matches,
   ValidateIf,
@@ -39,6 +40,12 @@ export class CreateOrdemServicoDto {
   tipoServicoId?: string;
 
   // Demais tipos de serviço da O.S. (além do principal)
+  // Endereço do cliente onde o serviço será feito (vazio = principal)
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  enderecoId?: string;
+
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(8)

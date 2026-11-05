@@ -1,3 +1,4 @@
+import { normalizarEnderecos } from '../../common/enderecos';
 import {
   ConflictException,
   Injectable,
@@ -53,6 +54,7 @@ export class ClientesService {
         razaoSocial: dto.razaoSocial,
         nomeFantasia: dto.nomeFantasia,
         endereco: dto.endereco,
+        enderecosExtras: normalizarEnderecos(dto.enderecosExtras),
         telefone: dto.telefone,
         celular: dto.celular,
         email: dto.email,
@@ -299,8 +301,9 @@ export class ClientesService {
 
   async update(id: string, dto: UpdateClienteDto) {
     await this.findOne(id);
-    const { documento: docBruto, uf, ...resto } = dto;
+    const { documento: docBruto, uf, enderecosExtras, ...resto } = dto;
     const data: Record<string, unknown> = { ...resto };
+    if (enderecosExtras !== undefined) data.enderecosExtras = normalizarEnderecos(enderecosExtras);
     // campos opcionais vazios limpam o valor
     for (const k of ['nomeFantasia', 'telefone', 'celular', 'email', 'cidade'] as const) {
       if (data[k] === '') data[k] = null;
