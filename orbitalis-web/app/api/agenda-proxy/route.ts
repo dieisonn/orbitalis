@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 
-// Proxy autenticado (cookie → Bearer) restrito às rotas /agenda e /feriados da API
+// Proxy autenticado (cookie → Bearer) restrito às rotas /agenda e /feriados da API (+ criar/cancelar O.S. a partir da agenda)
 async function proxy(request: NextRequest, method: string) {
   const token = (await cookies()).get('orbitalis_token')?.value
   if (!token) return NextResponse.json({ message: 'Não autenticado' }, { status: 401 })
 
   const path = request.nextUrl.searchParams.get('path') ?? '/agenda'
-  if (!/^\/(agenda(\/avisos|\/serie|\/[0-9a-f-]{36}(\/restaurar)?)?|feriados(\/[0-9a-f-]{36})?)(\?.*)?$/i.test(path)) {
+  if (!/^\/(agenda(\/avisos|\/serie|\/[0-9a-f-]{36}(\/restaurar)?)?|feriados(\/[0-9a-f-]{36})?|ordens-servico(\/[0-9a-f-]{36}\/cancelar)?)(\?.*)?$/i.test(path)) {
     return NextResponse.json({ message: 'Rota inválida' }, { status: 400 })
   }
 

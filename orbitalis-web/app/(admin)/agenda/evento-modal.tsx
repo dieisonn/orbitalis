@@ -120,6 +120,9 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const [vezes, setVezes] = useState(10)
   const [ate, setAte] = useState('')
   const [erro, setErro] = useState<string | null>(null)
+  // Evento novo: também cria a O.S. (a O.S. gera o evento na agenda)
+  const [criarOs, setCriarOs] = useState(false)
+  const [tipoOs, setTipoOs] = useState<'corretiva' | 'preventiva' | 'nao_se_aplica'>('corretiva')
 
   const tiposSel = tipoIds.map((id) => tipos.find((t) => t.id === id)).filter((t): t is TipoOpcao => !!t)
   const tipo = tiposSel[0]
@@ -187,6 +190,14 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
     // Evento de uma série: pergunta o alcance antes de salvar
     if (evento?.serieId && !escopo) { setPerguntando(true); return }
 
+    // Evento de O.S.: a mudança vale também para a O.S., em tempo real — avisa antes
+    if (evento && ehOs) {
+      const mudou: string[] = []
+      if (new Date(inicio).getTime() !== new Date(evento.inicio).getTime() || new Date(fim).getTime() !== new Date(evento.fim).getTime()) mudou.push('data/horário')
+      if ((tecnicoId || null) !== (evento.tecnico?.id ?? null)) mudou.push('técnico')
+      if (mudou.length && !confirm(`Este evento pertence à O.S. ${evento.ordemServico!.numero}.\nAlterar ${mudou.join(' e ')} aqui também altera a O.S., em tempo real (e notifica quem for o caso).\n\nContinuar?`)) return
+    }
+
     setSalvando(true)
     try {
       if (evento) {
@@ -222,7 +233,22 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         }
         try {
           // Repetição: a API cria todas as ocorrências de uma vez, ligadas na mesma série (tudo ou nada)
-          if (lista.length > 1) await chamar('POST', '/agenda/serie', { ...corpo, ...janela(lista[0]), ocorrencias: lista.map(janela) })
+          if (criarOs && lista.length === 1 && !diaInteiro) {
+            if (!clienteId) throw new Error('Escolha o cliente para criar a O.S.')
+            // A O.S. cria o evento da agenda sozinha: um só registro, sempre em sincronia
+            await chamar('POST', '/ordens-servico', {
+              clienteId,
+              tecnicoId: tecnicoId || undefined,
+              origem: 'manual_admin',
+              tipo: tipoOs,
+              tipoServicoId: tipoIds[0] || undefined,
+              ...(tipoIds.length > 1 ? { tiposServicoExtras: tipoIds.slice(1) } : {}),
+              dataAgendamento: data,
+              horaInicio: horaIni,
+              horaFim: fimEfetivo,
+              observacoesGerais: descricao.trim() || undefined,
+            })
+          } else if (lista.length > 1) await chamar('POST', '/agenda/serie', { ...corpo, ...janela(lista[0]), ocorrencias: lista.map(janela) })
           else await chamar('POST', '/agenda', { ...corpo, ...janela(lista[0]) })
         } catch (err) {
           setErro(err instanceof Error ? err.message : 'Erro ao salvar')
@@ -257,7 +283,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         {!origem && <p className="text-[11px] text-gray-600 mt-1">Em branco, usa “SIGLA - Cliente” automaticamente.</p>}
         {ehOs && (
           <p className="text-xs text-gray-700 bg-white/70 border border-border rounded-lg px-3 py-2 mt-2">
-            Evento da O.S. {evento!.ordemServico!.numero}: data, horário e técnico atualizam a O.S.
+            Evento da O.S. {evento!.ordemServico!.numero}: ao salvar, data, horário e técnico também são alterados na O.S., em tempo real.
           </p>
         )}
       </div>
@@ -325,6 +351,29 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
             </label>
           )}
         </Linha>
+
+        {!evento && (
+          <Linha icone={<Wrench size={16} />}>
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input type="checkbox" className="accent-action w-4 h-4 mt-0.5" checked={criarOs && repete === 'nao' && !diaInteiro}
+                disabled={repete !== 'nao' || diaInteiro || !clienteId} onChange={(e) => setCriarOs(e.target.checked)} />
+              <span>
+                Criar também a O.S. deste evento
+                <span className="block text-xs text-gray-500">
+                  {!clienteId ? 'Escolha o cliente primeiro. ' : repete !== 'nao' || diaInteiro ? 'Não vale para evento recorrente ou de dia inteiro. ' : ''}
+                  A O.S. e o evento ficam ligados: mudar um muda o outro.
+                </span>
+              </span>
+            </label>
+            {criarOs && repete === 'nao' && !diaInteiro && (
+              <select value={tipoOs} onChange={(e) => setTipoOs(e.target.value as typeof tipoOs)} className={`${campo} mt-2`} aria-label="Tipo da O.S.">
+                <option value="corretiva">O.S. corretiva</option>
+                <option value="preventiva">O.S. preventiva</option>
+                <option value="nao_se_aplica">O.S. de visita/outro (sem manutenção)</option>
+              </select>
+            )}
+          </Linha>
+        )}
 
         {!evento && (
           <Linha icone={<Repeat size={16} />}>

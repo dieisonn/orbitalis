@@ -75,7 +75,12 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
   }
   const [escopoDlg, setEscopoDlg] = useState(false)
   const apagar = (escopo?: Escopo) => executar(() => chamar('DELETE', `/agenda/${e.id}${escopo ? `?escopo=${escopo}` : ''}`))
+  const cancelarOs = () => {
+    if (!confirm(`Este evento pertence à O.S. ${e.ordemServico!.numero}.\nExcluí-lo CANCELA a O.S., em tempo real (o evento fica na agenda marcado como cancelado).\n\nCancelar a O.S.?`)) return
+    executar(() => chamar('PATCH', `/ordens-servico/${e.ordemServico!.id}/cancelar`))
+  }
   const excluir = () => {
+    if (ehOs) { cancelarOs(); return }
     if (e.serieId) { setEscopoDlg(true); return }
     if (!confirm(`Excluir o evento "${e.titulo}"?`)) return
     apagar()
@@ -97,8 +102,8 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
       <div className="flex items-center justify-end gap-0.5 px-2 pt-2">
         <button onClick={onEditar} disabled={ocupado} className={btn} title="Editar" aria-label="Editar evento"><Pencil size={17} /></button>
         <button onClick={onDuplicar} disabled={ocupado} className={btn} title="Duplicar" aria-label="Duplicar evento"><Copy size={17} /></button>
-        {!ehOs && (
-          <button onClick={excluir} disabled={ocupado} className={`${btn} hover:!bg-red-50 hover:text-red-600`} title="Excluir" aria-label="Excluir evento">
+        {(!ehOs || !['cancelada', 'concluida'].includes(e.ordemServico!.status)) && (
+          <button onClick={excluir} disabled={ocupado} className={`${btn} hover:!bg-red-50 hover:text-red-600`} title={ehOs ? 'Cancelar a O.S. deste evento' : 'Excluir'} aria-label={ehOs ? 'Cancelar a O.S. deste evento' : 'Excluir evento'}>
             {ocupado ? <Loader2 size={17} className="animate-spin" /> : <Trash2 size={17} />}
           </button>
         )}
@@ -227,10 +232,12 @@ export function EventoMenu({ evento: e, x, y, onFechar, onDuplicar, onMudou }: {
       style={{ position: 'fixed', zIndex: 70, width: LARGURA, left: pos?.left ?? -9999, top: pos?.top ?? 0, visibility: pos ? 'visible' : 'hidden' }}
       className="bg-white rounded-xl shadow-xl border border-border py-1.5">
       {escopoDlg && <EscopoSerieDialog acao="excluir" onCancelar={() => setEscopoDlg(false)} onEscolher={(esc) => { setEscopoDlg(false); executar(() => chamar('DELETE', `/agenda/${e.id}?escopo=${esc}`)) }} />}
-      <button disabled={ocupado || ehOs} className={item}
-        title={ehOs ? 'Evento de O.S.: cancele ou exclua a O.S. para tirá-lo da agenda' : undefined}
-        onClick={() => { if (e.serieId) setEscopoDlg(true); else if (confirm(`Excluir o evento "${e.titulo}"?`)) executar(() => chamar('DELETE', `/agenda/${e.id}`)) }}>
-        {ocupado ? <Loader2 size={17} className="animate-spin" /> : <Trash2 size={17} className="text-gray-600" />} Excluir
+      <button disabled={ocupado || (ehOs && ['cancelada', 'concluida'].includes(e.ordemServico!.status))} className={item}
+        title={ehOs ? 'Evento de O.S.: excluir cancela a O.S.' : undefined}
+        onClick={() => { if (ehOs) {
+            if (confirm(`Este evento pertence à O.S. ${e.ordemServico!.numero}.\nExcluí-lo CANCELA a O.S., em tempo real (o evento fica na agenda marcado como cancelado).\n\nCancelar a O.S.?`)) executar(() => chamar('PATCH', `/ordens-servico/${e.ordemServico!.id}/cancelar`))
+          } else if (e.serieId) setEscopoDlg(true); else if (confirm(`Excluir o evento "${e.titulo}"?`)) executar(() => chamar('DELETE', `/agenda/${e.id}`)) }}>
+        {ocupado ? <Loader2 size={17} className="animate-spin" /> : <Trash2 size={17} className="text-gray-600" />} {ehOs ? 'Cancelar O.S.' : 'Excluir'}
       </button>
       <button disabled={ocupado} className={item} onClick={() => { onFechar(); onDuplicar() }}>
         <Copy size={17} className="text-gray-600" /> Duplicar

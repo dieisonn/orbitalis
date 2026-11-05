@@ -182,6 +182,8 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
     if (novoIni === ev.inicio && novoFim === ev.fim) return
     // Evento de uma série: pergunta se vale só para este, para os seguintes ou para todos
     if (ev.serieId && !escopo) { setEscopoPend({ ev, ini: novoIni, fim: novoFim }); return }
+    // Evento de O.S.: avisa que a O.S. muda junto, em tempo real
+    if (ev.ordemServico && !confirm(`Este evento pertence à O.S. ${ev.ordemServico.numero}.\nMudar a data/horário aqui também altera a O.S., em tempo real.\n\nContinuar?`)) return
     const anterior = eventos
     setEventos((l) => l.map((x) => (x.id === ev.id ? { ...x, inicio: novoIni, fim: novoFim } : x)))
     try {

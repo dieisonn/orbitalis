@@ -548,9 +548,30 @@ export class AgendaService implements OnApplicationBootstrap {
       if (a.dia.getTime() !== b.dia.getTime()) {
         throw new BadRequestException('O evento de uma O.S. deve começar e terminar no mesmo dia');
       }
-      osData.dataAgendamento = a.dia;
-      osData.horaInicio = paraHHMM(a.minutos);
-      osData.horaFim = paraHHMM(b.minutos);
+      if (atual.osDiaId) {
+        // O.S. de vários dias: mexe só no dia de trabalho deste evento; a O.S. segue o 1º dia
+        const conflito = await this.prisma.ordemServicoDia.findFirst({
+          where: { ordemServicoId: os.id, data: a.dia, id: { not: atual.osDiaId } },
+          select: { id: true },
+        });
+        if (conflito) throw new BadRequestException('Esta O.S. já tem um dia de trabalho nessa data');
+        await this.prisma.ordemServicoDia.update({
+          where: { id: atual.osDiaId },
+          data: { data: a.dia, horaInicio: paraHHMM(a.minutos), horaFim: paraHHMM(b.minutos) },
+        });
+        const primeiro = await this.prisma.ordemServicoDia.findFirst({
+          where: { ordemServicoId: os.id }, orderBy: { data: 'asc' },
+        });
+        if (primeiro) {
+          osData.dataAgendamento = primeiro.data;
+          osData.horaInicio = primeiro.horaInicio;
+          osData.horaFim = primeiro.horaFim;
+        }
+      } else {
+        osData.dataAgendamento = a.dia;
+        osData.horaInicio = paraHHMM(a.minutos);
+        osData.horaFim = paraHHMM(b.minutos);
+      }
     }
     if (dto.tecnicoId !== undefined) {
       if (encerrada) throw new BadRequestException('Não é possível trocar o técnico de uma O.S. encerrada');
