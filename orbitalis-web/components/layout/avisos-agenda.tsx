@@ -74,7 +74,15 @@ export function AvisosAgendaNotificador() {
 
   // libera o áudio no primeiro clique/tecla e lê a permissão de notificações do navegador
   useEffect(() => {
-    const liberar = () => { ctxAudio() }
+    const liberar = () => {
+      ctxAudio()
+      // primeiro clique no sistema: pede a permissão das notificações do computador (o navegador só deixa pedir após um clique)
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default' && localStorage.getItem(CHAVE_BANNER) !== '1') {
+          void Notification.requestPermission().then((p) => setPerm(p))
+        }
+      } catch { /* ignora */ }
+    }
     window.addEventListener('pointerdown', liberar, { once: true })
     window.addEventListener('keydown', liberar, { once: true })
     if (typeof Notification !== 'undefined') setPerm(Notification.permission)
@@ -105,14 +113,15 @@ export function AvisosAgendaNotificador() {
     function alertar(novos: Toast[], comSom = true) {
       setToasts((t) => [...t, ...novos.filter((n) => !t.some((x) => x.id === n.id))])
       for (const n of novos) {
-        setTimeout(() => fechar(n.id), 30 * 60_000)
+        setTimeout(() => fechar(n.id), 90_000)   // some sozinho depois de 90 s
         try {
           if ('Notification' in window && Notification.permission === 'granted') {
             const nt = new Notification(n.titulo, {
               body: `${n.quando}${n.detalhe ? `\n${n.detalhe}` : ''}`, tag: n.id, icon: '/logo.png',
-              requireInteraction: true,
+              silent: false,
             })
             nt.onclick = () => { window.focus(); window.location.href = '/agenda'; nt.close() }
+            setTimeout(() => nt.close(), 90_000)
           }
         } catch { /* navegador sem suporte */ }
       }
