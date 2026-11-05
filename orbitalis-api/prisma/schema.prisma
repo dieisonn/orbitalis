@@ -344,7 +344,8 @@ model OrdemServico {
   itens            OrdemServicoItem[]
   conflitos        AuditoriaConflitoSincronizacao[]
   orcamento        Orcamento?
-  evento           EventoAgenda?
+  eventos          EventoAgenda[]
+  dias             OrdemServicoDia[]
   historico        OrdemServicoHistorico[]
 
   @@index([status])
@@ -646,7 +647,9 @@ model EventoAgenda {
   cor            String?  @db.VarChar(7)
   // true quando alguém editou título/descrição/local à mão: a O.S. deixa de sobrescrevê-los
   personalizado  Boolean  @default(false)
-  ordemServicoId String?  @unique @map("ordem_servico_id") @db.Uuid
+  ordemServicoId String?  @map("ordem_servico_id") @db.Uuid
+  // O.S. de vários dias: cada dia de trabalho tem o seu evento
+  osDiaId        String?  @map("os_dia_id") @db.Uuid
   tipoServicoId  String?  @map("tipo_servico_id") @db.Uuid
   // Outros tipos de serviço do mesmo evento (ex.: VT + MC); o principal acima define cor e relatórios
   tiposExtrasIds String[] @default([]) @map("tipos_extras_ids") @db.Uuid
@@ -658,6 +661,7 @@ model EventoAgenda {
   atualizadoEm   DateTime @updatedAt @map("atualizado_em")
 
   ordemServico OrdemServico? @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  osDia        OrdemServicoDia? @relation(fields: [osDiaId], references: [id], onDelete: Cascade)
   tipoServico  TipoServico?  @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
   tecnico      Usuario?      @relation("EventoTecnico", fields: [tecnicoId], references: [id], onDelete: SetNull)
   cliente      Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
@@ -665,7 +669,27 @@ model EventoAgenda {
   @@index([empresaId, inicio])
   @@index([tecnicoId])
   @@index([serieId])
+  @@index([ordemServicoId])
   @@map("eventos_agenda")
+}
+
+// ─────────────────────────────────────────
+// ordem_servico_dias — dias de trabalho de uma O.S. que dura mais de um dia
+// ─────────────────────────────────────────
+model OrdemServicoDia {
+  id             String   @id @default(uuid()) @db.Uuid
+  ordemServicoId String   @map("ordem_servico_id") @db.Uuid
+  data           DateTime @db.Date
+  horaInicio     String?  @map("hora_inicio") @db.VarChar(5)
+  horaFim        String?  @map("hora_fim") @db.VarChar(5)
+  empresaId      String?  @map("empresa_id") @db.Uuid
+
+  ordemServico OrdemServico   @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  eventos      EventoAgenda[]
+
+  @@unique([ordemServicoId, data])
+  @@index([empresaId])
+  @@map("ordem_servico_dias")
 }
 
 

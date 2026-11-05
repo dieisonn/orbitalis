@@ -40,6 +40,12 @@ export class CreateOrdemServicoDto {
   tipoServicoId?: string;
 
   // Demais tipos de serviço da O.S. (além do principal)
+  // O.S. de vários dias: cada dia com data e horários (2 ou mais; a data/hora acima passam a ser as do 1º dia)
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(62)
+  dias?: { data: string; horaInicio?: string | null; horaFim?: string | null }[];
+
   // Endereço do cliente onde o serviço será feito (vazio = principal)
   @IsOptional()
   @IsString()

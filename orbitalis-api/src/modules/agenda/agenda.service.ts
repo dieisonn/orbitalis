@@ -32,6 +32,7 @@ const INCLUDE_OS = {
   tecnico: { select: { id: true, nome: true } },
   tipoServico: { select: { id: true, sigla: true, nome: true, duracaoMinutos: true } },
   itens: { include: { equipamento: { select: { nome: true, ambiente: { select: { nome: true } } } } } },
+  dias: { orderBy: { data: 'asc' as const } },
 } satisfies Prisma.OrdemServicoInclude;
 
 type OsCompleta = Prisma.OrdemServicoGetPayload<{ include: typeof INCLUDE_OS }>;
@@ -66,7 +67,7 @@ export class AgendaService implements OnApplicationBootstrap {
     const desde = new Date(Date.now() - 90 * 86_400_000);
     const pendentes = await this.prisma.ordemServico.findMany({
       where: {
-        evento: { is: null },
+        eventos: { none: {} },
         status: { not: 'cancelada' },
         OR: [{ status: { in: ['aberta', 'agendada', 'em_andamento'] } }, { dataAgendamento: { gte: desde } }],
       },
@@ -124,36 +125,56 @@ export class AgendaService implements OnApplicationBootstrap {
     if (!os) return;
 
     const duracao = os.tipoServico?.duracaoMinutos ?? DURACAO_PADRAO_MIN;
-    const { inicio, fim } = janelaDaOs(os.dataAgendamento, os.horaInicio, os.horaFim, duracao);
-    const derivado = {
-      inicio, fim,
-      tecnicoId: os.tecnicoId,
-      tipoServicoId: os.tipoServicoId,
-      clienteId: os.ambiente.clienteId,
-    };
-    const textos = {
-      titulo: this.tituloDaOs(os),
-      descricao: this.descricaoDaOs(os, Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / 60000))),
-      local: enderecoDaOs(os.ambiente.cliente, os.enderecoId).endereco,
-    };
+    // O.S. de vários dias: um evento por dia de trabalho; senão, um único evento na data da O.S.
+    const multi = os.dias.length >= 2;
+    const alvos = multi
+      ? os.dias.map((d, i) => ({ diaId: d.id as string | null, dia: d.data, hi: d.horaInicio, hf: d.horaFim, rotulo: `dia ${i + 1}/${os.dias.length}` }))
+      : [{ diaId: null as string | null, dia: os.dataAgendamento, hi: os.horaInicio, hf: os.horaFim, rotulo: '' }];
 
-    const existente = await this.prisma.eventoAgenda.findFirst({ where: { ordemServicoId: osId } });
-    if (existente) {
-      await this.prisma.eventoAgenda.update({
-        where: { id: existente.id },
-        data: { ...derivado, ...(existente.personalizado ? {} : textos) },
-      });
-      return;
+    const existentes = await this.prisma.eventoAgenda.findMany({ where: { ordemServicoId: osId }, orderBy: { inicio: 'asc' } });
+    const usados = new Set<string>();
+    // evento "solto" de antes (sem dia) é reaproveitado pelo primeiro dia
+    let solto = existentes.find((e) => !e.osDiaId);
+
+    for (const alvo of alvos) {
+      const { inicio, fim } = janelaDaOs(alvo.dia, alvo.hi, alvo.hf, duracao);
+      const derivado = {
+        inicio, fim,
+        tecnicoId: os.tecnicoId,
+        tipoServicoId: os.tipoServicoId,
+        clienteId: os.ambiente.clienteId,
+        osDiaId: alvo.diaId,
+      };
+      const min = Math.max(1, Math.round((fim.getTime() - inicio.getTime()) / 60000));
+      const textos = {
+        titulo: `${this.tituloDaOs(os)}${alvo.rotulo ? ` (${alvo.rotulo})` : ''}`,
+        descricao: `${alvo.rotulo ? `Dia de trabalho: ${alvo.rotulo.replace('dia ', '')} (O.S. com ${os.dias.length} dias)\n` : ''}${this.descricaoDaOs(os, min)}`,
+        local: enderecoDaOs(os.ambiente.cliente, os.enderecoId).endereco,
+      };
+      let existente = alvo.diaId ? existentes.find((e) => e.osDiaId === alvo.diaId) : existentes.find((e) => !e.osDiaId);
+      if (!existente && alvo.diaId && solto && !usados.has(solto.id)) { existente = solto; solto = undefined }
+      if (existente) {
+        usados.add(existente.id);
+        await this.prisma.eventoAgenda.update({
+          where: { id: existente.id },
+          data: { ...derivado, ...(existente.personalizado ? {} : textos) },
+        });
+      } else {
+        const criado = await this.prisma.eventoAgenda.create({
+          data: { ...derivado, ...textos, ordemServicoId: osId, empresaId: os.empresaId ?? undefined },
+        });
+        usados.add(criado.id);
+      }
     }
-    try {
-      await this.prisma.eventoAgenda.create({
-        data: { ...derivado, ...textos, ordemServicoId: osId, empresaId: os.empresaId ?? undefined },
-      });
-    } catch (e) {
-      // duas sincronizações simultâneas: a outra criou primeiro
-      if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002')) throw e;
-      await this.sincronizar(osId);
-    }
+    // dias removidos (ou volta a ser de um dia só): apaga os eventos que sobraram
+    const sobrando = existentes.filter((e) => !usados.has(e.id)).map((e) => e.id);
+    if (sobrando.length) await this.prisma.eventoAgenda.deleteMany({ where: { id: { in: sobrando } } });
+    // duas sincronizações simultâneas podem ter criado o mesmo evento duas vezes: fica o mais antigo de cada dia
+    const todos = await this.prisma.eventoAgenda.findMany({ where: { ordemServicoId: osId }, orderBy: { criadoEm: 'asc' }, select: { id: true, osDiaId: true } });
+    const vistosDia = new Set<string>();
+    const duplicados: string[] = [];
+    for (const e of todos) { const k = e.osDiaId ?? '-'; if (vistosDia.has(k)) duplicados.push(e.id); else vistosDia.add(k) }
+    if (duplicados.length) await this.prisma.eventoAgenda.deleteMany({ where: { id: { in: duplicados } } });
   }
 
   // ─── Leitura ────────────────────────────────────────────────────────────────

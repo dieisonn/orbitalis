@@ -91,6 +91,9 @@ export class OrdensServicoService {
     }
 
     const enderecoValido = await this.validarEndereco(ambiente.clienteId, dto.enderecoId);
+    const diasOs = this.normalizarDias(dto.dias);
+    const multiDia = !!diasOs && diasOs.length >= 2;
+    if (diasOs && diasOs.length === 1) { dto.dataAgendamento = diasOs[0].data; dto.horaInicio = diasOs[0].horaInicio ?? undefined; dto.horaFim = diasOs[0].horaFim ?? undefined; }
 
     // Com técnico definido já nasce agendada (não precisa passar pela triagem)
     const statusInicial: OsStatus = dto.tecnicoId ? 'agendada' : 'aberta';
@@ -119,15 +122,16 @@ export class OrdensServicoService {
           status:            statusInicial,
           tipo:              dto.tipo ?? 'corretiva',
           origem:            dto.origem,
-          dataAgendamento:   new Date(dto.dataAgendamento),
+          dataAgendamento:   new Date(multiDia ? diasOs![0].data : dto.dataAgendamento),
           observacoesGerais: dto.observacoesGerais,
           tipoServicoId:     dto.tipoServicoId ?? null,
           tiposServicoExtras: this.extrasValidos(dto.tipoServicoId, dto.tiposServicoExtras),
           enderecoId:        enderecoValido ?? null,
-          horaInicio:        dto.horaInicio ?? null,
-          horaFim:           dto.horaFim ?? null,
+          horaInicio:        (multiDia ? diasOs![0].horaInicio : dto.horaInicio) ?? null,
+          horaFim:           (multiDia ? diasOs![0].horaFim : dto.horaFim) ?? null,
         },
       });
+      if (multiDia) await this.gravarDias(tx, os.id, diasOs!);
 
       if (equipamentosParaItens.length > 0) {
         await tx.ordemServicoItem.createMany({
@@ -672,6 +676,7 @@ export class OrdensServicoService {
           tecnico:     { select: { id: true, email: true, nome: true } },
           itens:       { select: { id: true, statusItem: true } },
           tipoServico: { select: { sigla: true, nome: true, corHex: true } },
+          dias:        { select: { data: true, horaInicio: true, horaFim: true }, orderBy: { data: 'asc' } },
         },
         orderBy: this.resolveOrderBy(orderBy),
         skip: (page - 1) * perPage,
@@ -682,6 +687,38 @@ export class OrdensServicoService {
 
     const comTipos = await this.comTiposExtras(data);
     return { data: comTipos.map((o) => ({ ...o, enderecoServico: enderecoDaOs(o.ambiente.cliente, o.enderecoId) })), total, page, perPage };
+  }
+
+  // Valida e ordena os dias de trabalho; menos de 2 dias = O.S. de um dia só (sem lista)
+  private normalizarDias(dias?: { data?: string; horaInicio?: string | null; horaFim?: string | null }[] | null) {
+    if (!Array.isArray(dias)) return undefined;
+    const lista = dias.map((d) => ({
+      data: String(d?.data ?? '').slice(0, 10),
+      horaInicio: d?.horaInicio ? String(d.horaInicio) : null,
+      horaFim: d?.horaFim ? String(d.horaFim) : null,
+    }));
+    const datas = new Set<string>();
+    for (const d of lista) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.data) || Number.isNaN(new Date(d.data).getTime())) throw new BadRequestException('Data inválida em um dos dias de trabalho');
+      if (datas.has(d.data)) throw new BadRequestException('Há dois dias de trabalho com a mesma data');
+      datas.add(d.data);
+      for (const h of [d.horaInicio, d.horaFim]) if (h && !/^([01]\d|2[0-3]):[0-5]\d$/.test(h)) throw new BadRequestException('Horário inválido (use HH:MM)');
+      if (d.horaInicio && d.horaFim && d.horaFim <= d.horaInicio) throw new BadRequestException(`A saída precisa ser depois da entrada (dia ${d.data.split('-').reverse().join('/')})`);
+    }
+    return lista.sort((a, b) => a.data.localeCompare(b.data));
+  }
+
+  // Grava os dias (substitui os anteriores, mantendo os que têm a mesma data para preservar os eventos da agenda)
+  private async gravarDias(tx: any, osId: string, dias: { data: string; horaInicio: string | null; horaFim: string | null }[]) {
+    const atuais: { id: string; data: Date }[] = await tx.ordemServicoDia.findMany({ where: { ordemServicoId: osId }, select: { id: true, data: true } });
+    const novas = new Set(dias.map((d) => d.data));
+    const remover = atuais.filter((a) => !novas.has(a.data.toISOString().slice(0, 10))).map((a) => a.id);
+    if (remover.length) await tx.ordemServicoDia.deleteMany({ where: { id: { in: remover } } });
+    for (const d of dias) {
+      const ja = atuais.find((a) => a.data.toISOString().slice(0, 10) === d.data);
+      if (ja) await tx.ordemServicoDia.update({ where: { id: ja.id }, data: { horaInicio: d.horaInicio, horaFim: d.horaFim } });
+      else await tx.ordemServicoDia.create({ data: { ordemServicoId: osId, data: new Date(d.data), horaInicio: d.horaInicio, horaFim: d.horaFim } });
+    }
   }
 
   // O endereço escolhido precisa existir no cadastro do cliente da O.S.
@@ -727,6 +764,7 @@ export class OrdensServicoService {
         ambiente:    { include: { cliente: true } },
         tecnico:     { select: { id: true, email: true, nome: true } },
         tipoServico: true,
+        dias:        { orderBy: { data: 'asc' } },
         historico:   { orderBy: { ocorridoEm: 'asc' } },
       },
     });
@@ -1026,6 +1064,7 @@ export class OrdensServicoService {
     tipoServicoId?: string | null;
     tiposServicoExtras?: string[];
     enderecoId?: string | null;
+    dias?: { data: string; horaInicio?: string | null; horaFim?: string | null }[];
     horaInicio?: string | null;
     horaFim?: string | null;
     ambienteId?: string;
@@ -1033,6 +1072,13 @@ export class OrdensServicoService {
   }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
+
+    // Dias de trabalho: com 2 ou mais dias a O.S. passa a ser de vários dias (data/hora da O.S. = as do 1º dia);
+    // com 0 ou 1 dia volta a ser de um dia só.
+    const diasOs = this.normalizarDias(dto.dias);
+    if (diasOs && diasOs.length >= 1) {
+      dto = { ...dto, dataAgendamento: diasOs[0].data, horaInicio: diasOs[0].horaInicio, horaFim: diasOs[0].horaFim };
+    }
 
     // Troca de cliente/ambiente: os itens (equipamentos) acompanham o ambiente, então só dá para
     // trocar enquanto nada foi executado; depois disso a troca apagaria o trabalho do técnico.
@@ -1083,6 +1129,10 @@ export class OrdensServicoService {
             })),
           });
         }
+      }
+      if (diasOs) {
+        if (diasOs.length >= 2) await this.gravarDias(tx, id, diasOs);
+        else await tx.ordemServicoDia.deleteMany({ where: { ordemServicoId: id } });
       }
       return tx.ordemServico.update({
       where: { id },
