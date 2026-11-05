@@ -1,4 +1,4 @@
-import { IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreateEquipamentoDto {
   @IsUUID()
@@ -48,4 +48,10 @@ export class CreateEquipamentoDto {
   @IsOptional()
   @IsNumber()
   valorAquisicao?: number;
+
+  // Planos ativos do cliente em que o novo equipamento deve entrar (inclusive nas O.S. futuras)
+  @IsOptional()
+  @IsArray()
+  @IsUUID('all', { each: true })
+  planoIds?: string[];
 }

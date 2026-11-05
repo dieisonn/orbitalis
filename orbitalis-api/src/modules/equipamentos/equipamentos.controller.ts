@@ -89,6 +89,20 @@ export class EquipamentosController {
     return this.equipamentosService.substituirQr(id, dto);
   }
 
+  // GET /api/v1/equipamentos/planos-elegiveis/:ambienteId
+  @Get('planos-elegiveis/:ambienteId')
+  @Roles(UsuarioTipo.admin)
+  planosElegiveis(@Param('ambienteId') ambienteId: string) {
+    return this.equipamentosService.planosElegiveis(ambienteId);
+  }
+
+  // POST /api/v1/equipamentos/:id/incluir-em-planos
+  @Post(':id/incluir-em-planos')
+  @Roles(UsuarioTipo.admin)
+  incluirEmPlanos(@Param('id') id: string, @Body() body: { planoIds?: string[] }) {
+    return this.equipamentosService.incluirEmPlanos(id, body.planoIds ?? []);
+  }
+
   // DELETE /api/v1/equipamentos/:id (soft delete §6.5)
   @Delete(':id')
   @Roles(UsuarioTipo.admin)

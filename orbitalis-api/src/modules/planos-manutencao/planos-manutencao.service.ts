@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AgendaService } from '../agenda/agenda.service';
+import { incluirEquipamentoNosPlanos, removerEquipamentoDosPlanos, resumoVazio } from '../cron/reconciliar-equipamentos';
 import { CronService } from '../cron/cron.service';
 import { CreatePlanoManutencaoDto } from './dto/create-plano.dto';
 
@@ -32,6 +34,7 @@ export class PlanosManutencaoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cronService: CronService,
+    private readonly agenda: AgendaService,
   ) {}
 
   // Todos os equipamentos do plano precisam estar em ambientes do cliente do plano
@@ -207,7 +210,11 @@ export class PlanosManutencaoService {
       );
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const antes = equipamentosConfig !== undefined
+      ? (await this.prisma.planoEquipamentoConfig.findMany({ where: { planoId: id }, select: { equipamentoId: true } })).map((c) => c.equipamentoId)
+      : [];
+
+    const atualizado = await this.prisma.$transaction(async (tx) => {
       await tx.planoManutencao.update({
         where: { id },
         data: {
@@ -232,6 +239,20 @@ export class PlanosManutencaoService {
 
       return tx.planoManutencao.findUnique({ where: { id }, include: INCLUDE_FULL });
     });
+
+    // Equipamentos que saíram/entraram no plano: ajusta também as O.S. futuras ainda não executadas
+    const reconciliacao = resumoVazio();
+    if (equipamentosConfig !== undefined) {
+      const depois = new Set(equipamentosConfig.map((c) => c.equipamentoId));
+      const somar = (r: ReturnType<typeof resumoVazio>) => { for (const k of Object.keys(r) as (keyof typeof r)[]) reconciliacao[k] += r[k]; };
+      for (const eqId of antes.filter((e) => !depois.has(e))) {
+        somar(await removerEquipamentoDosPlanos(this.prisma, this.agenda, eqId, [id]));
+      }
+      for (const eqId of [...depois].filter((e) => !antes.includes(e))) {
+        somar(await incluirEquipamentoNosPlanos(this.prisma, this.agenda, eqId, [id]));
+      }
+    }
+    return { ...atualizado, reconciliacao };
   }
 
   async remove(id: string, deleteOs = false) {

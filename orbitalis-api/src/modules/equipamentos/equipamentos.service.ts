@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AgendaService } from '../agenda/agenda.service';
+import { incluirEquipamentoNosPlanos, removerEquipamentoDosPlanos } from '../cron/reconciliar-equipamentos';
 import { CreateEquipamentoDto } from './dto/create-equipamento.dto';
 import { SubstituirQrDto } from './dto/substituir-qr.dto';
 
@@ -19,7 +21,10 @@ type UpdateEquipamentoData = {
 
 @Injectable()
 export class EquipamentosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly agenda: AgendaService,
+  ) {}
 
   private gerarCodigoQr(): string {
     return randomBytes(4).toString('hex').toUpperCase();
@@ -27,7 +32,14 @@ export class EquipamentosService {
 
   async create(dto: CreateEquipamentoDto) {
     const codigoQr = this.gerarCodigoQr();
-    return this.prisma.equipamento.create({
+    const { planoIds } = dto;
+    if (planoIds?.length) {
+      const ok = await this.prisma.ambiente.count({
+        where: { id: dto.ambienteId, cliente: { planosManutencao: { some: {} } } },
+      });
+      if (!ok) planoIds.length = 0;
+    }
+    const criado = await this.prisma.equipamento.create({
       data: {
         ambienteId: dto.ambienteId,
         codigoQr,
@@ -43,6 +55,41 @@ export class EquipamentosService {
         valorAquisicao: dto.valorAquisicao,
       },
     });
+    const reconciliacao = planoIds?.length
+      ? await incluirEquipamentoNosPlanos(this.prisma, this.agenda, criado.id, planoIds)
+      : null;
+    return { ...criado, reconciliacao };
+  }
+
+  // Planos ativos do cliente do ambiente — candidatos para receber um equipamento novo
+  async planosElegiveis(ambienteId: string) {
+    const amb = await this.prisma.ambiente.findFirst({ where: { id: ambienteId, deletedAt: null }, select: { clienteId: true } });
+    if (!amb) return [];
+    const hoje = new Date();
+    hoje.setUTCHours(0, 0, 0, 0);
+    const planos = await this.prisma.planoManutencao.findMany({
+      where: {
+        clienteId: amb.clienteId,
+        // Plano em andamento, ou já com todas as O.S. geradas mas ainda com visitas futuras a executar
+        OR: [
+          { ativo: true },
+          { ordensServico: { some: { status: { in: ['agendada', 'aberta'] }, dataAgendamento: { gte: hoje } } } },
+        ],
+      },
+      orderBy: { proximaGeracao: 'asc' },
+      select: {
+        id: true, frequenciaDias: true, proximaGeracao: true, dataFim: true,
+        tipoServico: { select: { sigla: true, nome: true } },
+        contrato: { select: { descricao: true } },
+        _count: { select: { ordensServico: { where: { status: { in: ['agendada', 'aberta'] } } } } },
+      },
+    });
+    return planos;
+  }
+
+  async incluirEmPlanos(id: string, planoIds: string[]) {
+    await this.findOne(id);
+    return incluirEquipamentoNosPlanos(this.prisma, this.agenda, id, planoIds ?? []);
   }
 
   async findAll(page = 1, perPage = 20) {
@@ -142,10 +189,13 @@ export class EquipamentosService {
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.equipamento.update({
+    const eq = await this.prisma.equipamento.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+    // Equipamento vendido/perdido: sai dos planos e das O.S. futuras ainda não executadas
+    const reconciliacao = await removerEquipamentoDosPlanos(this.prisma, this.agenda, id);
+    return { ...eq, reconciliacao };
   }
 
   async getMetricasConfiabilidade(periodo = 365, clienteId?: string) {
