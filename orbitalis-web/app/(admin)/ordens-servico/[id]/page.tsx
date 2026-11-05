@@ -58,6 +58,7 @@ type OrdemServico = {
   }
   tecnico: Tecnico | null
   tipoServico?: { sigla: string; nome: string; corHex: string } | null
+  dias?: { id: string; data: string; horaInicio: string | null; horaFim: string | null }[]
   enderecoServico?: { rotulo: string | null; endereco: string }
   tiposServicoExtrasInfo?: { id: string; sigla: string; nome: string; corHex: string }[]
   itens: OsItem[]
@@ -84,7 +85,7 @@ const ORIGEM_LABEL: Record<string, string> = {
 
 function fmtDate(d: string | null) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
 }
 
 function fmtBRL(v: number | null) {
@@ -245,6 +246,22 @@ export default async function OsDetailPage({ params }: Props) {
             <p className="text-sm font-semibold text-gray-800">{os.dataConclusao ? fmtDataHora(os.dataConclusao) : '—'}</p>
           </div>
         </div>
+
+        {(os.dias?.length ?? 0) >= 2 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+              <Calendar size={10} /> Dias de trabalho ({os.dias!.length} dias)
+            </p>
+            <ul className="divide-y divide-border rounded-lg border border-border">
+              {os.dias!.map((d, i) => (
+                <li key={d.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+                  <span className="font-semibold text-gray-800">Dia {i + 1} · {new Date(d.data).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })}</span>
+                  <span className="text-gray-600">{d.horaInicio ? `Entrada ${d.horaInicio}` : 'Entrada —'} · {d.horaFim ? `Saída ${d.horaFim}` : 'Saída —'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {os.observacoesGerais && (
           <div className="mt-4 pt-4 border-t border-border">

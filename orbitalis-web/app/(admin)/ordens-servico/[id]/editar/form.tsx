@@ -1,4 +1,5 @@
 'use client'
+import { HorarioOs, type DiaOs } from '@/components/ui/horario-os'
 import { SeletorEnderecoOs, type EnderecoCliente } from '@/components/ui/seletor-endereco-os'
 
 import { SeletorTiposServico } from '@/components/ui/seletor-tipos-servico'
@@ -32,6 +33,7 @@ export function EditarOsForm({
     tipoServicoId: string | null
     tiposServicoExtras: string[]
     enderecoId: string | null
+    dias: DiaOs[]
     horaInicio: string
     horaFim: string
     clienteId: string
@@ -67,6 +69,8 @@ export function EditarOsForm({
     const tecnicoId         = fd.get('tecnicoId')         as string
     const horaInicio        = fd.get('horaInicio')        as string
     const horaFim           = fd.get('horaFim')           as string
+    const diasJson          = fd.get('diasJson')          as string
+    const dias: DiaOs[] = diasJson ? JSON.parse(diasJson) : []
 
     // cliente/ambiente só vão quando mudaram (evita mexer nos itens à toa)
     const localMudou = clienteId !== initialValues.clienteId || ambienteId !== initialValues.ambienteId
@@ -74,7 +78,7 @@ export function EditarOsForm({
     setError(null)
     startTransition(async () => {
       const res = await editarOs(osId, {
-        dataAgendamento, observacoesGerais, tecnicoId, tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, horaInicio, horaFim,
+        dataAgendamento, observacoesGerais, tecnicoId, tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, dias, horaInicio, horaFim,
         ...(localMudou ? { clienteId, ambienteId } : {}),
       })
       if (!res.ok) { setError(res.error); return }
@@ -184,33 +188,8 @@ export function EditarOsForm({
         </select>
       </div>
 
-      {/* Data */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Data de Agendamento <span className="text-destructive">*</span>
-        </label>
-        <input
-          name="dataAgendamento"
-          type="date"
-          required
-          defaultValue={initialValues.dataAgendamento}
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-        />
-      </div>
-
-      {/* Horários */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Início</label>
-          <input name="horaInicio" type="time" defaultValue={initialValues.horaInicio}
-            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Término</label>
-          <input name="horaFim" type="time" defaultValue={initialValues.horaFim}
-            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-        </div>
-      </div>
+      {/* Data e horários */}
+      <HorarioOs dataInicial={initialValues.dataAgendamento} inicioInicial={initialValues.horaInicio} fimInicial={initialValues.horaFim} diasIniciais={initialValues.dias} />
 
       {/* Observações */}
       <div>

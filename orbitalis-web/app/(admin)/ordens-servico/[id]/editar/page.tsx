@@ -11,6 +11,7 @@ type OsEdicao = {
   id: string; numero: number | null; status: string; dataAgendamento: string | null
   observacoesGerais: string | null; tipo: string | null; horaInicio: string | null; horaFim: string | null
   ambienteId?: string; tipoServicoId?: string | null; tiposServicoExtras?: string[]; enderecoId?: string | null
+  dias?: { data: string; horaInicio: string | null; horaFim: string | null }[]
   tecnico?: { id: string } | null
   tipoServico?: { id: string } | null
   ambiente?: { id?: string; clienteId?: string; cliente?: { id: string } | null } | null
@@ -79,6 +80,7 @@ export default async function EditarOsPage({ params }: Props) {
               tipoServicoId: os.tipoServico?.id ?? os.tipoServicoId ?? null,
               tiposServicoExtras: os.tiposServicoExtras ?? [],
               enderecoId: os.enderecoId ?? null,
+              dias: (os.dias ?? []).length >= 2 ? (os.dias ?? []).map((d) => ({ data: d.data.slice(0, 10), horaInicio: d.horaInicio ?? '', horaFim: d.horaFim ?? '' })) : [],
               horaInicio: os.horaInicio ?? '',
               horaFim: os.horaFim ?? '',
               clienteId: os.ambiente?.cliente?.id ?? os.ambiente?.clienteId ?? '',

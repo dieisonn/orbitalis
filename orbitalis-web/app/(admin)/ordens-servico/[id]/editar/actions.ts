@@ -13,6 +13,7 @@ export async function editarOs(
     tipoServicoId: string
     tiposServicoExtras?: string[]
     enderecoId?: string
+    dias?: { data: string; horaInicio: string; horaFim: string }[]
     horaInicio: string
     horaFim: string
     clienteId?: string       // só enviado quando cliente/ambiente mudaram
@@ -28,6 +29,8 @@ export async function editarOs(
       tipoServicoId: data.tipoServicoId || null,
       tiposServicoExtras: data.tiposServicoExtras ?? [],
       enderecoId: data.enderecoId || null,
+      // lista vazia = O.S. de um dia só (remove os dias, se houver)
+      dias: (data.dias ?? []).map((d) => ({ data: d.data, horaInicio: d.horaInicio || null, horaFim: d.horaFim || null })),
       horaInicio: data.horaInicio || null,
       horaFim: data.horaFim || null,
       ...(data.ambienteId ? { ambienteId: data.ambienteId } : data.clienteId ? { clienteId: data.clienteId } : {}),

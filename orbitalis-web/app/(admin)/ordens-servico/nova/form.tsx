@@ -6,6 +6,7 @@ import { criarOs } from './actions'
 import { ChecklistSelect, NENHUM_CHECKLIST } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 import { textoSobre } from '@/lib/cor'
+import { HorarioOs, type DiaOs } from '@/components/ui/horario-os'
 import { ClienteSelect } from '@/components/ui/cliente-select'
 import { SeletorTiposServico } from '@/components/ui/seletor-tipos-servico'
 import { ClienteRapidoModal } from '@/components/ui/cliente-rapido-modal'
@@ -77,6 +78,8 @@ export function NovaOsForm({
     const horaInicio        = fd.get('horaInicio')        as string
     const horaFim           = fd.get('horaFim')           as string
     const observacoesGerais = fd.get('observacoesGerais') as string
+    const diasJson          = fd.get('diasJson') as string
+    const dias: DiaOs[] | undefined = diasJson ? JSON.parse(diasJson) : undefined
 
     setError(null)
     startTransition(async () => {
@@ -96,6 +99,7 @@ export function NovaOsForm({
           equipamentoId,
           horaInicio,
           horaFim,
+          dias,
         })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Erro ao criar O.S.'
@@ -268,41 +272,8 @@ export function NovaOsForm({
         </select>
       </div>
 
-      {/* Data */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Data de Agendamento <span className="text-destructive">*</span>
-        </label>
-        <input
-          name="dataAgendamento"
-          type="date"
-          required
-          defaultValue={hoje}
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-        />
-      </div>
-
-      {/* Horários */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Início</label>
-          <input
-            name="horaInicio"
-            type="time"
-            defaultValue="08:00"
-            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Horário de Término</label>
-          <input
-            name="horaFim"
-            type="time"
-            defaultValue="10:00"
-            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-      </div>
+      {/* Data e horários */}
+      <HorarioOs dataInicial={hoje} />
 
       {/* Observações */}
       <div>

@@ -15,6 +15,7 @@ export async function criarOs(params: {
   tipoServicoId: string
   tiposServicoExtras?: string[]
   enderecoId?: string
+  dias?: { data: string; horaInicio: string; horaFim: string }[]
   equipamentoId: string
   horaInicio: string
   horaFim: string
@@ -27,6 +28,7 @@ export async function criarOs(params: {
     modeloChecklistId: params.semChecklist ? undefined : params.modeloChecklistId || undefined,
     ...(params.semChecklist ? { semChecklist: true } : {}),
     tipoServicoId:     params.tipoServicoId    || undefined,
+    ...(params.dias?.length ? { dias: params.dias.map((d) => ({ data: d.data, horaInicio: d.horaInicio || null, horaFim: d.horaFim || null })) } : {}),
     ...(params.enderecoId ? { enderecoId: params.enderecoId } : {}),
     ...(params.tiposServicoExtras?.length ? { tiposServicoExtras: params.tiposServicoExtras } : {}),
     equipamentoId:     params.equipamentoId    || undefined,

@@ -25,6 +25,7 @@ export type OS = {
   assinaturaBase64: string | null
   tipoGas: string | null
   quantidadeGasGramas: number | null
+  dias?: { id?: string; data: string; horaInicio: string | null; horaFim: string | null }[]
   enderecoServico?: { rotulo: string | null; endereco: string }
   ambiente: {
     nome: string; localizacaoInterna: string; capacidadeTermica: string
@@ -137,8 +138,13 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }:
   // número no padrão da lista de O.S.: SIGLA-0000 (a sigla já identifica o tipo de serviço)
   const numeroCompleto = `${os.tipoServico?.sigla ?? 'OS'}-${os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase()}`
   // dataAgendamento guarda só a DATA (meia-noite UTC); o horário fica em horaInicio/horaFim
+  // O.S. de vários dias: entrada no 1º dia e saída no último; a lista dos dias aparece logo abaixo
+  const diasOs = (os.dias ?? []).length >= 2 ? os.dias! : null
+  const ultimo = diasOs ? diasOs[diasOs.length - 1] : null
   const entrada = `${dia}${os.horaInicio ? ` - ${os.horaInicio}` : ''}`
-  const saida = `${dia}${os.horaFim ? ` - ${os.horaFim}` : ''}`
+  const saida = ultimo
+    ? `${fmtDia(ultimo.data)}${ultimo.horaFim ? ` - ${ultimo.horaFim}` : ''}`
+    : `${dia}${os.horaFim ? ` - ${os.horaFim}` : ''}`
   const dataLonga = new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' })
   const cidadeEmpresa = [config?.cidade, config?.uf].filter(Boolean).join('/')
   const linhasObs = modoDia ? 6 : 4
@@ -186,6 +192,12 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }:
           <Campo rotulo="Entrada" valor={entrada} />
           <Campo rotulo="Saída" valor={saida} esquerda />
         </div>
+        {diasOs && (
+          <div style={{ borderTop: borda, padding: '3px 6px', fontSize: '8pt' }}>
+            <strong>Dias de trabalho:</strong>{' '}
+            {diasOs.map((d, i) => `Dia ${i + 1}: ${fmtDia(d.data)}${d.horaInicio || d.horaFim ? ` (${d.horaInicio ?? '—'} às ${d.horaFim ?? '—'})` : ''}`).join(' · ')}
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: borda }}>
           <Campo rotulo="Chegada (técnico)" valor={<span style={{ color: '#777' }}>____/____/______  ____:____</span>} />
           <Campo rotulo="Saída (técnico)" valor={<span style={{ color: '#777' }}>____/____/______  ____:____</span>} esquerda />

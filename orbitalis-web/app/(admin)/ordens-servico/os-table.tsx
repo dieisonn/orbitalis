@@ -18,6 +18,7 @@ type OrdemServico = {
   dataAgendamento: string
   observacoesGerais: string | null
   horaInicio: string | null
+  dias?: { data: string; horaInicio: string | null; horaFim: string | null }[]
   horaFim: string | null
   ambiente: {
     nome: string
@@ -177,7 +178,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                     <div className="sm:hidden mt-2 space-y-1">
                       <StatusBadge status={os.status} data={os.dataAgendamento} />
                       <div className="text-xs text-gray-500">
-                        {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}{horario ? ` · ${horario}` : ''}
+                        {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}{(os.dias?.length ?? 0) >= 2 ? ` · ${os.dias!.length} dias` : horario ? ` · ${horario}` : ''}
                         {tecnicoNome ? ` · ${tecnicoNome}` : ''}
                       </div>
                     </div>
@@ -190,7 +191,11 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                   </td>
                   <td className="hidden sm:table-cell px-3 py-3 whitespace-nowrap text-gray-700">
                     {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
-                    {horario && <div className="text-xs text-gray-500">{horario}</div>}
+                    {(os.dias?.length ?? 0) >= 2 ? (
+                      <div className="text-xs font-semibold text-action">
+                        até {new Date(os.dias![os.dias!.length - 1].data).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit' })} · {os.dias!.length} dias
+                      </div>
+                    ) : (horario && <div className="text-xs text-gray-500">{horario}</div>)}
                   </td>
                   <td className="hidden md:table-cell px-3 py-3 text-right text-gray-700">
                     {os.itens?.length ?? 0}
