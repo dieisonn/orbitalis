@@ -2,13 +2,67 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import * as bcrypt from 'bcrypt';
 import { UsuarioTipo } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AgendaService } from '../agenda/agenda.service';
 import { podeConceder, resolverAcesso } from '../../common/modulos';
 
 type Quem = { id: string; permissoes?: string[] | null };
 
 @Injectable()
 export class EquipeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly agenda: AgendaService,
+  ) {}
+
+  // O.S. ainda não concluídas: são as que precisam de responsável
+  private static readonly OS_PENDENTES = ['aberta', 'agendada', 'em_andamento'] as const;
+
+  /** O que o membro ainda tem sob sua responsabilidade (para decidir a transferência). */
+  async carga(userId: string) {
+    const membro = await this.prisma.usuario.findFirst({ where: { id: userId }, select: { id: true } });
+    if (!membro) throw new NotFoundException('Membro não encontrado');
+    const [os, planos, eventos] = await Promise.all([
+      this.prisma.ordemServico.count({ where: { tecnicoId: userId, status: { in: [...EquipeService.OS_PENDENTES] } } }),
+      this.prisma.planoManutencao.count({ where: { tecnicoId: userId, ativo: true } }),
+      this.prisma.eventoAgenda.count({ where: { tecnicoId: userId, ordemServicoId: null, fim: { gte: new Date() } } }),
+    ]);
+    return { osPendentes: os, planosAtivos: planos, eventosAvulsos: eventos };
+  }
+
+  /**
+   * Repassa para outro membro tudo o que o técnico ainda tem em aberto: O.S. não concluídas (e o evento
+   * delas na agenda), planos preventivos ativos (as O.S. futuras já nascem para o novo responsável) e
+   * eventos avulsos futuros da agenda. O que já foi concluído continua no nome de quem executou.
+   */
+  async transferir(userId: string, paraUserId: string) {
+    if (!paraUserId) throw new BadRequestException('Escolha o técnico que vai receber');
+    if (userId === paraUserId) throw new BadRequestException('Escolha um técnico diferente do atual');
+    const [de, para] = await Promise.all([
+      this.prisma.usuario.findFirst({ where: { id: userId }, select: { id: true } }),
+      this.prisma.usuario.findFirst({ where: { id: paraUserId }, select: { id: true, tipo: true, nome: true } }),
+    ]);
+    if (!de) throw new NotFoundException('Membro não encontrado');
+    if (!para || para.tipo === UsuarioTipo.cliente) throw new BadRequestException('O destino precisa ser um técnico ou usuário do escritório');
+
+    const osIds = (await this.prisma.ordemServico.findMany({
+      where: { tecnicoId: userId, status: { in: [...EquipeService.OS_PENDENTES] } },
+      select: { id: true },
+    })).map((o) => o.id);
+
+    if (osIds.length) {
+      await this.prisma.ordemServico.updateMany({ where: { id: { in: osIds } }, data: { tecnicoId: paraUserId } });
+      for (const id of osIds) await this.agenda.sincronizarOs(id);
+    }
+    const planos = await this.prisma.planoManutencao.updateMany({
+      where: { tecnicoId: userId, ativo: true },
+      data: { tecnicoId: paraUserId },
+    });
+    const eventos = await this.prisma.eventoAgenda.updateMany({
+      where: { tecnicoId: userId, ordemServicoId: null, fim: { gte: new Date() } },
+      data: { tecnicoId: paraUserId },
+    });
+    return { osTransferidas: osIds.length, planosTransferidos: planos.count, eventosTransferidos: eventos.count, para: para.nome };
+  }
 
   async getMembros() {
     const [membros, convitesPendentes] = await Promise.all([
@@ -128,7 +182,7 @@ export class EquipeService {
     });
   }
 
-  async removerMembro(userId: string, quem: Quem) {
+  async removerMembro(userId: string, quem: Quem, transferirPara?: string) {
     if (userId === quem.id) {
       throw new BadRequestException('Você não pode remover a si mesmo');
     }
@@ -146,6 +200,17 @@ export class EquipeService {
       if (completo && (await this.totalAdminsCompletos(userId)) === 0) {
         throw new BadRequestException('A empresa precisa de ao menos um administrador com acesso total');
       }
+    }
+
+    // Quem sai não pode deixar O.S. sem responsável: transfere junto (ou exige a escolha de quem recebe)
+    const carga = await this.carga(userId);
+    if (carga.osPendentes + carga.planosAtivos + carga.eventosAvulsos > 0) {
+      if (!transferirPara) {
+        throw new ConflictException(
+          `Este membro ainda tem ${carga.osPendentes} O.S. pendente(s) e ${carga.planosAtivos} plano(s) preventivo(s) ativo(s). Transfira para outro técnico antes de remover.`,
+        );
+      }
+      await this.transferir(userId, transferirPara);
     }
 
     // Remove o acesso mas mantém o registro (histórico de O.S., agenda e log). O e-mail e a senha são

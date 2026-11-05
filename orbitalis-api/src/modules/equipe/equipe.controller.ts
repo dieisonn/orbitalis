@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
@@ -52,7 +53,21 @@ export class EquipeController {
   removerMembro(
     @Param('userId') userId: string,
     @CurrentUser() user: AuthUser,
+    @Query('transferirPara') transferirPara?: string,
   ) {
-    return this.svc.removerMembro(userId, user);
+    return this.svc.removerMembro(userId, user, transferirPara);
+  }
+
+  // GET /equipe/:userId/carga — O.S./planos que o membro ainda tem em aberto
+  @Get(':userId/carga')
+  carga(@Param('userId') userId: string) {
+    return this.svc.carga(userId);
+  }
+
+  // POST /equipe/:userId/transferir — repassa O.S. pendentes, planos e agenda para outro membro
+  @Post(':userId/transferir')
+  @HttpCode(HttpStatus.OK)
+  transferir(@Param('userId') userId: string, @Body() body: { paraUserId: string }) {
+    return this.svc.transferir(userId, body.paraUserId);
   }
 }
