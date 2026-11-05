@@ -65,8 +65,10 @@ export default async function ContratosPage() {
               {contratos.map((c) => {
                 const fim = new Date(c.vigenciaFim).getTime()
                 const diasRestantes = Math.ceil((fim - agora) / 86_400_000)
-                const vencido = diasRestantes < 0
-                const urgente = !vencido && diasRestantes <= 30
+                // Contrato já renovado não é "atrasado": a vigência dele terminou como previsto e o vigente é a renovação
+                const renovado = !!c.renovacoes?.length
+                const vencido = !renovado && diasRestantes < 0
+                const urgente = !renovado && !vencido && diasRestantes <= 30
 
                 const meses = Math.max(1, Math.round((fim - new Date(c.vigenciaInicio).getTime()) / (30 * 86_400_000)))
                 const valorTotal = c.valorMensal != null ? c.valorMensal * meses : null
