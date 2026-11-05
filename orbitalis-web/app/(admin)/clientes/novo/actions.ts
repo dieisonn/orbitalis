@@ -51,6 +51,7 @@ export type DadosNovoCliente = {
   razaoSocial: string
   nomeFantasia?: string
   endereco: string
+  enderecosExtras?: { rotulo: string; endereco: string }[]
   telefone?: string
   celular?: string
   email?: string
@@ -65,6 +66,7 @@ export async function criarCliente(d: DadosNovoCliente): Promise<CriarClienteRes
     razaoSocial: d.razaoSocial,
     nomeFantasia: vazio(d.nomeFantasia),
     endereco: d.endereco,
+    ...(d.enderecosExtras?.length ? { enderecosExtras: d.enderecosExtras } : {}),
     telefone: vazio(d.telefone),
     celular: vazio(d.celular),
     email: vazio(d.email),

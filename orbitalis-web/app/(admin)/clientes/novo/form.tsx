@@ -1,5 +1,7 @@
 'use client'
 
+import { EnderecoInput } from '@/components/ui/endereco-input'
+import { EnderecosExtras, type EnderecoExtra } from '@/components/ui/enderecos-extras'
 import { useTransition, useState, useRef } from 'react'
 import { Search, CheckCircle } from 'lucide-react'
 import { ConvidarBtn } from '@/components/ui/convidar-btn'
@@ -12,6 +14,7 @@ export function NovoClienteForm() {
   const [cnpjLoading, setCnpjLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<CriarClienteResult | null>(null)
+  const [extras, setExtras] = useState<EnderecoExtra[]>([])
   const [prefill, setPrefill] = useState<Prefill>({ razaoSocial: '', nomeFantasia: '', endereco: '' })
   const cnpjRef = useRef<HTMLInputElement>(null)
 
@@ -45,7 +48,7 @@ export function NovoClienteForm() {
       try {
         const result = await criarCliente({
           documento: campo('documento'), razaoSocial: campo('razaoSocial'), nomeFantasia: campo('nomeFantasia'),
-          endereco: campo('endereco'), telefone: campo('telefone'), celular: campo('celular'),
+          endereco: campo('endereco'), enderecosExtras: extras.filter((x) => x.endereco.trim()), telefone: campo('telefone'), celular: campo('celular'),
           email: campo('email'), cidade: campo('cidade'), uf: campo('uf'),
         })
         setSuccess(result)
@@ -143,14 +146,18 @@ export function NovoClienteForm() {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Endereço <span className="text-destructive">*</span>
         </label>
-        <input
-          name="endereco"
-          required
+        <EnderecoInput
           value={prefill.endereco}
-          onChange={(e) => setPrefill((p) => ({ ...p, endereco: e.target.value }))}
+          onChange={(v) => setPrefill((p) => ({ ...p, endereco: v }))}
+          ariaLabel="Endereço"
           placeholder="Rua, número, bairro, cidade/UF"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
+        <input type="hidden" name="endereco" value={prefill.endereco} required />
+      </div>
+
+      <EnderecosExtras value={extras} onChange={setExtras} />
+      <div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

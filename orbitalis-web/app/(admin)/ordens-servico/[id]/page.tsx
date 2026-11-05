@@ -58,6 +58,7 @@ type OrdemServico = {
   }
   tecnico: Tecnico | null
   tipoServico?: { sigla: string; nome: string; corHex: string } | null
+  enderecoServico?: { rotulo: string | null; endereco: string }
   tiposServicoExtrasInfo?: { id: string; sigla: string; nome: string; corHex: string }[]
   itens: OsItem[]
   dataCriacao?: string
@@ -174,6 +175,9 @@ export default async function OsDetailPage({ params }: Props) {
                 <StatusBadge status={os.status} data={os.dataAgendamento} />
               </div>
               <p className="text-sm text-gray-500">{ORIGEM_LABEL[os.origem] ?? os.origem}</p>
+              {os.enderecoServico && (
+                <p className="text-sm text-gray-600 mt-0.5">📍 {os.enderecoServico.rotulo ? <strong>{os.enderecoServico.rotulo}: </strong> : null}{os.enderecoServico.endereco}</p>
+              )}
               {(os.tipoServico || !!os.tiposServicoExtrasInfo?.length) && (
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {[os.tipoServico, ...(os.tiposServicoExtrasInfo ?? [])].filter((t): t is NonNullable<typeof t> => !!t).map((t) => (

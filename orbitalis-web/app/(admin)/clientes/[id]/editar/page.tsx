@@ -8,7 +8,7 @@ export default async function EditarClientePage({ params }: Props) {
   const { id } = await params
 
   let cliente: {
-    id: string; documento: string | null; razaoSocial: string; nomeFantasia: string | null; endereco: string
+    id: string; documento: string | null; razaoSocial: string; nomeFantasia: string | null; endereco: string; enderecosExtras?: { id: string; rotulo: string; endereco: string }[]
     telefone: string | null; celular: string | null; email: string | null; cidade: string | null; uf: string | null
   }
   try {
@@ -37,6 +37,7 @@ export default async function EditarClientePage({ params }: Props) {
           razaoSocial={cliente.razaoSocial}
           nomeFantasia={cliente.nomeFantasia}
           endereco={cliente.endereco}
+          enderecosExtras={cliente.enderecosExtras ?? []}
           telefone={cliente.telefone}
         />
         </div>

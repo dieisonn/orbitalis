@@ -1,3 +1,4 @@
+import { SeletorEnderecoOs, type EnderecoCliente } from '@/components/ui/seletor-endereco-os'
 'use client'
 
 import { useTransition, useState } from 'react'
@@ -29,7 +30,7 @@ export function NovaOsForm({
   tiposServico,
   modelos,
 }: {
-  clientes: { id: string; razaoSocial: string; nomeFantasia: string | null }[]
+  clientes: { id: string; razaoSocial: string; nomeFantasia: string | null; endereco?: string; enderecosExtras?: EnderecoCliente[] }[]
   ambientes: Ambiente[]
   tecnicos: Tecnico[]
   tiposServico: TipoServico[]
@@ -41,6 +42,7 @@ export function NovaOsForm({
   const [ambienteId, setAmbienteId] = useState('')
   const [equipamentoId, setEquipamentoId] = useState('')
   // tipos de serviço marcados: o primeiro é o principal
+  const [enderecoId, setEnderecoId] = useState('')
   const [tiposIds, setTiposIds] = useState<string[]>([])
   const tipoServicoId = tiposIds[0] ?? ''
   const [tipo, setTipo]                   = useState<TipoOs | null>(null)
@@ -90,6 +92,7 @@ export function NovaOsForm({
           semChecklist: modeloChecklistId === NENHUM_CHECKLIST,
           tipoServicoId,
           tiposServicoExtras: tiposIds.slice(1),
+          enderecoId,
           equipamentoId,
           horaInicio,
           horaFim,
@@ -154,7 +157,7 @@ export function NovaOsForm({
         </div>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
           onCriar={(busca) => setCadastrando(busca)}
-          onChange={(id) => { setClienteId(id); setAmbienteId(''); setEquipamentoId('') }} />
+          onChange={(id) => { setClienteId(id); setAmbienteId(''); setEquipamentoId(''); setEnderecoId('') }} />
         {cadastrando !== null && (
           <ClienteRapidoModal nomeInicial={cadastrando} comAmbiente onFechar={() => setCadastrando(null)}
             onCriado={({ cliente, ambiente }) => {
@@ -167,6 +170,8 @@ export function NovaOsForm({
             }} />
         )}
       </div>
+
+      {(() => { const c = clientes.find((x) => x.id === clienteId) as { endereco?: string; enderecosExtras?: EnderecoCliente[] } | undefined; return <SeletorEnderecoOs extras={c?.enderecosExtras ?? []} principal={c?.endereco} value={enderecoId} onChange={setEnderecoId} /> })()}
 
       {/* Ambiente */}
       <div>

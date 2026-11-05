@@ -10,7 +10,7 @@ type TipoServico = { id: string; sigla: string; nome: string; corHex: string; at
 type OsEdicao = {
   id: string; numero: number | null; status: string; dataAgendamento: string | null
   observacoesGerais: string | null; tipo: string | null; horaInicio: string | null; horaFim: string | null
-  ambienteId?: string; tipoServicoId?: string | null; tiposServicoExtras?: string[]
+  ambienteId?: string; tipoServicoId?: string | null; tiposServicoExtras?: string[]; enderecoId?: string | null
   tecnico?: { id: string } | null
   tipoServico?: { id: string } | null
   ambiente?: { id?: string; clienteId?: string; cliente?: { id: string } | null } | null
@@ -78,6 +78,7 @@ export default async function EditarOsPage({ params }: Props) {
               tipo: os.tipo ?? 'corretiva',
               tipoServicoId: os.tipoServico?.id ?? os.tipoServicoId ?? null,
               tiposServicoExtras: os.tiposServicoExtras ?? [],
+              enderecoId: os.enderecoId ?? null,
               horaInicio: os.horaInicio ?? '',
               horaFim: os.horaFim ?? '',
               clienteId: os.ambiente?.cliente?.id ?? os.ambiente?.clienteId ?? '',

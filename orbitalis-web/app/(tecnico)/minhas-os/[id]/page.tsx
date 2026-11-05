@@ -15,6 +15,7 @@ type OrdemServico = OsParaExecucao & {
   dataConclusao: string | null
   observacoesGerais: string | null
   assinaturaBase64: string | null
+  enderecoServico?: { rotulo: string | null; endereco: string }
   ambiente: {
     nome: string
     localizacaoInterna: string
@@ -131,14 +132,14 @@ export default async function OsDetailPage({ params }: Props) {
         </div>
 
         <div className="mt-3 bg-surface rounded-lg p-3 text-xs">
-          <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Endereço do atendimento</p>
-          <p className="font-medium text-gray-700">{os.ambiente.cliente.endereco}</p>
+          <p className="text-gray-400 uppercase tracking-wide text-[10px] mb-1">Endereço do atendimento{os.enderecoServico?.rotulo ? ` — ${os.enderecoServico.rotulo}` : ''}</p>
+          <p className="font-medium text-gray-700">{os.enderecoServico?.endereco ?? os.ambiente.cliente.endereco}</p>
           <div className="flex flex-wrap gap-2 mt-2">
-            <a href={mapaUrl(os.ambiente.cliente.endereco)} target="_blank" rel="noopener noreferrer"
+            <a href={mapaUrl(os.enderecoServico?.endereco ?? os.ambiente.cliente.endereco)} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-action text-white font-semibold rounded-lg">
               <Navigation size={12} /> Abrir no mapa
             </a>
-            <a href={wazeUrl(os.ambiente.cliente.endereco)} target="_blank" rel="noopener noreferrer"
+            <a href={wazeUrl(os.enderecoServico?.endereco ?? os.ambiente.cliente.endereco)} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border text-gray-700 font-semibold rounded-lg">
               Waze
             </a>

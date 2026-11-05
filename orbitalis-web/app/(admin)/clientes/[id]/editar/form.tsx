@@ -1,5 +1,7 @@
 'use client'
 
+import { EnderecoInput } from '@/components/ui/endereco-input'
+import { EnderecosExtras, type EnderecoExtra } from '@/components/ui/enderecos-extras'
 import { useTransition, useState } from 'react'
 import { Search } from 'lucide-react'
 import { editarCliente } from './actions'
@@ -10,6 +12,7 @@ type Props = {
   razaoSocial: string
   nomeFantasia: string | null
   endereco: string
+  enderecosExtras?: { id?: string; rotulo: string; endereco: string }[]
   telefone: string | null
   documento: string | null
   celular: string | null
@@ -18,10 +21,11 @@ type Props = {
   uf: string | null
 }
 
-export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco, telefone, documento, celular, email, cidade, uf }: Props) {
+export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco, enderecosExtras: extrasIniciais, telefone, documento, celular, email, cidade, uf }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [cnpjLoading, setCnpjLoading] = useState(false)
+  const [extras, setExtras] = useState<EnderecoExtra[]>(extrasIniciais ?? [])
   const [dados, setDados] = useState({ razaoSocial, nomeFantasia: nomeFantasia ?? '', endereco })
   const [doc, setDoc] = useState(documento ?? '')
 
@@ -44,7 +48,7 @@ export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco, tel
         const campo = (n: string) => ((fd.get(n) as string) ?? '').trim()
         const r = await editarCliente(id, {
           documento: campo('documento'), razaoSocial: campo('razaoSocial'), nomeFantasia: campo('nomeFantasia'),
-          endereco: campo('endereco'), telefone: campo('telefone'), celular: campo('celular'),
+          endereco: campo('endereco'), enderecosExtras: extras.filter((x) => x.endereco.trim()), telefone: campo('telefone'), celular: campo('celular'),
           email: campo('email'), cidade: campo('cidade'), uf: campo('uf'),
         })
         if (r && 'error' in r) setError(r.error)
@@ -100,12 +104,17 @@ export function EditarClienteForm({ id, razaoSocial, nomeFantasia, endereco, tel
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Endereço
         </label>
-        <input
-          name="endereco"
+        <EnderecoInput
           value={dados.endereco}
-          onChange={(e) => setDados((p) => ({ ...p, endereco: e.target.value }))}
+          onChange={(v) => setDados((p) => ({ ...p, endereco: v }))}
+          ariaLabel="Endereço"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
+        <input type="hidden" name="endereco" value={dados.endereco} />
+      </div>
+
+      <EnderecosExtras value={extras} onChange={setExtras} cidade={cidade} uf={uf} />
+      <div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

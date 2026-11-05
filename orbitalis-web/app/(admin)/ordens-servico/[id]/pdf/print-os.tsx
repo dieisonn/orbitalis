@@ -25,6 +25,7 @@ export type OS = {
   assinaturaBase64: string | null
   tipoGas: string | null
   quantidadeGasGramas: number | null
+  enderecoServico?: { rotulo: string | null; endereco: string }
   ambiente: {
     nome: string; localizacaoInterna: string; capacidadeTermica: string
     cliente: { razaoSocial: string; nomeFantasia: string | null; documento: string | null; endereco: string; telefone?: string | null; celular?: string | null; email?: string | null; cidade?: string | null; uf?: string | null }
@@ -215,7 +216,7 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }:
           <Campo rotulo="CNPJ/CPF" valor={c.documento ?? ''} esquerda />
         </div>
         <div style={{ borderBottom: borda }}>
-          <Campo rotulo="Endereço" valor={c.endereco} />
+          <Campo rotulo={os.enderecoServico?.rotulo ? `Endereço (${os.enderecoServico.rotulo})` : 'Endereço'} valor={os.enderecoServico?.endereco ?? c.endereco} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', borderBottom: borda }}>
           <Campo rotulo="Cidade" valor={c.cidade ?? ''} />

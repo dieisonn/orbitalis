@@ -1,3 +1,4 @@
+import { SeletorEnderecoOs, type EnderecoCliente } from '@/components/ui/seletor-endereco-os'
 'use client'
 
 import { SeletorTiposServico } from '@/components/ui/seletor-tipos-servico'
@@ -9,7 +10,7 @@ import { ClienteSelect } from '@/components/ui/cliente-select'
 import { textoSobre } from '@/lib/cor'
 
 type Tecnico = { id: string; email: string; nome: string | null }
-type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
+type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null; endereco?: string; enderecosExtras?: EnderecoCliente[] }
 type Ambiente = { id: string; nome: string; localizacaoInterna: string; clienteId: string }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
@@ -30,6 +31,7 @@ export function EditarOsForm({
     tipo: string
     tipoServicoId: string | null
     tiposServicoExtras: string[]
+    enderecoId: string | null
     horaInicio: string
     horaFim: string
     clienteId: string
@@ -44,6 +46,7 @@ export function EditarOsForm({
   const router = useRouter()
   const [clienteId, setClienteId] = useState(initialValues.clienteId)
   const [ambienteId, setAmbienteId] = useState(initialValues.ambienteId)
+  const [enderecoId, setEnderecoId] = useState(initialValues.enderecoId ?? '')
   const [tiposIds, setTiposIds] = useState<string[]>(
     [initialValues.tipoServicoId, ...initialValues.tiposServicoExtras].filter((x): x is string => !!x),
   )
@@ -71,7 +74,7 @@ export function EditarOsForm({
     setError(null)
     startTransition(async () => {
       const res = await editarOs(osId, {
-        dataAgendamento, observacoesGerais, tecnicoId, tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), horaInicio, horaFim,
+        dataAgendamento, observacoesGerais, tecnicoId, tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, horaInicio, horaFim,
         ...(localMudou ? { clienteId, ambienteId } : {}),
       })
       if (!res.ok) { setError(res.error); return }
@@ -87,7 +90,7 @@ export function EditarOsForm({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente" disabled={localTravado}
-          onChange={(id) => { setClienteId(id); setAmbienteId('') }} />
+          onChange={(id) => { setClienteId(id); setAmbienteId(''); setEnderecoId('') }} />
         <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">
           Ambiente / Local <span className="ml-1 text-xs font-normal text-gray-500">(opcional)</span>
         </label>
@@ -109,6 +112,8 @@ export function EditarOsForm({
           </p>
         )}
       </div>
+
+      {(() => { const c = clientes.find((x) => x.id === clienteId); return <SeletorEnderecoOs extras={c?.enderecosExtras ?? []} principal={c?.endereco} value={enderecoId} onChange={setEnderecoId} /> })()}
 
       {/* Tipo de serviço */}
       <div>
