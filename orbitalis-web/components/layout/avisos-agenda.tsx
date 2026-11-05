@@ -13,8 +13,44 @@ export const OPCOES_AVISO = [10, 20, 30, 40, 50] as const
 const PADRAO = [30]
 const EVENTO_MUDOU = 'orbitalis:avisos-agenda'
 const CHAVE_FEITOS = 'orbitalis_avisos_feitos'
-const INTERVALO_MS = 30_000
+const INTERVALO_MS = 15_000
+const EVENTO_TESTE = 'orbitalis:avisos-teste'
+const CHAVE_SOM = 'orbitalis_avisos_som'
+const CHAVE_BANNER = 'orbitalis_avisos_banner_dispensado'
 const proxy = (path: string) => `/api/agenda-proxy?path=${encodeURIComponent(path)}`
+
+// ── Som: gerado pelo navegador (sem arquivo). Navegadores só liberam áudio depois de um clique/tecla na página.
+let audio: AudioContext | null = null
+function ctxAudio(): AudioContext | null {
+  try {
+    if (!audio) {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AC) return null
+      audio = new AC()
+    }
+    if (audio.state === 'suspended') void audio.resume()
+    return audio
+  } catch { return null }
+}
+export function somAtivo(): boolean { try { return localStorage.getItem(CHAVE_SOM) !== 'off' } catch { return true } }
+export function definirSom(on: boolean) { try { localStorage.setItem(CHAVE_SOM, on ? 'on' : 'off') } catch { /* ignora */ } }
+function tocarSom() {
+  if (!somAtivo()) return
+  const c = ctxAudio()
+  if (!c || c.state !== 'running') return
+  // três toques de sino: nota, nota mais aguda, nota
+  const notas = [880, 1175, 880, 1175, 880]
+  notas.forEach((f, i) => {
+    const t0 = c.currentTime + i * 0.35
+    const o = c.createOscillator(); const g = c.createGain()
+    o.type = 'sine'; o.frequency.value = f
+    g.gain.setValueAtTime(0.0001, t0)
+    g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6)
+    o.connect(g).connect(c.destination)
+    o.start(t0); o.stop(t0 + 0.65)
+  })
+}
 
 type Toast = { id: string; titulo: string; quando: string; detalhe: string | null }
 
@@ -32,10 +68,59 @@ function gravarFeitos(f: Record<string, number>) {
 export function AvisosAgendaNotificador() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const minutosRef = useRef<number[]>(PADRAO)
+  const [perm, setPerm] = useState<string>('granted')
+  const [bannerOculto, setBannerOculto] = useState(true)
+  const tituloOriginal = useRef<string>('')
+
+  // libera o áudio no primeiro clique/tecla e lê a permissão de notificações do navegador
+  useEffect(() => {
+    const liberar = () => { ctxAudio() }
+    window.addEventListener('pointerdown', liberar, { once: true })
+    window.addEventListener('keydown', liberar, { once: true })
+    if (typeof Notification !== 'undefined') setPerm(Notification.permission)
+    else setPerm('indisponivel')
+    try { setBannerOculto(localStorage.getItem(CHAVE_BANNER) === '1') } catch { setBannerOculto(false) }
+    return () => { window.removeEventListener('pointerdown', liberar); window.removeEventListener('keydown', liberar) }
+  }, [])
+
+  // enquanto houver aviso na tela, o título da aba pisca (aparece mesmo com outra aba/janela em primeiro plano)
+  useEffect(() => {
+    if (!toasts.length) return
+    if (!tituloOriginal.current) tituloOriginal.current = document.title
+    const base = tituloOriginal.current
+    const alerta = `🔔 ${toasts[0].titulo} — ${toasts[0].quando.split('—')[1]?.trim() ?? 'agora'}`
+    let alterna = false
+    const t = setInterval(() => { alterna = !alterna; document.title = alterna ? alerta : base }, 1000)
+    return () => { clearInterval(t); document.title = base; tituloOriginal.current = '' }
+  }, [toasts])
 
   useEffect(() => {
     let ativo = true
     const fechar = (id: string) => setToasts((t) => t.filter((x) => x.id !== id))
+    // avisa as outras abas/janelas abertas do Orbitalis (cada uma mostra o aviso)
+    let canal: BroadcastChannel | null = null
+    try { canal = new BroadcastChannel('orbitalis-avisos') } catch { /* navegador sem suporte */ }
+
+    // aviso na tela (fica até ser dispensado) + som + notificação do sistema
+    function alertar(novos: Toast[], comSom = true) {
+      setToasts((t) => [...t, ...novos.filter((n) => !t.some((x) => x.id === n.id))])
+      for (const n of novos) {
+        setTimeout(() => fechar(n.id), 30 * 60_000)
+        try {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const nt = new Notification(n.titulo, {
+              body: `${n.quando}${n.detalhe ? `\n${n.detalhe}` : ''}`, tag: n.id, icon: '/logo.png',
+              requireInteraction: true,
+            })
+            nt.onclick = () => { window.focus(); window.location.href = '/agenda'; nt.close() }
+          }
+        } catch { /* navegador sem suporte */ }
+      }
+      if (comSom) tocarSom()
+    }
+    if (canal) canal.onmessage = (ev) => { if (ativo && Array.isArray(ev.data)) alertar(ev.data as Toast[], false) }
+    const aoTestar = () => alertar([{ id: `teste|${Date.now()}`, titulo: 'Teste de aviso', quando: 'Começa às 08:00 — em 30 min', detalhe: 'Assim você será avisado dos seus eventos' }])
+    window.addEventListener(EVENTO_TESTE, aoTestar)
 
     async function carregarPrefs() {
       try {
@@ -80,15 +165,8 @@ export function AvisosAgendaNotificador() {
         }
         gravarFeitos(feitos)
         if (!ativo || !novos.length) return
-        setToasts((t) => [...t, ...novos.filter((n) => !t.some((x) => x.id === n.id))])
-        for (const n of novos) {
-          setTimeout(() => fechar(n.id), 90_000)
-          try {
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(n.titulo, { body: `${n.quando}${n.detalhe ? `\n${n.detalhe}` : ''}`, tag: n.id })
-            }
-          } catch { /* navegador sem suporte */ }
-        }
+        alertar(novos)
+        try { canal?.postMessage(novos) } catch { /* sem BroadcastChannel */ }
       } catch { /* offline ou API indisponível: tenta de novo no próximo ciclo */ }
     }
 
@@ -96,24 +174,42 @@ export function AvisosAgendaNotificador() {
     window.addEventListener(EVENTO_MUDOU, aoMudar)
     carregarPrefs().then(verificar)
     const timer = setInterval(verificar, INTERVALO_MS)
-    return () => { ativo = false; clearInterval(timer); window.removeEventListener(EVENTO_MUDOU, aoMudar) }
+    return () => { ativo = false; clearInterval(timer); window.removeEventListener(EVENTO_MUDOU, aoMudar); window.removeEventListener(EVENTO_TESTE, aoTestar); canal?.close() }
   }, [])
 
-  if (!toasts.length) return null
+  async function ativarSistema() {
+    try { setPerm(await Notification.requestPermission()) } catch { /* ignora */ }
+  }
+  const mostrarBanner = perm === 'default' && !bannerOculto
+  if (!toasts.length && !mostrarBanner) return null
   return (
-    <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2 w-[min(22rem,calc(100vw-2rem))] print:hidden" role="region" aria-label="Avisos da agenda">
+    <div className="fixed bottom-4 right-4 z-[60] flex flex-col gap-3 w-[min(26rem,calc(100vw-2rem))] print:hidden" role="region" aria-label="Avisos da agenda">
+      {mostrarBanner && (
+        <div className="bg-white border border-border rounded-lg shadow-lg p-3 text-sm">
+          <p className="font-semibold text-gray-900">Receba os avisos mesmo em outra aba ou janela</p>
+          <p className="text-xs text-gray-700 mt-0.5">Ative as notificações do navegador para ser avisado dos eventos com som, sem precisar estar nesta tela.</p>
+          <div className="flex gap-2 mt-2">
+            <button onClick={ativarSistema} className="px-3 py-1.5 text-xs font-semibold text-white bg-action rounded-lg hover:bg-action/90">Ativar notificações</button>
+            <button onClick={() => { setBannerOculto(true); try { localStorage.setItem(CHAVE_BANNER, '1') } catch { /* ignora */ } }}
+              className="px-3 py-1.5 text-xs font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface">Agora não</button>
+          </div>
+        </div>
+      )}
       {toasts.map((t) => (
-        <div key={t.id} role="status" aria-live="polite"
-          className="bg-white border border-border border-l-4 border-l-action rounded-lg shadow-lg p-3 flex gap-2.5">
-          <BellRing size={18} className="text-action shrink-0 mt-0.5" aria-hidden="true" />
+        <div key={t.id} role="alert" aria-live="assertive"
+          className="bg-white border-2 border-action border-l-8 rounded-xl shadow-2xl p-4 flex gap-3">
+          <BellRing size={26} className="text-action shrink-0 mt-0.5 animate-bounce" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-gray-900 truncate">{t.titulo}</p>
-            <p className="text-xs text-gray-700">{t.quando}</p>
-            {t.detalhe && <p className="text-xs text-gray-600 truncate">{t.detalhe}</p>}
-            <Link href="/agenda" className="text-xs font-semibold text-primary hover:underline">Abrir agenda</Link>
+            <p className="text-base font-bold text-gray-900">{t.titulo}</p>
+            <p className="text-sm font-semibold text-action">{t.quando}</p>
+            {t.detalhe && <p className="text-sm text-gray-700">{t.detalhe}</p>}
+            <div className="flex gap-3 mt-2">
+              <Link href="/agenda" onClick={() => setToasts((l) => l.filter((x) => x.id !== t.id))} className="text-sm font-semibold text-primary hover:underline">Abrir agenda</Link>
+              <button onClick={() => setToasts((l) => l.filter((x) => x.id !== t.id))} className="text-sm font-semibold text-gray-600 hover:underline">Entendi</button>
+            </div>
           </div>
           <button onClick={() => setToasts((l) => l.filter((x) => x.id !== t.id))} aria-label="Dispensar aviso"
-            className="self-start p-1 text-gray-500 hover:text-gray-800"><X size={14} /></button>
+            className="self-start p-1 text-gray-500 hover:text-gray-800"><X size={16} /></button>
         </div>
       ))}
     </div>
@@ -138,6 +234,7 @@ function AvisosModal({ onFechar }: { onFechar: () => void }) {
   const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState<{ tipo: 'erro' | 'ok'; texto: string } | null>(null)
   const [perm, setPerm] = useState<string>(() => (typeof Notification === 'undefined' ? 'indisponivel' : Notification.permission))
+  const [som, setSom] = useState<boolean>(() => somAtivo())
 
   useEffect(() => {
     let ativo = true
@@ -210,6 +307,14 @@ function AvisosModal({ onFechar }: { onFechar: () => void }) {
             <p className="text-xs text-gray-600 mt-2">{sel.length === 0 ? 'Nenhum aviso: você não será notificado.' : `${sel.length} de 3 escolhidos.`}</p>
           </fieldset>
         )}
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+            <input type="checkbox" checked={som} onChange={(e) => { setSom(e.target.checked); definirSom(e.target.checked) }} className="h-4 w-4 accent-[var(--color-action)]" />
+            Tocar som no aviso
+          </label>
+          <button onClick={() => { ctxAudio(); window.dispatchEvent(new Event(EVENTO_TESTE)); onFechar() }}
+            className="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary/5">Testar aviso</button>
+        </div>
         <div className="mt-4 text-xs text-gray-700 bg-surface rounded-lg p-3">
           {perm === 'granted' && <p>Notificações do navegador ativas. Os avisos também aparecem na tela.</p>}
           {perm === 'default' && (
