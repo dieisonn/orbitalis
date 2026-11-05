@@ -91,6 +91,34 @@ async function photon(params: string): Promise<Feature[]> {
   } catch { return [] }
 }
 
+// Entende o que a pessoa digitou ou colou, em qualquer ordem comum:
+//  "Rua X, 19", "R. X 19", "Rua X, 19 - Bairro, Cidade - MG, 38700-000", "Rua X, 327, Cidade, 38701-118, MG, BR"
+// e separa rua, número, cidade e UF (os que faltarem vêm da cidade da empresa).
+function interpretar(q: string, cidadeEmpresa: string, ufEmpresa: string) {
+  let partes = q.split(',').map((x) => x.trim()).filter(Boolean)
+  let uf = ''
+  let cid = ''
+  // país, CEP e UF soltos no fim/meio
+  partes = partes.filter((x) => !/^(br|brasil|brazil)$/i.test(x) && !/^\d{5}-?\d{3}$/.test(x))
+  const ultimo = partes[partes.length - 1] ?? ''
+  if (partes.length > 1 && /^[A-Za-z]{2}$/.test(ultimo) && !/^(de|da|do)$/i.test(ultimo)) { uf = ultimo.toUpperCase(); partes.pop() }
+  // "Cidade - UF" no fim
+  const m = (partes[partes.length - 1] ?? '').match(/^(.+?)\s+-\s+([A-Za-z]{2})$/)
+  if (m) { cid = m[1].trim(); uf = m[2].toUpperCase(); partes.pop() }
+  else if (uf && partes.length > 1) cid = partes.pop() as string
+  // sobra "Rua X", "19", ("- Bairro", bairro): rua é a primeira parte
+  let rua = (partes[0] ?? '').replace(/\s+-\s+[^\d]+$/, '')
+  let numero: string | undefined
+  const num = (t: string) => t.match(/^(?:n[º°o.]*\s*)?(\d{1,5})(?:\s*-\s*.*)?$/i)?.[1]
+  if (partes[1] && num(partes[1])) numero = num(partes[1])
+  if (!numero) {
+    // "R. X 19" (número colado no fim da rua)
+    const colado = rua.match(/^(.*?\D)\s+(?:n[º°o.]*\s*)?(\d{1,5})$/i)
+    if (colado) { rua = colado[1].trim(); numero = colado[2] }
+  }
+  return { rua: expandir(rua), numero, cidade: cid || cidadeEmpresa, uf: uf || ufEmpresa }
+}
+
 export async function GET(req: NextRequest) {
   if (!(await cookies()).get('orbitalis_token')?.value) return NextResponse.json({ message: 'Não autenticado' }, { status: 401 })
   const sp = req.nextUrl.searchParams
@@ -104,15 +132,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json((await porCep(digitos)).map((s) => ({ rotulo: s.rotulo })))
   }
 
-  // "Rua X, 19, Uberlândia - MG": cidade e UF digitadas valem mais que as da empresa
-  const fim = q.match(/,\s*([^,\d]+?)\s*-\s*([A-Za-z]{2})\s*(?:,\s*\d{5}-?\d{3})?\s*$/)
-  const cidadeBusca = fim ? fim[1].trim() : cidade
-  const ufBusca = fim ? fim[2].toUpperCase() : uf
-  // "Rua X, 19 - Bairro" (endereço já escolhido e editado): descarta o bairro, fica "Rua X, 19"
-  const semCidade = (fim ? q.slice(0, fim.index).trim() : q).replace(/\s+-\s+[^,\d]+$/, '')
-  const texto = expandir(semCidade)
-  const numero = texto.match(/(?:,|\s)\s*(?:n[º°o.]*\s*)?(\d{1,5})\s*$/i)?.[1]   // número digitado ao fim
-  const ruaDigitada = numero ? texto.replace(/(?:,|\s)\s*(?:n[º°o.]*\s*)?\d{1,5}\s*$/i, '').trim() : texto
+  const { rua: ruaDigitada, numero, cidade: cidadeBusca, uf: ufBusca } = interpretar(q, cidade, uf)
   const BR = 'bbox=-74,-34,-34,5.5'
   const correios = await porRua(ufBusca, cidadeBusca, ruaDigitada, numero)
 
