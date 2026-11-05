@@ -83,10 +83,18 @@ export const diaPorExtenso = (dia: Dia) =>
   `${DIAS_SEMANA[diaDaSemana(dia)]}, ${dia.d} de ${MESES[dia.m].toLowerCase()}`
 
 // Navegação até o local — só links, sem nenhuma integração/conta
-export const mapaUrl = (local: string) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(local)}`
-export const wazeUrl = (local: string) =>
-  `https://waze.com/ul?q=${encodeURIComponent(local)}&navigate=yes`
+// Se o "endereço" forem coordenadas (ex.: fazenda), o mapa e o Waze vão direto ao ponto
+import { lerCoordenadas, coordenadasTexto } from '@/lib/coordenadas'
+export const mapaUrl = (local: string) => {
+  const c = lerCoordenadas(local)
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c ? coordenadasTexto(c) : local)}`
+}
+export const wazeUrl = (local: string) => {
+  const c = lerCoordenadas(local)
+  return c
+    ? `https://waze.com/ul?ll=${coordenadasTexto(c)}&navigate=yes`
+    : `https://waze.com/ul?q=${encodeURIComponent(local)}&navigate=yes`
+}
 
 export const STATUS_OS_LABEL: Record<string, string> = {
   aberta: 'Aberta', agendada: 'Agendada', em_andamento: 'Em andamento',

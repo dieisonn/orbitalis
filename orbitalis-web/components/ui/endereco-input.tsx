@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { MapPin, Map as MapaIcone, X, Loader2 } from 'lucide-react'
 import { mapaUrl } from '@/lib/agenda'
+import { lerCoordenadas, coordenadasTexto } from '@/lib/coordenadas'
 
 /**
  * Campo de endereço com sugestões enquanto digita e mapa dentro da própria tela (sem abrir outra aba).
@@ -24,7 +25,7 @@ export function EnderecoInput({ value, onChange, className = '', placeholder = '
   useEffect(() => {
     if (!digitado.current) return
     const q = value.trim()
-    if (q.length < 4) return
+    if (q.length < 4 || lerCoordenadas(q)) { setSugestoes([]); return }
     const ctl = new AbortController()
     const t = setTimeout(async () => {
       setBuscando(true)
@@ -83,6 +84,9 @@ export function EnderecoInput({ value, onChange, className = '', placeholder = '
 
       {texto && (
         <div className="mt-1.5">
+          {lerCoordenadas(texto) && (
+            <p className="text-[11px] text-gray-600 mb-1">Coordenadas reconhecidas: {coordenadasTexto(lerCoordenadas(texto)!).replace(',', ', ')} — o mapa, o Google Maps e o Waze vão direto a esse ponto.</p>
+          )}
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => { setMapaTexto(texto); setMapa((m) => !m) }} aria-expanded={mapa}
               className="inline-flex items-center gap-1 text-[11px] font-semibold text-action hover:underline">
@@ -96,7 +100,7 @@ export function EnderecoInput({ value, onChange, className = '', placeholder = '
           </div>
           {mapa && mapaTexto && (
             <iframe title="Mapa do local" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
-              src={`https://maps.google.com/maps?q=${encodeURIComponent(mapaTexto)}&hl=pt-BR&z=16&output=embed`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(lerCoordenadas(mapaTexto) ? coordenadasTexto(lerCoordenadas(mapaTexto)!) : mapaTexto)}&hl=pt-BR&z=${lerCoordenadas(mapaTexto) ? 15 : 16}&output=embed`}
               className="mt-1.5 w-full h-52 rounded-lg border border-border bg-surface" />
           )}
         </div>
