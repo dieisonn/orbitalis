@@ -16,6 +16,37 @@ const UF: Record<string, string> = {
 const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
 const UA = { 'User-Agent': 'Orbitalis/1.0 (orbitalis.com.br)' }
 
+// Municípios do Brasil (IBGE), para entender "…, patos de minas" mesmo sem UF. Lista pública, muda raramente.
+type Municipios = Map<string, string[]>   // nome sem acento → UFs que têm cidade com esse nome
+let municipiosCache: Municipios | null = null
+async function municipios(): Promise<Municipios> {
+  if (municipiosCache) return municipiosCache
+  try {
+    const r = await fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios?orderBy=nome', { next: { revalidate: 60 * 60 * 24 * 30 }, signal: AbortSignal.timeout(8000) })
+    if (!r.ok) return new Map()
+    const lista = (await r.json()) as { nome: string; microrregiao?: { mesorregiao?: { UF?: { sigla?: string } } } }[]
+    const m: Municipios = new Map()
+    for (const c of lista) {
+      const ufc = c.microrregiao?.mesorregiao?.UF?.sigla
+      if (!ufc) continue
+      const k = semAcento(c.nome)
+      m.set(k, [...(m.get(k) ?? []), ufc])
+    }
+    if (m.size > 5000) municipiosCache = m
+    return m
+  } catch { return new Map() }
+}
+
+// Se o texto (ou o fim dele) é o nome de uma cidade, devolve cidade e UF. Em empate de nome, vale a UF informada/da empresa.
+function acharCidade(texto: string, mun: Municipios, ufPreferida: string): { cidade: string; uf: string; nome: string } | null {
+  const t = semAcento(texto).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!t || !mun.size) return null
+  const ufs = mun.get(t)
+  if (!ufs) return null
+  const uf = ufPreferida && ufs.includes(ufPreferida) ? ufPreferida : ufs[0]
+  return { cidade: t, uf, nome: texto.trim() }
+}
+
 type Feature = { geometry?: { coordinates?: [number, number] }; properties?: Record<string, string | undefined> }
 type Sugestao = { rotulo: string; cidade: string }
 
@@ -109,14 +140,22 @@ function interpretar(q: string, cidadeEmpresa: string, ufEmpresa: string) {
   // sobra "Rua X", "19", ("- Bairro", bairro): rua é a primeira parte
   let rua = (partes[0] ?? '').replace(/\s+-\s+[^\d]+$/, '')
   let numero: string | undefined
+  let textoDepoisDoNumero = ''
   const num = (t: string) => t.match(/^(?:n[º°o.]*\s*)?(\d{1,5})(?:\s*-\s*.*)?$/i)?.[1]
   if (partes[1] && num(partes[1])) numero = num(partes[1])
   if (!numero) {
     // "R. X 19" (número colado no fim da rua)
     const colado = rua.match(/^(.*?\D)\s+(?:n[º°o.]*\s*)?(\d{1,5})$/i)
     if (colado) { rua = colado[1].trim(); numero = colado[2] }
+    else {
+      // "Rua X 234 Patos de Minas" (tudo sem vírgula): o que vem depois do número pode ser a cidade
+      const meio = rua.match(/^(.*?\D)\s+(?:n[º°o.]*\s*)?(\d{1,5})\s+(\D.*)$/i)
+      if (meio) { rua = meio[1].trim(); numero = meio[2]; textoDepoisDoNumero = meio[3].trim() }
+    }
   }
-  return { rua: expandir(rua), numero, cidade: cid || cidadeEmpresa, uf: uf || ufEmpresa }
+  // Partes que sobraram depois de rua e número ("Bairro", "Cidade"), de trás para frente; e o texto depois do número colado
+  const sobras = partes.slice(1).filter((x) => !num(x)).reverse()
+  return { rua: expandir(rua), numero, cidade: cid || cidadeEmpresa, uf: uf || ufEmpresa, explicita: !!cid, ufExplicita: !!uf, sobras, textoDepoisDoNumero }
 }
 
 export async function GET(req: NextRequest) {
@@ -132,7 +171,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json((await porCep(digitos)).map((s) => ({ rotulo: s.rotulo })))
   }
 
-  const { rua: ruaDigitada, numero, cidade: cidadeBusca, uf: ufBusca } = interpretar(q, cidade, uf)
+  const ia = interpretar(q, cidade, uf)
+  const { rua: ruaDigitada, numero } = ia
+  let { cidade: cidadeBusca, uf: ufBusca } = ia
+  // Cidade digitada (com ou sem UF): vale a digitada, não a da empresa
+  let cidadeDigitada = ia.explicita
+  if (!cidadeDigitada) {
+    const mun = await municipios()
+    const candidatas = [ia.textoDepoisDoNumero, ...ia.sobras].filter(Boolean)
+    for (const c of candidatas) {
+      // "Bairro - Cidade" ou "Centro Patos de Minas": tenta o texto todo e depois só o fim
+      const palavras = c.split(/\s+/)
+      for (let i = 0; i < palavras.length && !cidadeDigitada; i++) {
+        const ach = acharCidade(palavras.slice(i).join(' '), mun, ia.ufExplicita ? ia.uf : uf)
+        if (ach) { cidadeBusca = ach.nome; ufBusca = ia.ufExplicita ? ia.uf : ach.uf; cidadeDigitada = true }
+      }
+      if (cidadeDigitada) break
+    }
+  }
   const BR = 'bbox=-74,-34,-34,5.5'
   const correios = await porRua(ufBusca, cidadeBusca, ruaDigitada, numero)
 
@@ -164,8 +220,12 @@ export async function GET(req: NextRequest) {
     vistos.add(rotulo)
     lista.push({ rotulo, cidade: cid })
   }
-  // cidade da empresa primeiro (mantém a ordem de relevância dentro de cada grupo)
-  const ordenada = alvo ? [...lista.filter((s) => semAcento(s.cidade) === alvo), ...lista.filter((s) => semAcento(s.cidade) !== alvo)] : lista
+  // cidade primeiro (mantém a ordem de relevância dentro de cada grupo); se a pessoa digitou a cidade,
+  // só ela: sugerir a mesma rua em outras cidades do país atrapalha mais do que ajuda
+  const daCidade = alvo ? lista.filter((s) => semAcento(s.cidade) === alvo) : []
+  const ordenada = alvo
+    ? cidadeDigitada && daCidade.length ? daCidade : [...daCidade, ...lista.filter((s) => semAcento(s.cidade) !== alvo)]
+    : lista
   const vistosFinal = new Set<string>()
   const unica = ordenada.filter((s) => { const k = semAcento(s.rotulo).replace(/[^a-z0-9]/g, ''); if (vistosFinal.has(k)) return false; vistosFinal.add(k); return true })
   return NextResponse.json(unica.slice(0, 8).map((s) => ({ rotulo: s.rotulo })))
