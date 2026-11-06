@@ -10,6 +10,7 @@ type OrdemServico = {
   dataAgendamento: string
   ambiente: { nome: string; localizacaoInterna: string }
   itens: { id: string }[]
+  dias?: { data: string }[]
 }
 
 export default async function MinhasOsPage() {

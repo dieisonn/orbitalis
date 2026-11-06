@@ -11,6 +11,7 @@ type OrdemServico = {
   dataAgendamento: string
   ambiente: { nome: string; localizacaoInterna: string }
   itens: { id: string }[]
+  dias?: { data: string }[]
 }
 
 type Tab = 'pendentes' | 'hoje' | 'concluidas'
@@ -22,14 +23,13 @@ const ORIGEM_LABEL: Record<string, string> = {
   orcamento_aprovado: 'Orçamento aprovado',
 }
 
-function isHoje(isoDate: string): boolean {
-  const d = new Date(isoDate)
-  const h = new Date()
-  return (
-    d.getFullYear() === h.getFullYear() &&
-    d.getMonth() === h.getMonth() &&
-    d.getDate() === h.getDate()
-  )
+// A data da O.S. é só o dia (guardada à meia-noite UTC) e "hoje" é o dia em Brasília: compara como texto AAAA-MM-DD.
+// (Usar getDate() local deslocava a O.S. um dia para trás, e a aba "Hoje" ficava errada.)
+function isHoje(os: { dataAgendamento: string; dias?: { data: string }[] }): boolean {
+  const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
+  // O.S. de vários dias vale em qualquer um dos seus dias
+  const datas = os.dias?.length ? os.dias.map((d) => d.data) : [os.dataAgendamento]
+  return datas.some((d) => d.slice(0, 10) === hoje)
 }
 
 function isAtrasada(os: OrdemServico): boolean {
@@ -44,7 +44,7 @@ export function OsList({ ordens }: { ordens: OrdemServico[] }) {
     (os) => !['concluida', 'cancelada'].includes(os.status),
   )
   const hoje = ordens.filter(
-    (os) => isHoje(os.dataAgendamento) && !['concluida', 'cancelada'].includes(os.status),
+    (os) => isHoje(os) && !['concluida', 'cancelada'].includes(os.status),
   )
   const concluidas = ordens.filter((os) =>
     ['concluida', 'cancelada'].includes(os.status),
@@ -64,7 +64,7 @@ export function OsList({ ordens }: { ordens: OrdemServico[] }) {
       <div className="mb-4">
         <h1 className="text-xl font-bold text-primary">Minhas O.S.</h1>
         <p className="text-gray-500 text-xs mt-0.5">
-          {ordens.length} ordem(ns) atribuída(s) a você
+          {pendentes.length} ordem(ns) pendente(s) atribuída(s) a você
         </p>
       </div>
 

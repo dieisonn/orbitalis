@@ -452,9 +452,13 @@ export class OrdensServicoService {
     return this.prisma.ordemServico.findMany({
       where: {
         tecnicoId,
-        status: { in: ['aberta', 'agendada', 'em_andamento'] },
+        // pendentes + as concluídas/canceladas dos últimos 60 dias (aba "Concluídas" do portal do técnico)
+        OR: [
+          { status: { in: ['aberta', 'agendada', 'em_andamento'] } },
+          { status: { in: ['concluida', 'cancelada'] }, dataAgendamento: { gte: new Date(Date.now() - 60 * 86_400_000) } },
+        ],
       },
-      include: { itens: { include: { equipamento: true } }, ambiente: true },
+      include: { itens: { include: { equipamento: true } }, ambiente: true, dias: { orderBy: { data: 'asc' } } },
       orderBy: { dataAgendamento: 'asc' },
     });
   }

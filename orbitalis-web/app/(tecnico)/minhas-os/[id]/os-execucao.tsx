@@ -193,6 +193,25 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     })
   }
 
+  // Marca (ou desmarca) todo o checklist de um equipamento de uma vez
+  function marcarTudo(item: OsItem, marcar: boolean) {
+    setSaved(false)
+    const todos = parseSnapshot(item.checklistSnapshot).map((c) => c.id)
+    setChecked((prev) => ({ ...prev, [item.id]: marcar ? new Set(todos) : new Set() }))
+  }
+
+  // Marca o checklist de todos os equipamentos ainda não concluídos (visita com muitos equipamentos iguais)
+  function marcarTudoGeral() {
+    setSaved(false)
+    setChecked((prev) => {
+      const n = { ...prev }
+      for (const i of os.itens) {
+        if (itemStatus[i.id] !== 'concluido') n[i.id] = new Set(parseSnapshot(i.checklistSnapshot).map((c) => c.id))
+      }
+      return n
+    })
+  }
+
   function mandatoryOk(item: OsItem): boolean {
     const cl = parseSnapshot(item.checklistSnapshot)
     const checkedSet = checked[item.id] ?? new Set()
@@ -298,6 +317,12 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
                 className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">
                 {abertos.size ? 'Recolher todos' : 'Expandir todos'}
               </button>
+              {isWorking && (
+                <button type="button" onClick={() => { if (confirm('Marcar o checklist de TODOS os equipamentos ainda não concluídos?')) marcarTudoGeral() }}
+                  className="text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">
+                  Marcar tudo em todos
+                </button>
+              )}
               {isWorking && prontosParaConcluir > 0 && (
                 <button type="button" onClick={concluirProntos}
                   className="text-xs font-semibold px-3 py-1.5 rounded-full bg-green-500 text-white hover:bg-green-600">
@@ -440,9 +465,17 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
             {/* Checklist */}
             {cl.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-2">
-                  Checklist
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                    Checklist <span className="normal-case font-medium">· {cl.filter((c) => checkedSet.has(c.id)).length}/{cl.length}</span>
+                  </p>
+                  {!isReadOnly && (
+                    <button type="button" onClick={() => marcarTudo(item, checkedSet.size < cl.length)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary px-2.5 py-1 rounded-full border border-primary/30 hover:bg-primary/5">
+                      <CheckCheck size={12} /> {checkedSet.size < cl.length ? 'Marcar tudo' : 'Desmarcar tudo'}
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-2">
                   {cl.map((ci) => (
                     <label
