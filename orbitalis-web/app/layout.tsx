@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import '@fontsource/ibm-plex-sans/latin-400.css'
 import '@fontsource/ibm-plex-sans/latin-500.css'
 import '@fontsource/ibm-plex-sans/latin-600.css'
@@ -9,6 +9,14 @@ import './globals.css'
 import { TruncateTitles } from '@/components/ui/truncate-titles'
 import { AvisoCookies } from '@/components/ui/aviso-cookies'
 import { Acessibilidade } from '@/components/ui/acessibilidade'
+
+// Tela do celular abre no tamanho certo e não dá zoom (nem o zoom automático do iOS ao tocar em campos)
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
 
 export const metadata: Metadata = {
   title: 'Orbitalis — Gestão de Ativos',

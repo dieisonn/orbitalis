@@ -10,7 +10,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
   const path = usePathname()
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface overflow-x-hidden">
       {/* Header fixo no topo */}
       <header className="sticky top-0 z-40 bg-[var(--nav-bg)] border-b border-[var(--nav-border)] px-4 py-2.5 flex items-center gap-3">
         <img src="/logo.png" alt="Orbitalis" className="h-8 w-auto object-contain" />
