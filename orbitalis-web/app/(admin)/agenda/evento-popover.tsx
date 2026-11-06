@@ -52,9 +52,10 @@ export type Ancora = { x: number; y: number; w: number; h: number }
 
 // ─── Clique esquerdo: cartão do evento ───────────────────────────────────────
 
-export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplicar, onMudou }: {
+export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplicar, onMudou, somenteLeitura = false }: {
   evento: EventoAgenda; ancora: Ancora
   onFechar: () => void; onEditar: () => void; onDuplicar: () => void; onMudou: () => void
+  somenteLeitura?: boolean   // portal do técnico: só detalhes
 }) {
   const LARGURA = 380
   const { ref, pos } = useLugar(ancora, LARGURA)
@@ -100,9 +101,9 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
       <div className="h-2" style={{ backgroundColor: e.corHex }} />
 
       <div className="flex items-center justify-end gap-0.5 px-2 pt-2">
-        <button onClick={onEditar} disabled={ocupado} className={btn} title="Editar" aria-label="Editar evento"><Pencil size={17} /></button>
-        <button onClick={onDuplicar} disabled={ocupado} className={btn} title="Duplicar" aria-label="Duplicar evento"><Copy size={17} /></button>
-        {(!ehOs || !['cancelada', 'concluida'].includes(e.ordemServico!.status)) && (
+        {!somenteLeitura && <button onClick={onEditar} disabled={ocupado} className={btn} title="Editar" aria-label="Editar evento"><Pencil size={17} /></button>}
+        {!somenteLeitura && <button onClick={onDuplicar} disabled={ocupado} className={btn} title="Duplicar" aria-label="Duplicar evento"><Copy size={17} /></button>}
+        {!somenteLeitura && (!ehOs || !['cancelada', 'concluida'].includes(e.ordemServico!.status)) && (
           <button onClick={excluir} disabled={ocupado} className={`${btn} hover:!bg-red-50 hover:text-red-600`} title={ehOs ? 'Cancelar a O.S. deste evento' : 'Excluir'} aria-label={ehOs ? 'Cancelar a O.S. deste evento' : 'Excluir evento'}>
             {ocupado ? <Loader2 size={17} className="animate-spin" /> : <Trash2 size={17} />}
           </button>
@@ -167,7 +168,7 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
           {e.ordemServico && (
             <Linha icone={<Clock size={16} />}>
               <p>O.S. {e.ordemServico.numero} · {STATUS_OS_LABEL[e.ordemServico.status] ?? e.ordemServico.status}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Mudar data, horário ou técnico aqui atualiza a O.S.</p>
+              {!somenteLeitura && <p className="text-xs text-gray-500 mt-0.5">Mudar data, horário ou técnico aqui atualiza a O.S.</p>}
             </Linha>
           )}
         </div>
@@ -176,11 +177,11 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
 
         {ehOs && (
           <div className="flex flex-wrap gap-2 mt-4">
-            <a href={`/ordens-servico/${e.ordemServico!.id}`}
+            <a href={somenteLeitura ? `/minhas-os/${e.ordemServico!.id}` : `/ordens-servico/${e.ordemServico!.id}`}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
               <ExternalLink size={14} /> Abrir O.S.
             </a>
-            {e.personalizado && (
+            {e.personalizado && !somenteLeitura && (
               <button onClick={restaurar} disabled={ocupado}
                 className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-gray-700 text-sm rounded-lg hover:bg-surface">
                 <RotateCcw size={14} /> Restaurar texto da O.S.

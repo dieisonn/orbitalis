@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { ModoLeitura } from './modo-leitura'
 import { ChevronLeft, ChevronRight, Plus, Loader2, Navigation, Flag } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, DIAS_SEMANA, MESES, hoje, somarDias, chaveDia, chaveDoInstante, mesmoDia,
@@ -55,9 +56,10 @@ function lerDia(s?: string): Dia | null {
   return t.getUTCFullYear() === dia.y && t.getUTCMonth() === dia.m && t.getUTCDate() === dia.d ? dia : null
 }
 
-export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cidade, uf, visaoInicial, dataInicial }: {
+export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cidade, uf, visaoInicial, dataInicial, somenteLeitura = false }: {
   tipos: TipoOpcao[]; clientes: ClienteOpcao[]; tecnicos: TecnicoOpcao[]; cidade: string | null; uf: string | null
   visaoInicial?: string; dataInicial?: string
+  somenteLeitura?: boolean   // portal do técnico: só consulta
 }) {
   const [visao, setVisao] = useState<Visao>(VISOES.find((v) => v === visaoInicial) ?? 'mes')
   const [cursor, setCursor] = useState<Dia>(() => lerDia(dataInicial) ?? hoje())
@@ -83,9 +85,9 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
   const [feriadosAberto, setFeriadosAberto] = useState(false)
   const [menu, setMenu] = useState<{ e: EventoAgenda; x: number; y: number } | null>(null)
   const [modal, setModal] = useState<{ evento: EventoAgenda | null; modelo?: EventoAgenda | null; inicio?: string; fim?: string } | null>(null)
-  const setNovo = (v: { inicio: string; fim?: string }) => { setPop(null); setMenu(null); setModal({ evento: null, ...v }) }
+  const setNovo = (v: { inicio: string; fim?: string }) => { if (somenteLeitura) return; setPop(null); setMenu(null); setModal({ evento: null, ...v }) }
   const abrir: AoAbrir = (e, a) => { setMenu(null); setPop({ e, a }) }
-  const abrirMenu: AoMenu = (e, x, y) => { setPop(null); setMenu({ e, x, y }) }
+  const abrirMenu: AoMenu = (e, x, y) => { if (somenteLeitura) return; setPop(null); setMenu({ e, x, y }) }
   const arrastando = useRef<EventoAgenda | null>(null)
   const [alvo, setAlvo] = useState<string | null>(null)
 
@@ -232,7 +234,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
     else if (k === 't') setCursor(hoje())
     else if (k === 'arrowleft' || k === 'j' || k === 'p') navegar(-1)
     else if (k === 'arrowright' || k === 'k' || k === 'n') navegar(1)
-    else if (k === 'c') novoHoje()
+    else if (k === 'c' && !somenteLeitura) novoHoje()
     else return
     e.preventDefault()
   }
@@ -243,6 +245,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
   }, [])
 
   return (
+    <ModoLeitura.Provider value={somenteLeitura}>
     <div>
       {/* Barra superior */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -256,11 +259,11 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
         {carregando && <Loader2 size={16} className="animate-spin text-gray-400" />}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <select aria-label="Filtrar por técnico" value={tecnicoFiltro} onChange={(e) => setTecnicoFiltro(e.target.value)}
+          {!somenteLeitura && <select aria-label="Filtrar por técnico" value={tecnicoFiltro} onChange={(e) => setTecnicoFiltro(e.target.value)}
             className="px-3 py-2 border border-border rounded-lg text-sm text-gray-700 bg-white">
             <option value="">Todos os técnicos</option>
             {tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>)}
-          </select>
+          </select>}
           <div className="flex rounded-lg border border-border overflow-hidden text-sm font-semibold">
             {(['mes', 'semana', 'dia'] as Visao[]).map((v) => (
               <button key={v} onClick={() => setVisao(v)} title={`${v === 'mes' ? 'Mês' : v === 'semana' ? 'Semana' : 'Dia'} (${v === 'mes' ? 'M' : v === 'semana' ? 'W' : 'D'})`}
@@ -269,15 +272,15 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
               </button>
             ))}
           </div>
-          <button onClick={() => { setPop(null); setMenu(null); setFeriadosAberto(true) }} title="Feriados: lançar e cadastrar"
+          {!somenteLeitura && <button onClick={() => { setPop(null); setMenu(null); setFeriadosAberto(true) }} title="Feriados: lançar e cadastrar"
             className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-sm font-semibold text-gray-700 rounded-lg bg-white hover:bg-surface">
             <Flag size={14} /> Feriados
-          </button>
-          <AvisosAgendaBotao />
-          <button onClick={novoHoje} title="Novo evento (C)"
+          </button>}
+          {!somenteLeitura && <AvisosAgendaBotao />}
+          {!somenteLeitura && <button onClick={novoHoje} title="Novo evento (C)"
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
             <Plus size={14} /> Novo evento
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -327,8 +330,8 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
       )}
 
       <p className="hidden md:block mt-2 text-xs text-gray-500">
-        {visao !== 'mes' && 'Arraste na grade para criar um evento já com o horário; arraste um evento para movê-lo e puxe a borda de cima ou de baixo para mudar a duração. '}
-        Atalhos: <kbd className="font-mono">D</kbd> dia · <kbd className="font-mono">W</kbd> semana · <kbd className="font-mono">M</kbd> mês · <kbd className="font-mono">T</kbd> hoje · <kbd className="font-mono">←</kbd> <kbd className="font-mono">→</kbd> navegar · <kbd className="font-mono">C</kbd> novo evento
+        {!somenteLeitura && visao !== 'mes' && 'Arraste na grade para criar um evento já com o horário; arraste um evento para movê-lo e puxe a borda de cima ou de baixo para mudar a duração. '}
+        Atalhos: <kbd className="font-mono">D</kbd> dia · <kbd className="font-mono">W</kbd> semana · <kbd className="font-mono">M</kbd> mês · <kbd className="font-mono">T</kbd> hoje · <kbd className="font-mono">←</kbd> <kbd className="font-mono">→</kbd> navegar{!somenteLeitura && <> · <kbd className="font-mono">C</kbd> novo evento</>}
       </p>
 
       {feriadosAberto && (
@@ -343,6 +346,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
           onEditar={() => { setPop(null); setModal({ evento: pop.e }) }}
           onDuplicar={() => { setPop(null); setModal({ evento: null, modelo: pop.e }) }}
           onMudou={carregar}
+          somenteLeitura={somenteLeitura}
         />
       )}
       {menu && (
@@ -371,13 +375,15 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
         />
       )}
     </div>
+    </ModoLeitura.Provider>
   )
 }
 
 function Chip({ e, onAbrir, onMenu, onArrastar }: { e: EventoAgenda; onAbrir: AoAbrir; onMenu: AoMenu; onArrastar: (e: EventoAgenda) => void }) {
+  const leitura = useContext(ModoLeitura)
   return (
     <button
-      draggable
+      draggable={!leitura}
       onDragStart={(ev) => { ev.dataTransfer.effectAllowed = 'move'; onArrastar(e) }}
       onClick={(ev) => { ev.stopPropagation(); onAbrir(e, ancoraDe(ev.currentTarget)) }}
       onContextMenu={(ev) => { ev.preventDefault(); ev.stopPropagation(); onMenu(e, ev.clientX, ev.clientY) }}
@@ -483,7 +489,8 @@ function BlocoEvento({ e, d, topo, altura, nivel, idx, de, esmaecido, onAbrir, o
 }) {
   const encerrada = e.ordemServico?.status === 'concluida' || e.ordemServico?.status === 'cancelada'
   const mesmoDiaInteiro = diffDias(relogio(e.inicio), relogio(new Date(new Date(e.fim).getTime() - 1))) === 0
-  const arrastavel = !encerrada && mesmoDiaInteiro
+  const leitura = useContext(ModoLeitura)
+  const arrastavel = !encerrada && mesmoDiaInteiro && !leitura
   const colEl = (ev: React.PointerEvent) => (ev.currentTarget as HTMLElement).closest('[data-coluna]') as HTMLElement
   const meiaNoite = new Date(instante(d.y, d.m, d.d)).getTime()
   const base = {
@@ -534,6 +541,7 @@ function GradeHoras({ dias, porDia, marcas, onAbrir, onMenu, onNovo, onHorario }
   onAbrir: AoAbrir; onMenu: AoMenu; onNovo: (inicio: string, fim?: string) => void
   onHorario: (e: EventoAgenda, inicio: string, fim: string) => void
 }) {
+  const leituraGrade = useContext(ModoLeitura)
   // Prévia do que está sendo feito com o mouse: criar (arrastar no vazio), mover ou mudar a duração (borda de cima/baixo)
   const [prev, setPrev] = useState<{ kind: Acao; k: string; ini: number; fim: number; evId?: string } | null>(null)
   const ctl = useRef<Controle | null>(null)
@@ -710,7 +718,7 @@ function GradeHoras({ dias, porDia, marcas, onAbrir, onMenu, onNovo, onHorario }
             return (
               <div key={k} data-coluna={k} className={`relative border-l border-border min-w-0 select-none ${feriado ? 'bg-gray-100/70' : ''}`} style={{ height: horas.length * PX_HORA, touchAction: 'pan-y' }}
                 onPointerDown={(ev) => {
-                  if ((ev.target as HTMLElement).closest('button')) return
+                  if ((ev.target as HTMLElement).closest('button') || leituraGrade) return
                   iniciar(ev, 'criar', ev.currentTarget as HTMLElement, { dia: d })
                 }}>
                 {horas.map((h) => <div key={h} style={{ height: PX_HORA }} className="border-b border-border/70" />)}

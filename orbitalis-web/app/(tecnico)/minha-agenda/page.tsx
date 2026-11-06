@@ -1,15 +1,46 @@
 import { api } from '@/lib/api'
 import { getUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { Clock, MapPin, Navigation, Phone } from 'lucide-react'
+import { AgendaClient } from '../../(admin)/agenda/agenda-client'
 import {
   type EventoAgenda, chaveDoInstante, diaPorExtenso, hoje, hhmm, instante, relogio, somarDias,
   mapaUrl, wazeUrl, STATUS_OS_LABEL,
 } from '@/lib/agenda'
 
-export default async function MinhaAgendaPage() {
+export default async function MinhaAgendaPage({ searchParams }: { searchParams: Promise<{ modo?: string; v?: string; d?: string }> }) {
   const userId = await getUserId()
   if (!userId) redirect('/login')
+  const { modo, v, d } = await searchParams
+  const calendario = modo === 'calendario'
+
+  const abas = (
+    <div className="flex gap-1 bg-surface rounded-xl p-1 border border-border max-w-xs">
+      {[{ k: 'lista', t: 'Lista' }, { k: 'calendario', t: 'Calendário' }].map((a) => (
+        <Link key={a.k} href={a.k === 'lista' ? '/minha-agenda' : '/minha-agenda?modo=calendario'} replace
+          className={`flex-1 text-center py-2 rounded-lg text-xs font-semibold transition-colors ${(a.k === 'calendario') === calendario ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+          {a.t}
+        </Link>
+      ))}
+    </div>
+  )
+
+  if (calendario) {
+    // Calendário só para consulta: a mesma agenda do painel, sem criar, mover, editar nem excluir
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-lg font-bold text-primary">Minha agenda</h1>
+          <p className="text-xs text-gray-500">Somente consulta</p>
+        </div>
+        {abas}
+        <div className="relative left-1/2 w-[min(1100px,calc(100vw-2rem))] -translate-x-1/2">
+          <AgendaClient somenteLeitura tipos={[]} clientes={[]} tecnicos={[]} cidade={null} uf={null} visaoInicial={v} dataInicial={d} />
+        </div>
+      </div>
+    )
+  }
 
   const h = hoje()
   const de = instante(h.y, h.m, h.d)
@@ -34,6 +65,7 @@ export default async function MinhaAgendaPage() {
         <h1 className="text-lg font-bold text-primary">Minha agenda</h1>
         <p className="text-xs text-gray-500">Próximos 15 dias</p>
       </div>
+      {abas}
 
       {grupos.size === 0 && (
         <p className="text-center text-sm text-gray-400 py-10">Nenhum atendimento agendado.</p>
