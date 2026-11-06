@@ -78,7 +78,7 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
   const tecnicos    = tecnicosRes.data
   const clientes    = clientesRes.data
 
-  const aguardandoTriagem = ordens.filter((o) => o.status === 'aberta').length
+  const aguardandoTriagem = ordens.filter((o) => o.status === 'aberta' && !o.tecnico).length
   const isFiltered = !!(status || q || tecnicoId || clienteId || dataInicio || dataFim || atrasadas)
 
   return (

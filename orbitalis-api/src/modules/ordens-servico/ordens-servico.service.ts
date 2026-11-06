@@ -1145,6 +1145,9 @@ export class OrdensServicoService {
         ...(dto.dataAgendamento ? { dataAgendamento: new Date(dto.dataAgendamento) } : {}),
         ...(dto.observacoesGerais !== undefined ? { observacoesGerais: dto.observacoesGerais || null } : {}),
         ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
+        // Status acompanha o técnico: com técnico a O.S. sai da triagem (agendada); sem técnico volta a aguardar triagem
+        ...(dto.tecnicoId !== undefined && os.status === 'aberta' && dto.tecnicoId ? { status: 'agendada' as const } : {}),
+        ...(dto.tecnicoId !== undefined && os.status === 'agendada' && !dto.tecnicoId ? { status: 'aberta' as const } : {}),
         ...(dto.tipo ? { tipo: dto.tipo as any } : {}),
         ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId || null } : {}),
         ...(dto.tipoServicoId !== undefined || dto.tiposServicoExtras !== undefined
