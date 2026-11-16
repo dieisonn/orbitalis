@@ -200,7 +200,30 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
 
     setSalvando(true)
     try {
-      if (evento) {
+      if (evento && !ehOs && criarOs && !diaInteiro) {
+        // Evento avulso que agora ganha O.S.: cria a O.S. (que gera o próprio evento) e tira o evento avulso, para não duplicar
+        if (!clienteId) { setSalvando(false); return setErro('Escolha o cliente para gerar a O.S.') }
+        await chamar('POST', '/ordens-servico', {
+          clienteId,
+          tecnicoId: tecnicoId || undefined,
+          origem: 'manual_admin',
+          tipo: tipoOs,
+          tipoServicoId: tipoIds[0] || undefined,
+          ...(tipoIds.length > 1 ? { tiposServicoExtras: tipoIds.slice(1) } : {}),
+          dataAgendamento: data,
+          horaInicio: horaIni,
+          horaFim: fimEfetivo,
+          observacoesGerais: [titulo.trim() && `Evento: ${titulo.trim()}`, descricao.trim()].filter(Boolean).join('\n') || undefined,
+        })
+        try {
+          await chamar('DELETE', `/agenda/${evento.id}`)
+        } catch {
+          setErro('A O.S. foi criada, mas não consegui remover o evento avulso antigo. Exclua-o na agenda para não ficar repetido.')
+          setSalvando(false)
+          onMudou()
+          return
+        }
+      } else if (evento) {
         await chamar('PATCH', `/agenda/${evento.id}${evento.serieId && escopo ? `?escopo=${escopo}` : ''}`, {
           titulo: titulo.trim() || undefined,
           descricao: descricao.trim() || null,
@@ -352,13 +375,13 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
           )}
         </Linha>
 
-        {!evento && (
+        {!ehOs && !evento?.serieId && (
           <Linha icone={<Wrench size={16} />}>
             <label className="flex items-start gap-2 text-sm text-gray-700">
               <input type="checkbox" className="accent-action w-4 h-4 mt-0.5" checked={criarOs && repete === 'nao' && !diaInteiro}
                 disabled={repete !== 'nao' || diaInteiro || !clienteId} onChange={(e) => setCriarOs(e.target.checked)} />
               <span>
-                Criar também a O.S. deste evento
+                {evento ? 'Gerar a O.S. deste evento' : 'Criar também a O.S. deste evento'}
                 <span className="block text-xs text-gray-500">
                   {!clienteId ? 'Escolha o cliente primeiro. ' : repete !== 'nao' || diaInteiro ? 'Não vale para evento recorrente ou de dia inteiro. ' : ''}
                   A O.S. e o evento ficam ligados: mudar um muda o outro.
