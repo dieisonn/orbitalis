@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { OsExecucao, type OsParaExecucao } from './os-execucao'
 import { ArrowLeft, MapPin, Building2, Calendar, Package, Navigation, Phone } from 'lucide-react'
+import { numeroOs } from '@/lib/os-numero'
 import { mapaUrl, wazeUrl } from '@/lib/agenda'
 
 type Props = { params: Promise<{ id: string }> }
@@ -11,7 +12,7 @@ type Props = { params: Promise<{ id: string }> }
 type OrdemServico = OsParaExecucao & {
   origem: string
   numero?: number | null
-  tipoServico?: { nome: string } | null
+  tipoServico?: { sigla: string; nome: string } | null
   horaInicio?: string | null
   dataAgendamento: string
   dataInicio: string | null
@@ -62,7 +63,7 @@ export default async function OsDetailPage({ params }: Props) {
     )
   }
 
-  const shortId = os.numero ? `O.S. #${os.numero}` : `OS-${os.id.slice(0, 6).toUpperCase()}`
+  const shortId = numeroOs(os)
   const cliente = os.ambiente.cliente.nomeFantasia ?? os.ambiente.cliente.razaoSocial
   // Visita com equipamentos em vários ambientes: o título vira o cliente e o local, a contagem de ambientes
   const nAmbientes = new Set(os.itens.map((i) => i.equipamento.ambiente?.nome).filter(Boolean)).size

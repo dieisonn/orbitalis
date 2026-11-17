@@ -7,6 +7,7 @@ import {
   MapPin, User, Calendar, Clock, CheckSquare, Wrench,
   FileText, DollarSign, ClipboardCheck, AlertCircle, Wind,
 } from 'lucide-react'
+import { numeroOs } from '@/lib/os-numero'
 import { ConcluirOsBtn } from '@/components/ui/concluir-os-btn'
 
 type Props = { params: Promise<{ id: string }> }
@@ -142,7 +143,7 @@ export default async function OsDetailPage({ params }: Props) {
     notFound()
   }
 
-  const osNum    = os.numero != null ? `OS-${String(os.numero).padStart(4,'0')}` : `OS-${os.id.slice(0,6).toUpperCase()}`
+  const osNum    = numeroOs(os)
   const cliente  = os.ambiente?.cliente
   const clienteNome = cliente?.nomeFantasia ?? cliente?.razaoSocial ?? '—'
 
