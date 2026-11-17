@@ -12,8 +12,12 @@ import { ConcluirOsBtn } from '@/components/ui/concluir-os-btn'
 type Props = { params: Promise<{ id: string }> }
 
 type ChecklistItem = {
-  ordem: number
-  tarefa: string
+  id?: string
+  ordem?: number
+  tarefa?: string
+  descricao?: string
+  marcado?: boolean
+  resultado?: 'C' | 'NC' | 'NA' | null
   obrigatorio: boolean
   tipo: 'checkbox' | 'numero' | 'texto'
   valor?: string | number | boolean | null
@@ -93,32 +97,28 @@ function fmtBRL(v: number | null) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 }
 
-function ItemChecklistRow({ item }: { item: ChecklistItem }) {
+function ItemChecklistRow({ item, n }: { item: ChecklistItem; n: number }) {
+  const resultado = item.resultado ?? (item.marcado ? 'C' : null)
   const valorStr = item.valor == null ? '' : String(item.valor)
-  const hasValue = valorStr !== '' && valorStr !== 'false'
+  const hasValue = valorStr !== '' && valorStr !== 'false' && valorStr !== 'true'
+  const estilos = { C: ['Conforme', 'bg-green-100 text-green-700'], NC: ['Não conforme', 'bg-red-100 text-red-700'], NA: ['Não se aplica', 'bg-gray-100 text-gray-600'] } as const
 
   return (
     <div className="flex items-start gap-3 py-2 border-b border-border/60 last:border-0">
-      <span className="text-xs text-gray-300 w-5 shrink-0 text-right pt-0.5">{item.ordem}.</span>
+      <span className="text-xs text-gray-300 w-5 shrink-0 text-right pt-0.5">{n}.</span>
       <div className="flex-1 min-w-0">
         <span className="text-sm text-gray-700">
-          {item.tarefa}
+          {item.descricao ?? item.tarefa}
           {item.obrigatorio && <span className="text-destructive ml-1 text-xs">*</span>}
         </span>
       </div>
       <div className="shrink-0 text-right">
-        {item.tipo === 'checkbox' ? (
-          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-            item.valor === true || item.valor === 'true'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-gray-100 text-gray-400'
-          }`}>
-            {item.valor === true || item.valor === 'true' ? '✓ Feito' : '— Pendente'}
-          </span>
+        {resultado ? (
+          <span className={`inline-flex text-xs font-medium px-2 py-0.5 rounded-full ${estilos[resultado][1]}`}>{estilos[resultado][0]}</span>
         ) : hasValue ? (
           <span className="text-sm font-semibold text-gray-800">{valorStr}</span>
         ) : (
-          <span className="text-xs text-gray-300 italic">sem valor</span>
+          <span className="text-xs text-gray-300 italic">não respondido</span>
         )}
       </div>
     </div>
@@ -402,8 +402,8 @@ export default async function OsDetailPage({ params }: Props) {
                   {/* Checklist items */}
                   {checklist.length > 0 ? (
                     <div className="px-5 py-2">
-                      {checklist.map((ci) => (
-                        <ItemChecklistRow key={ci.ordem} item={ci} />
+                      {checklist.map((ci, i) => (
+                        <ItemChecklistRow key={ci.id ?? i} item={ci} n={i + 1} />
                       ))}
                     </div>
                   ) : (

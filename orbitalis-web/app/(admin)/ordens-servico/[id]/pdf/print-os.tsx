@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { Printer } from 'lucide-react'
 
-type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: string; unidade?: string; opcoes?: string[] }
+type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: string; unidade?: string; opcoes?: string[]; marcado?: boolean; resultado?: 'C' | 'NC' | 'NA' | null }
+
+// Itens antigos só têm `marcado`: contam como Conforme
+const resultadoDe = (c: ChecklistItem) => c.resultado ?? (c.marcado ? 'C' : null)
 
 type Item = {
   id: string
@@ -277,14 +280,19 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }:
               <div style={{ padding: '6px 8px' }}>
                 {checklistItems.length > 0 && (
                   <div style={{ marginBottom: '6px' }}>
-                    <p style={rotulo}>Checklist de serviços</p>
+                    <p style={rotulo}>Checklist de serviços <span style={{ textTransform: 'none', fontWeight: 400 }}>· C = Conforme · NC = Não conforme · NA = Não se aplica</span></p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 14px', marginTop: '3px' }}>
                       {checklistItems.map((ci) => (
                         <div key={ci.id} style={{ breakInside: 'avoid' }}>
-                          <Caixa marcada={false}>
-                            {ci.descricao}{ci.obrigatorio ? ' *' : ''}
-                            {ci.tipo === 'numero' && <span style={{ color: '#666' }}>{`  ________ ${ci.unidade ?? ''}`}</span>}
-                          </Caixa>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
+                            <span style={{ fontSize: '8.5pt', lineHeight: 1.25 }}>
+                              {ci.descricao}{ci.obrigatorio ? ' *' : ''}
+                              {ci.tipo === 'numero' && <span style={{ color: '#666' }}>{`  ________ ${ci.unidade ?? ''}`}</span>}
+                            </span>
+                            <span style={{ display: 'inline-flex', gap: '6px', flexShrink: 0 }}>
+                              {(['C', 'NC', 'NA'] as const).map((r) => <Caixa key={r} marcada={resultadoDe(ci) === r}>{r}</Caixa>)}
+                            </span>
+                          </div>
                           {/* opções para marcar no papel */}
                           {ci.opcoes && ci.opcoes.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0 8px', margin: '0 0 0 15px', lineHeight: 1.1 }}>
@@ -445,7 +453,7 @@ function MatrizChecklist({ itens, checklist, numeros, mostrarAmbiente }: {
   const cel: React.CSSProperties = { border: borda, padding: '2px 3px', textAlign: 'center', fontSize: '8pt' }
   return (
     <div style={{ padding: '6px 8px' }}>
-      <p style={rotulo}>Checklist de serviços — marque (✓) ou anote a letra / valor em cada equipamento</p>
+      <p style={rotulo}>Checklist de serviços — anote C (conforme), NC (não conforme) ou NA (não se aplica) em cada equipamento; nos itens de escolha ou medição, anote também a letra / o valor</p>
       <div style={{ columnCount: 2, columnGap: '14px', marginTop: '3px', fontSize: '7.5pt', lineHeight: 1.25 }}>
         {checklist.map((ci, n) => (
           <div key={ci.id} style={{ breakInside: 'avoid', marginBottom: '2px' }}>
@@ -476,7 +484,11 @@ function MatrizChecklist({ itens, checklist, numeros, mostrarAmbiente }: {
                 <div style={{ fontSize: '6.5pt', color: '#666', lineHeight: 1.1 }}>{[it.equipamento.marca, it.equipamento.modelo].filter(Boolean).join(' ')}</div>
               </td>
               {mostrarAmbiente && <td style={{ ...cel, textAlign: 'left', fontSize: '7pt', overflowWrap: 'anywhere' }}>{it.equipamento.ambiente?.nome ?? ''}</td>}
-              {checklist.map((ci) => <td key={ci.id} style={cel} />)}
+              {checklist.map((ci) => {
+                const ck = parseSnapshot(it.checklistSnapshot).find((x) => x.id === ci.id)
+                const r = ck ? resultadoDe(ck) : null
+                return <td key={ci.id} style={{ ...cel, fontWeight: 700, fontSize: '7.5pt' }}>{r ?? ''}</td>
+              })}
               <td style={{ ...cel, textAlign: 'left', fontSize: '7pt' }}>{it.observacoesTecnicas ?? ''}</td>
             </tr>
           ))}
