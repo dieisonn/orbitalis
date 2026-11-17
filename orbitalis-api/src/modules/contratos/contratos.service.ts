@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service';
 import { FeriadosService } from '../feriados/feriados.service';
 import { dataDoCiclo, visitasRestantes } from '../cron/geracao-preventiva';
+import { idsSubstituidos } from './situacao-contrato';
 
 export type VisitaCalendario = {
   data: string;                 // YYYY-MM-DD
@@ -110,7 +111,10 @@ export class ContratosService {
       include: { cliente: { select: { razaoSocial: true, nomeFantasia: true } }, renovacoes: { select: { id: true } } },
       orderBy: { vigenciaFim: 'asc' },
     });
-    return this.anexarConsumo(contratos);
+    const substituidos = await idsSubstituidos(this.prisma, contratos);
+    const comConsumo = await this.anexarConsumo(contratos);
+    // renovado = renovou pelo botão (tem renovação ligada) ou foi substituído por contrato mais novo do mesmo cliente e nome
+    return comConsumo.map((c) => ({ ...c, renovado: c.renovacoes.length > 0 || substituidos.has(c.id) }));
   }
 
   async findOne(id: string) {

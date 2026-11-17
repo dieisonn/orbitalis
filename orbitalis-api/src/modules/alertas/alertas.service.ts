@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AlertaTipo, AlertaSeveridade } from '@prisma/client';
+import { idsSubstituidos } from '../contratos/situacao-contrato';
 
 @Injectable()
 export class AlertasService {
@@ -127,7 +128,9 @@ export class AlertasService {
       include: { cliente: { select: { razaoSocial: true } } },
     });
 
+    const substituidos = await idsSubstituidos(this.prisma, contratosVencendo);
     for (const c of contratosVencendo) {
+      if (substituidos.has(c.id)) continue; // contrato já renovado
       const existente = await this.prisma.alertaOcorrencia.findFirst({
         where: { tipo: AlertaTipo.contrato_vencendo, referenciaId: c.id, resolvido: false },
       });

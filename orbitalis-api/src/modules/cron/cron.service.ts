@@ -6,6 +6,8 @@ import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AlertasService } from '../alertas/alertas.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { gerarOsDoPlano, INCLUDE_GERACAO } from './geracao-preventiva';
+import { inicioDoDiaBrasilia } from '../../common/prazo-plano';
+import { idsSubstituidos } from '../contratos/situacao-contrato';
 
 @Injectable()
 export class CronService {
@@ -24,6 +26,13 @@ export class CronService {
     this.logger.log('Cron preventivo iniciado');
 
     const agora = new Date();
+
+    // Planos cujo prazo (dataFim) já passou deixam de ser ativos; os demais seguem ativos mesmo com todas as visitas geradas
+    const encerrados = await this.prisma.planoManutencao.updateMany({
+      where: { ativo: true, dataFim: { lt: inicioDoDiaBrasilia(agora) } },
+      data: { ativo: false },
+    });
+    if (encerrados.count) this.logger.log(`${encerrados.count} plano(s) com prazo vencido encerrado(s)`);
 
     const planos = await this.prisma.planoManutencao.findMany({
       where: {
@@ -163,8 +172,10 @@ export class CronService {
       },
     });
 
+    const substituidos = await idsSubstituidos(this.prisma, contratos);
     let enviadas = 0;
     for (const contrato of contratos) {
+      if (substituidos.has(contrato.id)) continue; // já renovado: não avisa vencimento
       const clienteEmail = contrato.cliente.usuario?.email;
       if (!clienteEmail) continue;
 

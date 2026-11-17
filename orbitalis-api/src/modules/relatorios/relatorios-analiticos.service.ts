@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { idsSubstituidos } from '../contratos/situacao-contrato';
 
 const DIA = 86_400_000;
 const num = (d: unknown) => (d == null ? 0 : Number(d));
@@ -36,6 +37,7 @@ export class RelatoriosAnaliticosService {
       },
       orderBy: { vigenciaFim: 'asc' },
     });
+    const substituidos = await idsSubstituidos(this.prisma, contratos);
     const planoIds = contratos.flatMap((c) => c.planos.map((p) => p.id));
     const ordens = planoIds.length
       ? await this.prisma.ordemServico.findMany({
@@ -52,7 +54,7 @@ export class RelatoriosAnaliticosService {
       const futuras = os.filter((o) => emAberto(o.status) && o.dataAgendamento >= hoje).length;
       const devidas = concluidas + atrasadas;
       const diasParaFim = Math.round((c.vigenciaFim.getTime() - hoje.getTime()) / DIA);
-      const situacao = c.renovacoes.length ? 'renovado' : diasParaFim < 0 ? 'vencido' : diasParaFim <= 60 ? 'vence_em_breve' : 'vigente';
+      const situacao = c.renovacoes.length || substituidos.has(c.id) ? 'renovado' : diasParaFim < 0 ? 'vencido' : diasParaFim <= 60 ? 'vence_em_breve' : 'vigente';
       const meses = Math.max(1, Math.round((c.vigenciaFim.getTime() - c.vigenciaInicio.getTime()) / (DIA * 30.4)));
       return {
         id: c.id, clienteId: c.cliente.id, cliente: nomeCliente(c.cliente), descricao: c.descricao,

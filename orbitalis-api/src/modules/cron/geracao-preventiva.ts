@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AgendaService } from '../agenda/agenda.service';
+import { planoEncerrado } from '../../common/prazo-plano';
 
 // Planos elegíveis para geração, com tudo que a geração precisa (ignora excluídos — soft delete)
 export const INCLUDE_GERACAO = {
@@ -171,9 +172,17 @@ export async function gerarOsDoPlano(
 
   const datas = datasParaGerar(plano);
   if (datas.length === 0) {
-    // Nenhum ciclo cabe mais dentro do prazo → encerra o plano
-    await prisma.planoManutencao.update({ where: { id: plano.id }, data: { ativo: false } });
-    logger.log(`Plano ${plano.id}: sem ciclos restantes — marcado como concluído`);
+    if (planoEncerrado(plano)) {
+      // Prazo do plano acabou e não há mais ciclos → encerra
+      await prisma.planoManutencao.update({ where: { id: plano.id }, data: { ativo: false } });
+      logger.log(`Plano ${plano.id}: prazo encerrado, sem ciclos restantes — marcado como concluído`);
+    } else if (plano.dataFim && plano.proximaGeracao <= plano.dataFim) {
+      // Todas as visitas já foram geradas, mas o plano segue vigente: fica ativo e sai da fila de geração
+      await prisma.planoManutencao.update({
+        where: { id: plano.id },
+        data: { proximaGeracao: new Date(plano.dataFim.getTime() + 86_400_000) },
+      });
+    }
     return { geradas: 0, ciclos: 0, semCiclos: true, esgotado: true };
   }
 
@@ -256,12 +265,11 @@ export async function gerarOsDoPlano(
       ultimaGeracao: ultimaData,
       proximaGeracao,
       visitasGeradas: geradasNoPlano,
-      ...(esgotado ? { ativo: false } : {}),
     },
   });
 
   logger.log(
-    `Plano ${plano.id}: ${datas.length} visita(s), agrupamento por ${modo}, ${geradas} O.S. nova(s)${esgotado ? ' [CONCLUÍDO]' : ''}`,
+    `Plano ${plano.id}: ${datas.length} visita(s), agrupamento por ${modo}, ${geradas} O.S. nova(s)${esgotado ? ' [todas as visitas geradas; plano segue ativo até o fim do prazo]' : ''}`,
   );
   return { geradas, ciclos: datas.length, semCiclos: false, esgotado };
 }

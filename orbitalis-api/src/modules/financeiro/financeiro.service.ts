@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { idsSubstituidos } from '../contratos/situacao-contrato';
 
 @Injectable()
 export class FinanceiroService {
@@ -75,8 +76,9 @@ export class FinanceiroService {
       orderBy: { vigenciaFim: 'asc' },
     });
 
+    const substituidos = await idsSubstituidos(this.prisma, contratos);
     const contratosAtivos = contratos.filter(
-      (c) => c.ativo && c.vigenciaFim >= hoje,
+      (c) => c.ativo && c.vigenciaFim >= hoje && !substituidos.has(c.id),
     );
     const mrrContratos = contratosAtivos.reduce(
       (s, c) => s + (c.valorMensal ? Number(c.valorMensal) : 0),

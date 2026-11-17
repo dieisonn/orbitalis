@@ -14,6 +14,7 @@ type Contrato = {
   vigenciaInicio: string; vigenciaFim: string; numOsIncluidas: number | null
   ativo: boolean
   renovacoes?: { id: string }[]
+  renovado?: boolean
   cliente: { razaoSocial: string; nomeFantasia: string | null }
 }
 
@@ -66,7 +67,7 @@ export default async function ContratosPage() {
                 const fim = new Date(c.vigenciaFim).getTime()
                 const diasRestantes = Math.ceil((fim - agora) / 86_400_000)
                 // Contrato já renovado não é "atrasado": a vigência dele terminou como previsto e o vigente é a renovação
-                const renovado = !!c.renovacoes?.length
+                const renovado = !!(c.renovado ?? c.renovacoes?.length)
                 const vencido = !renovado && diasRestantes < 0
                 const urgente = !renovado && !vencido && diasRestantes <= 30
 
@@ -80,12 +81,12 @@ export default async function ContratosPage() {
                       <div className="@lg:hidden mt-0.5 text-xs font-normal text-gray-500 line-clamp-2 break-words">{c.descricao}</div>
                       <div className="@xl:hidden mt-1">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                          c.renovacoes?.length ? 'bg-blue-100 text-blue-700' :
+                          renovado ? 'bg-blue-100 text-blue-700' :
                           vencido ? 'bg-red-100 text-red-700' :
                           !c.ativo ? 'bg-gray-100 text-gray-500' :
                           'bg-green-100 text-green-700'
                         }`}>
-                          {c.renovacoes?.length ? 'Renovado' : vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
+                          {renovado ? 'Renovado' : vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
                         </span>
                       </div>
                     </td>
@@ -120,12 +121,12 @@ export default async function ContratosPage() {
                     </td>
                     <td className="hidden @xl:table-cell px-4 py-3">
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        c.renovacoes?.length ? 'bg-blue-100 text-blue-700' :
+                        renovado ? 'bg-blue-100 text-blue-700' :
                         vencido ? 'bg-red-100 text-red-700' :
                         !c.ativo ? 'bg-gray-100 text-gray-500' :
                         'bg-green-100 text-green-700'
                       }`}>
-                        {c.renovacoes?.length ? 'Renovado' : vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
+                        {renovado ? 'Renovado' : vencido ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo'}
                       </span>
                     </td>
                     <td className="px-3 @xl:px-4 py-3 text-right whitespace-nowrap">
