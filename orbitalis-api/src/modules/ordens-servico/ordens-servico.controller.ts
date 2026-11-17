@@ -8,6 +8,8 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { OsStatus, UsuarioTipo } from '@prisma/client';
@@ -97,6 +99,55 @@ export class OrdensServicoController {
   @Roles(UsuarioTipo.tecnico)
   presignedUrl(@Body('filename') filename: string) {
     return this.ordensServicoService.presignedUrl(filename);
+  }
+
+  // GET /api/v1/ordens-servico/equipamento/:equipamentoId/ultimo — checklist da última visita concluída
+  @Get('equipamento/:equipamentoId/ultimo')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  ultimoDoEquipamento(@Param('equipamentoId') equipamentoId: string) {
+    return this.ordensServicoService.ultimoChecklistDoEquipamento(equipamentoId);
+  }
+
+  // GET /api/v1/ordens-servico/fotos/:fotoId/arquivo — a imagem
+  @Get('fotos/:fotoId/arquivo')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  async arquivoFoto(@Param('fotoId') fotoId: string, @CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: any) {
+    const f = await this.ordensServicoService.arquivoFoto(fotoId, user);
+    res.header('Content-Type', f.mime);
+    res.header('Cache-Control', 'private, max-age=86400');
+    return new StreamableFile(f.dados);
+  }
+
+  // DELETE /api/v1/ordens-servico/fotos/:fotoId
+  @Delete('fotos/:fotoId')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  removerFoto(@Param('fotoId') fotoId: string, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.removerFoto(fotoId, user);
+  }
+
+  // GET /api/v1/ordens-servico/:id/fotos
+  @Get(':id/fotos')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  listarFotos(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.listarFotos(id, user);
+  }
+
+  // POST /api/v1/ordens-servico/:id/fotos
+  @Post(':id/fotos')
+  @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
+  adicionarFoto(
+    @Param('id') id: string,
+    @Body() body: { itemId?: string; checklistItemId?: string; momento?: string; legenda?: string; dados: string },
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.ordensServicoService.adicionarFoto(id, body, user);
+  }
+
+  // PATCH /api/v1/ordens-servico/:id/auxiliares — Admin
+  @Patch(':id/auxiliares')
+  @Roles(UsuarioTipo.admin)
+  auxiliares(@Param('id') id: string, @Body() body: { tecnicoIds: string[] }) {
+    return this.ordensServicoService.definirAuxiliares(id, body.tecnicoIds ?? []);
   }
 
   // GET /api/v1/ordens-servico/:id — Admin, Técnico ou Cliente

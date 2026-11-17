@@ -1,0 +1,32 @@
+import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { PushService } from './push.service';
+
+@Controller('push')
+@UseGuards(JwtAuthGuard)
+export class PushController {
+  constructor(private readonly push: PushService) {}
+
+  @Get('chave')
+  chave() {
+    return this.push.chavePublica();
+  }
+
+  @Post('assinar')
+  assinar(@Body() body: { endpoint: string; keys: { p256dh: string; auth: string } }, @CurrentUser() user: AuthUser) {
+    return this.push.assinar(user.id, body);
+  }
+
+  @Post('desassinar')
+  desassinar(@Body() body: { endpoint: string }, @CurrentUser() user: AuthUser) {
+    return this.push.desassinar(user.id, body.endpoint);
+  }
+
+  // Teste: manda um aviso para os aparelhos do próprio usuário
+  @Post('testar')
+  async testar(@CurrentUser() user: AuthUser) {
+    await this.push.notificar([user.id], { titulo: 'Orbitalis', corpo: 'Avisos ativados neste aparelho.', url: '/minhas-os' });
+    return { ok: true };
+  }
+}

@@ -15,6 +15,7 @@ import { SincronizarOsDto } from './dto/sincronizar-os.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AgendaService } from '../agenda/agenda.service';
+import { PushService } from '../push/push.service';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 import { ambienteVarios } from '../cron/geracao-preventiva';
 
@@ -32,12 +33,39 @@ export class OrdensServicoService {
     private readonly prisma: PrismaService,
     private readonly notificacoes: NotificacoesService,
     private readonly agenda: AgendaService,
+    private readonly push: PushService,
   ) {}
 
   private osNumeroFormatado(os: any): string {
     const sigla = os.tipoServico?.sigla ?? 'OS';
     const num = os.numero != null ? String(os.numero).padStart(4, '0') : os.id.slice(0, 6).toUpperCase();
     return `${sigla}-${num}`;
+  }
+
+  /** Técnico responsável ou auxiliar da O.S. */
+  private async tecnicoAtende(os: { id: string; tecnicoId: string | null }, userId: string, db: any = this.prisma): Promise<boolean> {
+    if (os.tecnicoId === userId) return true;
+    return !!(await db.ordemServicoAuxiliar.findFirst({ where: { ordemServicoId: os.id, tecnicoId: userId }, select: { id: true } }));
+  }
+
+  /** Aviso no celular para responsável e auxiliares. */
+  private async avisarEquipe(osId: string, titulo: string, corpo: string, extras: (string | null | undefined)[] = []) {
+    const os = await this.prisma.ordemServico.findUnique({
+      where: { id: osId },
+      select: { tecnicoId: true, auxiliares: { select: { tecnicoId: true } } },
+    });
+    if (!os) return;
+    await this.push.notificar([os.tecnicoId, ...os.auxiliares.map((a) => a.tecnicoId), ...extras], { titulo, corpo, url: `/minhas-os/${osId}`, tag: `os-${osId}` });
+  }
+
+  private async descricaoParaAviso(osId: string): Promise<string> {
+    const o = await this.prisma.ordemServico.findUnique({
+      where: { id: osId },
+      select: { numero: true, id: true, tipoServico: { select: { sigla: true } }, ambiente: { select: { nome: true, cliente: { select: { razaoSocial: true, nomeFantasia: true } } } } },
+    });
+    if (!o) return 'O.S.';
+    const cli = o.ambiente.cliente.nomeFantasia || o.ambiente.cliente.razaoSocial;
+    return `${this.osNumeroFormatado(o)} · ${cli}`;
   }
 
   // Ambiente padrão do cliente para O.S. abertas sem local específico (visita técnica, orçamento...).
@@ -451,7 +479,7 @@ export class OrdensServicoService {
   async findByTecnico(tecnicoId: string) {
     const lista = await this.prisma.ordemServico.findMany({
       where: {
-        tecnicoId,
+        AND: [{ OR: [{ tecnicoId }, { auxiliares: { some: { tecnicoId } } }] }],
         // pendentes + as concluídas/canceladas dos últimos 60 dias (aba "Concluídas" do portal do técnico)
         OR: [
           { status: { in: ['aberta', 'agendada', 'em_andamento'] } },
@@ -463,11 +491,12 @@ export class OrdensServicoService {
         ambiente: { include: { cliente: true } },
         tipoServico: true,
         dias: { orderBy: { data: 'asc' } },
+        tecnico: { select: { id: true, nome: true } },
       },
       orderBy: { dataAgendamento: 'asc' },
     });
     // Lista do técnico: cliente, endereço do atendimento e telefone, para ele ver quem/onde sem abrir a O.S.
-    return lista.map((o) => ({ ...o, enderecoServico: enderecoDaOs(o.ambiente.cliente, o.enderecoId) }));
+    return lista.map((o) => ({ ...o, souAuxiliar: o.tecnicoId !== tecnicoId, enderecoServico: enderecoDaOs(o.ambiente.cliente, o.enderecoId) }));
   }
 
   // PATCH /ordens-servico/:id/sincronizar (§6.3 + §6.4)
@@ -476,7 +505,7 @@ export class OrdensServicoService {
       const os = await tx.ordemServico.findUnique({ where: { id } });
       if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
       // Técnico só executa as O.S. atribuídas a ele
-      if (user?.role === 'tecnico' && os.tecnicoId !== user.id) {
+      if (user?.role === 'tecnico' && !(await this.tecnicoAtende(os, user.id, tx))) {
         throw new NotFoundException('Ordem de Serviço não encontrada');
       }
       if (os.status === 'concluida') {
@@ -536,6 +565,7 @@ export class OrdensServicoService {
           status: todasConcluidas ? 'concluida' : 'em_andamento',
           assinaturaBase64: dto.assinaturaBase64,
           observacoesGerais: dto.observacoesGerais,
+          ...(dto.recebidoPor !== undefined ? { recebidoPor: dto.recebidoPor.trim() || null } : {}),
           dataInicio: entrada,
           dataConclusao: todasConcluidas ? saida : null,
         },
@@ -781,6 +811,7 @@ export class OrdensServicoService {
         itens:       { include: { equipamento: { include: { ambiente: { select: { id: true, nome: true, localizacaoInterna: true } } } } } },
         ambiente:    { include: { cliente: true } },
         tecnico:     { select: { id: true, email: true, nome: true } },
+        auxiliares:  { select: { tecnicoId: true, tecnico: { select: { id: true, nome: true, email: true } } } },
         tipoServico: true,
         dias:        { orderBy: { data: 'asc' } },
         historico:   { orderBy: { ocorridoEm: 'asc' } },
@@ -791,7 +822,7 @@ export class OrdensServicoService {
 
     // Cliente só enxerga O.S. dos próprios ambientes. Responde "não encontrada"
     // (e não "proibido") para não revelar que o id existe.
-    if (user?.role === 'tecnico' && os.tecnicoId !== user.id) {
+    if (user?.role === 'tecnico' && os.tecnicoId !== user.id && !os.auxiliares.some((a) => a.tecnicoId === user.id)) {
       throw new NotFoundException('Ordem de Serviço não encontrada');
     }
     if (user?.role === 'cliente' && os.ambiente.cliente.usuarioId !== user.id) {
@@ -848,6 +879,7 @@ export class OrdensServicoService {
       ambienteNome: updated.ambiente.nome,
       dataAgendamento: dto.dataAgendamento,
     }).catch(() => null);
+    void this.avisarEquipe(id, 'Nova O.S. para você', await this.descricaoParaAviso(id));
 
     return updated;
   }
@@ -865,6 +897,7 @@ export class OrdensServicoService {
       data: { status: 'cancelada' },
     });
     await this.registrarHistorico(id, os.status, 'cancelada', user);
+    void this.avisarEquipe(id, 'O.S. cancelada', `${await this.descricaoParaAviso(id)} foi cancelada.`);
     return cancelada;
   }
 
@@ -914,7 +947,7 @@ export class OrdensServicoService {
     // Admin muda o status livremente. O técnico só INICIA o atendimento das próprias O.S.;
     // encerrar passa por /sincronizar (checklist + assinatura) ou pelo admin.
     if (user?.role === 'tecnico') {
-      if (os.tecnicoId !== user.id) throw new NotFoundException('Ordem de Serviço não encontrada');
+      if (!(await this.tecnicoAtende(os, user.id))) throw new NotFoundException('Ordem de Serviço não encontrada');
       if (status !== 'em_andamento' || !['aberta', 'agendada', 'em_andamento'].includes(os.status)) {
         throw new BadRequestException('O técnico só pode iniciar o atendimento; para encerrar, registre a execução e a assinatura.');
       }
@@ -1182,6 +1215,19 @@ export class OrdensServicoService {
 
     await this.agenda.sincronizarOs(id);
 
+    // Avisos no celular: nova atribuição, retirada da O.S. ou mudança de dia/horário
+    const desc = await this.descricaoParaAviso(id);
+    const url = `/minhas-os/${id}`;
+    if (dto.tecnicoId !== undefined && (dto.tecnicoId || null) !== (os.tecnicoId ?? null)) {
+      if (dto.tecnicoId) void this.push.notificar([dto.tecnicoId], { titulo: 'Nova O.S. para você', corpo: desc, url, tag: `os-${id}` });
+      if (os.tecnicoId) void this.push.notificar([os.tecnicoId], { titulo: 'O.S. repassada', corpo: `${desc} foi passada para outro técnico.`, url: '/minhas-os', tag: `os-${id}` });
+    } else if (
+      (dto.dataAgendamento && new Date(dto.dataAgendamento).toISOString().slice(0, 10) !== os.dataAgendamento.toISOString().slice(0, 10)) ||
+      (dto.horaInicio !== undefined && (dto.horaInicio || null) !== (os.horaInicio ?? null))
+    ) {
+      void this.avisarEquipe(id, 'O.S. reagendada', `${desc}: confira o novo dia/horário.`);
+    }
+
     return updated;
   }
 
@@ -1235,5 +1281,123 @@ export class OrdensServicoService {
     }
 
     return result;
+  }
+
+  // ── Técnicos auxiliares ────────────────────────────────────────────────
+
+  // PATCH /ordens-servico/:id/auxiliares — Admin define quem ajuda o responsável (substitui a lista)
+  async definirAuxiliares(id: string, tecnicoIds: string[]) {
+    const os = await this.prisma.ordemServico.findUnique({ where: { id }, select: { id: true, tecnicoId: true } });
+    if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+    const ids = [...new Set((tecnicoIds ?? []).filter((t) => t && t !== os.tecnicoId))];
+    const validos = ids.length ? await this.prisma.usuario.findMany({ where: { id: { in: ids }, tipo: 'tecnico' }, select: { id: true } }) : [];
+    if (validos.length !== ids.length) throw new BadRequestException('Há técnicos inválidos na lista de auxiliares');
+
+    const atuais = await this.prisma.ordemServicoAuxiliar.findMany({ where: { ordemServicoId: id }, select: { tecnicoId: true } });
+    const atuaisIds = new Set(atuais.map((a) => a.tecnicoId));
+    const novos = ids.filter((t) => !atuaisIds.has(t));
+    const sairam = [...atuaisIds].filter((t) => !ids.includes(t));
+    if (sairam.length) await this.prisma.ordemServicoAuxiliar.deleteMany({ where: { ordemServicoId: id, tecnicoId: { in: sairam } } });
+    if (novos.length) await this.prisma.ordemServicoAuxiliar.createMany({ data: novos.map((tecnicoId) => ({ ordemServicoId: id, tecnicoId })) });
+
+    if (novos.length) void this.push.notificar(novos, { titulo: 'Você é auxiliar nesta O.S.', corpo: await this.descricaoParaAviso(id), url: `/minhas-os/${id}`, tag: `os-${id}` });
+    return this.prisma.ordemServicoAuxiliar.findMany({
+      where: { ordemServicoId: id },
+      select: { tecnicoId: true, tecnico: { select: { id: true, nome: true, email: true } } },
+    });
+  }
+
+  // ── Fotos da execução ──────────────────────────────────────────────────
+
+  private async osAcessivel(id: string, user: { id: string; role: string }) {
+    const os = await this.prisma.ordemServico.findUnique({ where: { id }, select: { id: true, status: true, tecnicoId: true } });
+    if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
+    if (user.role === 'tecnico' && !(await this.tecnicoAtende(os, user.id))) throw new NotFoundException('Ordem de Serviço não encontrada');
+    return os;
+  }
+
+  // POST /ordens-servico/:id/fotos
+  async adicionarFoto(
+    id: string,
+    dto: { itemId?: string; checklistItemId?: string; momento?: string; legenda?: string; dados: string },
+    user: { id: string; role: string },
+  ) {
+    const os = await this.osAcessivel(id, user);
+    if (user.role === 'tecnico' && ['concluida', 'cancelada'].includes(os.status)) {
+      throw new BadRequestException('Esta O.S. já foi encerrada; não é possível anexar fotos.');
+    }
+    const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dto.dados ?? '');
+    if (!m) throw new BadRequestException('Imagem inválida (use JPEG, PNG ou WebP)');
+    const dados = Buffer.from(m[2], 'base64');
+    if (dados.length > 2 * 1024 * 1024) throw new BadRequestException('Foto muito grande (máximo 2 MB)');
+    if (dto.itemId) {
+      const item = await this.prisma.ordemServicoItem.findFirst({ where: { id: dto.itemId, ordemServicoId: id }, select: { id: true } });
+      if (!item) throw new BadRequestException('Equipamento não pertence a esta O.S.');
+    }
+    const total = await this.prisma.ordemServicoFoto.count({ where: { ordemServicoId: id } });
+    if (total >= 80) throw new BadRequestException('Limite de 80 fotos por O.S.');
+    const momento = ['antes', 'depois', 'problema', 'outra'].includes(dto.momento ?? '') ? dto.momento! : 'outra';
+    const f = await this.prisma.ordemServicoFoto.create({
+      data: {
+        ordemServicoId: id,
+        itemId: dto.itemId || null,
+        checklistItemId: dto.checklistItemId?.slice(0, 60) || null,
+        momento,
+        legenda: dto.legenda?.slice(0, 200) || null,
+        mime: m[1],
+        dados,
+        criadoPor: user.id,
+      },
+      select: { id: true, itemId: true, checklistItemId: true, momento: true, legenda: true, criadoEm: true },
+    });
+    return f;
+  }
+
+  // GET /ordens-servico/:id/fotos (sem os bytes; a imagem vem de /fotos/:fotoId/arquivo)
+  async listarFotos(id: string, user: { id: string; role: string }) {
+    await this.osAcessivel(id, user);
+    return this.prisma.ordemServicoFoto.findMany({
+      where: { ordemServicoId: id },
+      orderBy: { criadoEm: 'asc' },
+      select: { id: true, itemId: true, checklistItemId: true, momento: true, legenda: true, criadoEm: true },
+    });
+  }
+
+  // GET /ordens-servico/fotos/:fotoId/arquivo
+  async arquivoFoto(fotoId: string, user: { id: string; role: string }) {
+    const f = await this.prisma.ordemServicoFoto.findUnique({ where: { id: fotoId }, select: { mime: true, dados: true, ordemServicoId: true } });
+    if (!f) throw new NotFoundException('Foto não encontrada');
+    await this.osAcessivel(f.ordemServicoId, user);
+    return { mime: f.mime, dados: Buffer.from(f.dados) };
+  }
+
+  // DELETE /ordens-servico/fotos/:fotoId
+  async removerFoto(fotoId: string, user: { id: string; role: string }) {
+    const f = await this.prisma.ordemServicoFoto.findUnique({ where: { id: fotoId }, select: { id: true, ordemServicoId: true } });
+    if (!f) throw new NotFoundException('Foto não encontrada');
+    const os = await this.osAcessivel(f.ordemServicoId, user);
+    if (user.role === 'tecnico' && ['concluida', 'cancelada'].includes(os.status)) throw new BadRequestException('Esta O.S. já foi encerrada.');
+    await this.prisma.ordemServicoFoto.delete({ where: { id: fotoId } });
+    return { ok: true };
+  }
+
+  // ── Última visita do equipamento (para "igual ao último") ─────────────
+
+  // GET /ordens-servico/equipamento/:equipamentoId/ultimo
+  async ultimoChecklistDoEquipamento(equipamentoId: string) {
+    const eq = await this.prisma.equipamento.findFirst({ where: { id: equipamentoId }, select: { id: true } }); // garante a empresa
+    if (!eq) throw new NotFoundException('Equipamento não encontrado');
+    const item = await this.prisma.ordemServicoItem.findFirst({
+      where: { equipamentoId, statusItem: 'concluido', ordemServico: { status: 'concluida' } },
+      orderBy: { ordemServico: { dataConclusao: 'desc' } },
+      select: { checklistSnapshot: true, ordemServico: { select: { id: true, numero: true, dataConclusao: true, tipoServico: { select: { sigla: true } } } } },
+    });
+    if (!item) return null;
+    return {
+      osId: item.ordemServico.id,
+      osNumero: this.osNumeroFormatado(item.ordemServico),
+      data: item.ordemServico.dataConclusao,
+      checklist: item.checklistSnapshot,
+    };
   }
 }

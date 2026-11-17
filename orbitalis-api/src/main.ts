@@ -9,7 +9,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(),
+    new FastifyAdapter({ bodyLimit: 6 * 1024 * 1024 }), // fotos e assinaturas chegam em base64
   );
 
   app.setGlobalPrefix('api/v1');

@@ -41,6 +41,10 @@ export class SincronizarOsDto {
   @IsString()
   observacoesGerais?: string;
 
+  @IsOptional()
+  @IsString()
+  recebidoPor?: string;
+
   // Entrada e saída no cliente, informadas pelo técnico (ISO 8601); vazio = horário do envio
   @IsOptional()
   @IsDateString()

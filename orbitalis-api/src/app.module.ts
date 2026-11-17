@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ClientesModule } from './modules/clientes/clientes.module';
 import { AmbientesModule } from './modules/ambientes/ambientes.module';
 import { EquipamentosModule } from './modules/equipamentos/equipamentos.module';
+import { PushModule } from './modules/push/push.module';
 import { OrdensServicoModule } from './modules/ordens-servico/ordens-servico.module';
 import { RelatoriosModule } from './modules/relatorios/relatorios.module';
 import { PlanosManutencaoModule } from './modules/planos-manutencao/planos-manutencao.module';
@@ -44,6 +45,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     AmbientesModule,
     EquipamentosModule,
     OrdensServicoModule,
+    PushModule,
     RelatoriosModule,
     PlanosManutencaoModule,
     UsuariosModule,

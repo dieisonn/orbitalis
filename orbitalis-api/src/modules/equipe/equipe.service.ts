@@ -3,6 +3,7 @@ import * as bcrypt from 'bcrypt';
 import { UsuarioTipo } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AgendaService } from '../agenda/agenda.service';
+import { PushService } from '../push/push.service';
 import { podeConceder, resolverAcesso } from '../../common/modulos';
 
 type Quem = { id: string; permissoes?: string[] | null };
@@ -12,6 +13,7 @@ export class EquipeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agenda: AgendaService,
+    private readonly push: PushService,
   ) {}
 
   // O.S. ainda não concluídas: são as que precisam de responsável
@@ -51,7 +53,24 @@ export class EquipeService {
 
     if (osIds.length) {
       await this.prisma.ordemServico.updateMany({ where: { id: { in: osIds } }, data: { tecnicoId: paraUserId } });
+      // o destino passa a ser o responsável: não pode continuar como auxiliar das mesmas O.S.
+      await this.prisma.ordemServicoAuxiliar.deleteMany({ where: { ordemServicoId: { in: osIds }, tecnicoId: paraUserId } });
       for (const id of osIds) await this.agenda.sincronizarOs(id);
+    }
+    // O.S. em que o técnico era só auxiliar: o destino assume o apoio (se já não participa)
+    const auxPendentes = await this.prisma.ordemServicoAuxiliar.findMany({
+      where: { tecnicoId: userId, ordemServico: { status: { in: [...EquipeService.OS_PENDENTES] } } },
+      select: { id: true, ordemServicoId: true, ordemServico: { select: { tecnicoId: true } } },
+    });
+    let auxTransferidas = 0;
+    for (const a of auxPendentes) {
+      const jaParticipa = a.ordemServico.tecnicoId === paraUserId ||
+        !!(await this.prisma.ordemServicoAuxiliar.findFirst({ where: { ordemServicoId: a.ordemServicoId, tecnicoId: paraUserId }, select: { id: true } }));
+      if (jaParticipa) await this.prisma.ordemServicoAuxiliar.delete({ where: { id: a.id } });
+      else { await this.prisma.ordemServicoAuxiliar.update({ where: { id: a.id }, data: { tecnicoId: paraUserId } }); auxTransferidas++; }
+    }
+    if (osIds.length || auxTransferidas) {
+      void this.push.notificar([paraUserId], { titulo: 'O.S. repassadas para você', corpo: `${osIds.length + auxTransferidas} O.S. foram transferidas para você.`, url: '/minhas-os' });
     }
     const planos = await this.prisma.planoManutencao.updateMany({
       where: { tecnicoId: userId, ativo: true },
@@ -61,7 +80,7 @@ export class EquipeService {
       where: { tecnicoId: userId, ordemServicoId: null, fim: { gte: new Date() } },
       data: { tecnicoId: paraUserId },
     });
-    return { osTransferidas: osIds.length, planosTransferidos: planos.count, eventosTransferidos: eventos.count, para: para.nome };
+    return { osTransferidas: osIds.length, auxiliaresTransferidas: auxTransferidas, planosTransferidos: planos.count, eventosTransferidos: eventos.count, para: para.nome };
   }
 
   async getMembros() {

@@ -132,6 +132,8 @@ model Usuario {
 
   cliente                        Cliente?
   ordensComoTecnico              OrdemServico[]    @relation("TecnicoOrdens")
+  ordensComoAuxiliar             OrdemServicoAuxiliar[] @relation("TecnicoAuxiliar")
+  pushAssinaturas                PushAssinatura[]
   planosComoTecnico              PlanoManutencao[] @relation("TecnicoPlanos")
   configuracaoEmpresaResponsavel ConfiguracaoEmpresa?
   orcamentosCriados              Orcamento[]       @relation("OrcamentoCriadoPor")
@@ -334,6 +336,8 @@ model OrdemServico {
   enderecoId            String?  @map("endereco_id") @db.VarChar(40)
   horaInicio            String?  @map("hora_inicio") @db.VarChar(5)
   horaFim               String?  @map("hora_fim") @db.VarChar(5)
+  // Nome de quem recebeu o serviço no cliente (junto da assinatura)
+  recebidoPor           String?  @map("recebido_por") @db.VarChar(120)
   dataCriacao           DateTime @default(now()) @map("data_criacao")
   empresaId             String?  @map("empresa_id") @db.Uuid
 
@@ -347,6 +351,8 @@ model OrdemServico {
   eventos          EventoAgenda[]
   dias             OrdemServicoDia[]
   historico        OrdemServicoHistorico[]
+  auxiliares       OrdemServicoAuxiliar[]
+  fotos            OrdemServicoFoto[]
 
   @@index([status])
   @@index([empresaId])
@@ -414,6 +420,7 @@ model OrdemServicoItem {
 
   ordemServico OrdemServico @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
   equipamento  Equipamento  @relation(fields: [equipamentoId], references: [id])
+  fotos        OrdemServicoFoto[]
 
   @@map("ordem_servico_itens")
 }
@@ -718,4 +725,74 @@ model FeriadoEmpresa {
   @@unique([empresaId, data, nome])
   @@index([empresaId, data])
   @@map("feriados_empresa")
+}
+
+
+// ─────────────────────────────────────────
+// Técnicos auxiliares de uma O.S. (veem e preenchem junto com o responsável)
+// ─────────────────────────────────────────
+model OrdemServicoAuxiliar {
+  id             String  @id @default(uuid()) @db.Uuid
+  ordemServicoId String  @map("ordem_servico_id") @db.Uuid
+  tecnicoId      String  @map("tecnico_id") @db.Uuid
+  empresaId      String? @map("empresa_id") @db.Uuid
+
+  ordemServico OrdemServico @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  tecnico      Usuario      @relation("TecnicoAuxiliar", fields: [tecnicoId], references: [id], onDelete: Cascade)
+
+  @@unique([ordemServicoId, tecnicoId], map: "ordem_servico_auxiliares_os_tecnico_key")
+  @@index([tecnicoId])
+  @@index([empresaId])
+  @@map("ordem_servico_auxiliares")
+}
+
+// ─────────────────────────────────────────
+// Fotos da execução (JPEG já reduzido no aparelho). momento: antes | depois | problema | outra
+// ─────────────────────────────────────────
+model OrdemServicoFoto {
+  id              String   @id @default(uuid()) @db.Uuid
+  ordemServicoId  String   @map("ordem_servico_id") @db.Uuid
+  itemId          String?  @map("item_id") @db.Uuid
+  checklistItemId String?  @map("checklist_item_id") @db.VarChar(60)
+  momento         String   @default("outra") @db.VarChar(10)
+  legenda         String?  @db.VarChar(200)
+  mime            String   @default("image/jpeg") @db.VarChar(40)
+  dados           Bytes
+  criadoPor       String?  @map("criado_por") @db.Uuid
+  criadoEm        DateTime @default(now()) @map("criado_em")
+  empresaId       String?  @map("empresa_id") @db.Uuid
+
+  ordemServico OrdemServico      @relation(fields: [ordemServicoId], references: [id], onDelete: Cascade)
+  item         OrdemServicoItem? @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([ordemServicoId])
+  @@index([empresaId])
+  @@map("ordem_servico_fotos")
+}
+
+// ─────────────────────────────────────────
+// Avisos no celular (Web Push): um registro por aparelho
+// ─────────────────────────────────────────
+model PushAssinatura {
+  id        String   @id @default(uuid()) @db.Uuid
+  usuarioId String   @map("usuario_id") @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  criadoEm  DateTime @default(now()) @map("criado_em")
+  empresaId String?  @map("empresa_id") @db.Uuid
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([empresaId])
+  @@map("push_assinaturas")
+}
+
+model PushConfig {
+  id           Int    @id @default(1)
+  chavePublica String @map("chave_publica")
+  chavePrivada String @map("chave_privada")
+
+  @@map("push_config")
 }
