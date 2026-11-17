@@ -523,14 +523,21 @@ export class OrdensServicoService {
       });
       const todasConcluidas = todosItens.every((i) => i.statusItem === 'concluido');
 
+      // Entrada/saída: o técnico pode informar o horário real; sem isso vale o horário do envio
+      const entrada = dto.entrada ? new Date(dto.entrada) : (os.dataInicio ?? new Date());
+      const saida = dto.saida ? new Date(dto.saida) : new Date();
+      if (todasConcluidas && saida.getTime() < entrada.getTime()) {
+        throw new BadRequestException('A saída não pode ser anterior à entrada');
+      }
+
       return tx.ordemServico.update({
         where: { id },
         data: {
           status: todasConcluidas ? 'concluida' : 'em_andamento',
           assinaturaBase64: dto.assinaturaBase64,
           observacoesGerais: dto.observacoesGerais,
-          dataInicio: os.dataInicio ?? new Date(),
-          dataConclusao: todasConcluidas ? new Date() : null,
+          dataInicio: entrada,
+          dataConclusao: todasConcluidas ? saida : null,
         },
         include: { itens: true },
       });

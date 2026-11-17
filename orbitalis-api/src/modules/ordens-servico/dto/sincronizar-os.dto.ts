@@ -1,6 +1,7 @@
 import { OsItemStatus } from '@prisma/client';
 import {
   IsArray,
+  IsDateString,
   IsEnum,
   IsOptional,
   IsString,
@@ -39,4 +40,13 @@ export class SincronizarOsDto {
   @IsOptional()
   @IsString()
   observacoesGerais?: string;
+
+  // Entrada e saída no cliente, informadas pelo técnico (ISO 8601); vazio = horário do envio
+  @IsOptional()
+  @IsDateString()
+  entrada?: string;
+
+  @IsOptional()
+  @IsDateString()
+  saida?: string;
 }
