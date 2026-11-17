@@ -18,6 +18,8 @@ import { AgendaService } from '../agenda/agenda.service';
 import { PushService } from '../push/push.service';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
 import { ambienteVarios } from '../cron/geracao-preventiva';
+import { AdicionarFotoDto } from './dto/foto-auxiliares.dto';
+import { FOTO_MAX_BYTES, FOTOS_MAX_POR_OS, OS_ENCERRADA, bytesDeImagemValidos } from './foto-bytes';
 
 const AMBIENTE_PADRAO = 'Sem local definido';
 
@@ -43,7 +45,7 @@ export class OrdensServicoService {
   }
 
   /** Técnico responsável ou auxiliar da O.S. */
-  private async tecnicoAtende(os: { id: string; tecnicoId: string | null }, userId: string, db: any = this.prisma): Promise<boolean> {
+  private async tecnicoAtende(os: { id: string; tecnicoId: string | null }, userId: string, db: Pick<PrismaService, 'ordemServicoAuxiliar'> = this.prisma): Promise<boolean> {
     if (os.tecnicoId === userId) return true;
     return !!(await db.ordemServicoAuxiliar.findFirst({ where: { ordemServicoId: os.id, tecnicoId: userId }, select: { id: true } }));
   }
@@ -555,7 +557,7 @@ export class OrdensServicoService {
       // Entrada/saída: o técnico pode informar o horário real; sem isso vale o horário do envio
       const entrada = dto.entrada ? new Date(dto.entrada) : (os.dataInicio ?? new Date());
       const saida = dto.saida ? new Date(dto.saida) : new Date();
-      if (todasConcluidas && saida.getTime() < entrada.getTime()) {
+      if (saida.getTime() < entrada.getTime() && (todasConcluidas || dto.saida)) {
         throw new BadRequestException('A saída não pode ser anterior à entrada');
       }
 
@@ -1319,25 +1321,29 @@ export class OrdensServicoService {
   // POST /ordens-servico/:id/fotos
   async adicionarFoto(
     id: string,
-    dto: { itemId?: string; checklistItemId?: string; momento?: string; legenda?: string; dados: string },
+    dto: AdicionarFotoDto,
     user: { id: string; role: string },
   ) {
     const os = await this.osAcessivel(id, user);
-    if (user.role === 'tecnico' && ['concluida', 'cancelada'].includes(os.status)) {
+    if (user.role === 'tecnico' && OS_ENCERRADA.includes(os.status)) {
       throw new BadRequestException('Esta O.S. já foi encerrada; não é possível anexar fotos.');
     }
     const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(dto.dados ?? '');
     if (!m) throw new BadRequestException('Imagem inválida (use JPEG, PNG ou WebP)');
     const dados = Buffer.from(m[2], 'base64');
-    if (dados.length > 2 * 1024 * 1024) throw new BadRequestException('Foto muito grande (máximo 2 MB)');
+    if (dados.length > FOTO_MAX_BYTES) throw new BadRequestException(`Foto muito grande (máximo ${FOTO_MAX_BYTES / 1024 / 1024} MB)`);
+    if (!bytesDeImagemValidos(dados, m[1])) throw new BadRequestException('O arquivo enviado não é uma imagem válida');
     if (dto.itemId) {
       const item = await this.prisma.ordemServicoItem.findFirst({ where: { id: dto.itemId, ordemServicoId: id }, select: { id: true } });
       if (!item) throw new BadRequestException('Equipamento não pertence a esta O.S.');
     }
-    const total = await this.prisma.ordemServicoFoto.count({ where: { ordemServicoId: id } });
-    if (total >= 80) throw new BadRequestException('Limite de 80 fotos por O.S.');
     const momento = ['antes', 'depois', 'problema', 'outra'].includes(dto.momento ?? '') ? dto.momento! : 'outra';
-    const f = await this.prisma.ordemServicoFoto.create({
+    // Trava por O.S.: duas fotos enviadas ao mesmo tempo não furam o limite
+    const f = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${id}))`;
+      const total = await tx.ordemServicoFoto.count({ where: { ordemServicoId: id } });
+      if (total >= FOTOS_MAX_POR_OS) throw new BadRequestException(`Limite de ${FOTOS_MAX_POR_OS} fotos por O.S.`);
+      return tx.ordemServicoFoto.create({
       data: {
         ordemServicoId: id,
         itemId: dto.itemId || null,
@@ -1349,6 +1355,7 @@ export class OrdensServicoService {
         criadoPor: user.id,
       },
       select: { id: true, itemId: true, checklistItemId: true, momento: true, legenda: true, criadoEm: true },
+      });
     });
     return f;
   }
@@ -1376,7 +1383,7 @@ export class OrdensServicoService {
     const f = await this.prisma.ordemServicoFoto.findUnique({ where: { id: fotoId }, select: { id: true, ordemServicoId: true } });
     if (!f) throw new NotFoundException('Foto não encontrada');
     const os = await this.osAcessivel(f.ordemServicoId, user);
-    if (user.role === 'tecnico' && ['concluida', 'cancelada'].includes(os.status)) throw new BadRequestException('Esta O.S. já foi encerrada.');
+    if (user.role === 'tecnico' && OS_ENCERRADA.includes(os.status)) throw new BadRequestException('Esta O.S. já foi encerrada.');
     await this.prisma.ordemServicoFoto.delete({ where: { id: fotoId } });
     return { ok: true };
   }
@@ -1384,9 +1391,17 @@ export class OrdensServicoService {
   // ── Última visita do equipamento (para "igual ao último") ─────────────
 
   // GET /ordens-servico/equipamento/:equipamentoId/ultimo
-  async ultimoChecklistDoEquipamento(equipamentoId: string) {
+  async ultimoChecklistDoEquipamento(equipamentoId: string, user: { id: string; role: string }) {
     const eq = await this.prisma.equipamento.findFirst({ where: { id: equipamentoId }, select: { id: true } }); // garante a empresa
     if (!eq) throw new NotFoundException('Equipamento não encontrado');
+    // Técnico só vê o histórico de equipamentos que estão em O.S. dele (responsável ou auxiliar)
+    if (user.role === 'tecnico') {
+      const meu = await this.prisma.ordemServicoItem.findFirst({
+        where: { equipamentoId, ordemServico: { OR: [{ tecnicoId: user.id }, { auxiliares: { some: { tecnicoId: user.id } } }] } },
+        select: { id: true },
+      });
+      if (!meu) throw new NotFoundException('Equipamento não encontrado');
+    }
     const item = await this.prisma.ordemServicoItem.findFirst({
       where: { equipamentoId, statusItem: 'concluido', ordemServico: { status: 'concluida' } },
       orderBy: { ordemServico: { dataConclusao: 'desc' } },

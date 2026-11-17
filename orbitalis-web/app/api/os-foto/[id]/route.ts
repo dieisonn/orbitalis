@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const res = await fetch(`${BACKEND}/ordens-servico/fotos/${id}/arquivo`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
   if (!res.ok) return new NextResponse('Não encontrada', { status: 404 })
   return new NextResponse(await res.arrayBuffer(), {
-    headers: { 'Content-Type': res.headers.get('content-type') ?? 'image/jpeg', 'Cache-Control': 'private, max-age=86400' },
+    headers: { 'Content-Type': res.headers.get('content-type') ?? 'image/jpeg', 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' },
   })
 }
 

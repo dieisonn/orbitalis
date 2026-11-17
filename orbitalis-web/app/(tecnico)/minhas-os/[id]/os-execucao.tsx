@@ -161,7 +161,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const [saida, setSaida] = useState(() => paraCampo(os.dataConclusao))
   const [confirmando, setConfirmando] = useState(false)
   const [fotos, setFotos] = useState<FotoOs[]>(os.fotos ?? [])
-  const [enviandoFoto, setEnviandoFoto] = useState<string | null>(null)
+  const [enviandoFoto, setEnviandoFoto] = useState<string[]>([])
   const [recebidoPor, setRecebidoPor] = useState(os.recebidoPor ?? '')
   const [aviso, setAviso] = useState<string | null>(null)
   const [base, setBase] = useState<string | null>(null)
@@ -256,8 +256,14 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
         clearLocalSync(os.id)
         setPendingSync(false)
         router.refresh()
-      } catch {
-        // silently retry on next online event
+      } catch (e) {
+        // Sem rede: tenta de novo quando voltar. Recusa do servidor (O.S. concluída/cancelada...): avisa e descarta a fila
+        const msg = e instanceof Error ? e.message : ''
+        if (navigator.onLine && /conclu[ií]d|cancelad|n[ãa]o encontrada|n[ãa]o pertence/i.test(msg)) {
+          clearLocalSync(os.id)
+          setPendingSync(false)
+          setError(`O que foi salvo sem internet não pôde ser enviado: ${msg}`)
+        }
       }
     }
 
@@ -359,7 +365,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   async function enviarFoto(file: File, ctx: { itemId: string; checklistItemId?: string; momento: string }) {
     if (!navigator.onLine) { setError('Sem internet: as fotos só podem ser enviadas com conexão. Tente de novo quando voltar o sinal.'); return }
     const chave = `${ctx.itemId}:${ctx.checklistItemId ?? ctx.momento}`
-    setEnviandoFoto(chave)
+    setEnviandoFoto((l) => [...l, chave])
     setError(null)
     try {
       const dados = await reduzirImagem(file)
@@ -370,7 +376,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível enviar a foto')
     } finally {
-      setEnviandoFoto(null)
+      setEnviandoFoto((l) => { const i = l.indexOf(chave); return i < 0 ? l : [...l.slice(0, i), ...l.slice(i + 1)] })
     }
   }
 
@@ -445,32 +451,39 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   useEffect(() => { setBase((b) => b ?? estado) }, [])  // eslint-disable-line react-hooks/exhaustive-deps
   const naoSalvo = base !== null && base !== estado
 
-  function pedirConclusao() {
+  // Regras para encerrar a O.S. (usadas ao pedir e ao confirmar a conclusão)
+  function conclusaoPermitida(): boolean {
     if (!allItemsDone) {
       setError('Marque todos os equipamentos como concluídos antes de encerrar a O.S.')
-      return
+      return false
     }
     if (entrada && (saida || agoraCampo()) < entrada) {
       setError('A saída não pode ser anterior à entrada.')
-      return
+      return false
     }
     setError(null)
-    setConfirmando(true)
+    return true
+  }
+
+  function pedirConclusao() {
+    if (conclusaoPermitida()) setConfirmando(true)
   }
 
   function handleConcluir() {
-    if (!allItemsDone) {
-      setError('Marque todos os equipamentos como concluídos antes de encerrar a O.S.')
+    if (!conclusaoPermitida()) return
+    if (!navigator.onLine) {
+      // Não dá para encerrar sem internet: guarda o que foi preenchido para enviar depois
+      saveLocalSync(os.id, buildPayload(false))
+      setBase(estado)
+      setPendingSync(true)
+      setConfirmando(false)
+      setError('Sem internet: o que você preencheu ficou guardado neste aparelho. Quando o sinal voltar, toque em "Concluir" de novo para encerrar a O.S.')
       return
     }
-    if (entrada && (saida || agoraCampo()) < entrada) {
-      setError('A saída não pode ser anterior à entrada.')
-      return
-    }
-    setError(null)
     startTransition(async () => {
       try {
         await sincronizarOs(os.id, buildPayload(true))
+        clearLocalSync(os.id) // descarta qualquer salvamento antigo feito sem internet
         setBase(estado)
         router.push('/minhas-os')
       } catch (e) {
@@ -731,7 +744,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
                   {!isReadOnly && (
                     <div className="flex flex-wrap gap-2">
                       {([['antes', 'Antes'], ['depois', 'Depois'], ['outra', 'Outra']] as const).map(([m, r]) => (
-                        <BotaoFoto key={m} rotulo={r} ocupado={enviandoFoto === `${item.id}:${m}`} onArquivo={(f) => enviarFoto(f, { itemId: item.id, momento: m })} />
+                        <BotaoFoto key={m} rotulo={r} ocupado={enviandoFoto.includes(`${item.id}:${m}`)} onArquivo={(f) => enviarFoto(f, { itemId: item.id, momento: m })} />
                       ))}
                     </div>
                   )}
@@ -744,7 +757,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
                           <span className="text-xs text-gray-700 min-w-0 flex-1">{c.descricao}</span>
                           <span className="shrink-0 flex items-center gap-1.5">
                             {fotos.some((f) => f.itemId === item.id && f.checklistItemId === c.id) && <span className="text-[10px] text-green-700 font-semibold">✓ {fotos.filter((f) => f.itemId === item.id && f.checklistItemId === c.id).length}</span>}
-                            <BotaoFoto destaque rotulo="Foto" ocupado={enviandoFoto === `${item.id}:${c.id}`} onArquivo={(f) => enviarFoto(f, { itemId: item.id, checklistItemId: c.id, momento: 'problema' })} />
+                            <BotaoFoto destaque rotulo="Foto" ocupado={enviandoFoto.includes(`${item.id}:${c.id}`)} onArquivo={(f) => enviarFoto(f, { itemId: item.id, checklistItemId: c.id, momento: 'problema' })} />
                           </span>
                         </div>
                       ))}

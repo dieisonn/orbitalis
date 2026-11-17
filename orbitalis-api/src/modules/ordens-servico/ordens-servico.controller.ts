@@ -5,6 +5,7 @@ import {
   NotFoundException,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -22,6 +23,7 @@ import { OrdensServicoService } from './ordens-servico.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
+import { AdicionarFotoDto, DefinirAuxiliaresDto } from './dto/foto-auxiliares.dto';
 
 @Controller('ordens-servico')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -104,31 +106,32 @@ export class OrdensServicoController {
   // GET /api/v1/ordens-servico/equipamento/:equipamentoId/ultimo — checklist da última visita concluída
   @Get('equipamento/:equipamentoId/ultimo')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
-  ultimoDoEquipamento(@Param('equipamentoId') equipamentoId: string) {
-    return this.ordensServicoService.ultimoChecklistDoEquipamento(equipamentoId);
+  ultimoDoEquipamento(@Param('equipamentoId', ParseUUIDPipe) equipamentoId: string, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.ultimoChecklistDoEquipamento(equipamentoId, user);
   }
 
   // GET /api/v1/ordens-servico/fotos/:fotoId/arquivo — a imagem
   @Get('fotos/:fotoId/arquivo')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
-  async arquivoFoto(@Param('fotoId') fotoId: string, @CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: any) {
+  async arquivoFoto(@Param('fotoId', ParseUUIDPipe) fotoId: string, @CurrentUser() user: AuthUser, @Res({ passthrough: true }) res: any) {
     const f = await this.ordensServicoService.arquivoFoto(fotoId, user);
     res.header('Content-Type', f.mime);
     res.header('Cache-Control', 'private, max-age=86400');
+    res.header('X-Content-Type-Options', 'nosniff');
     return new StreamableFile(f.dados);
   }
 
   // DELETE /api/v1/ordens-servico/fotos/:fotoId
   @Delete('fotos/:fotoId')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
-  removerFoto(@Param('fotoId') fotoId: string, @CurrentUser() user: AuthUser) {
+  removerFoto(@Param('fotoId', ParseUUIDPipe) fotoId: string, @CurrentUser() user: AuthUser) {
     return this.ordensServicoService.removerFoto(fotoId, user);
   }
 
   // GET /api/v1/ordens-servico/:id/fotos
   @Get(':id/fotos')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
-  listarFotos(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+  listarFotos(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
     return this.ordensServicoService.listarFotos(id, user);
   }
 
@@ -136,8 +139,8 @@ export class OrdensServicoController {
   @Post(':id/fotos')
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   adicionarFoto(
-    @Param('id') id: string,
-    @Body() body: { itemId?: string; checklistItemId?: string; momento?: string; legenda?: string; dados: string },
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: AdicionarFotoDto,
     @CurrentUser() user: AuthUser,
   ) {
     return this.ordensServicoService.adicionarFoto(id, body, user);
@@ -146,8 +149,8 @@ export class OrdensServicoController {
   // PATCH /api/v1/ordens-servico/:id/auxiliares — Admin
   @Patch(':id/auxiliares')
   @Roles(UsuarioTipo.admin)
-  auxiliares(@Param('id') id: string, @Body() body: { tecnicoIds: string[] }) {
-    return this.ordensServicoService.definirAuxiliares(id, body.tecnicoIds ?? []);
+  auxiliares(@Param('id', ParseUUIDPipe) id: string, @Body() body: DefinirAuxiliaresDto) {
+    return this.ordensServicoService.definirAuxiliares(id, body.tecnicoIds);
   }
 
   // GET /api/v1/ordens-servico/:id — Admin, Técnico ou Cliente

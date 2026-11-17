@@ -1,6 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as webpush from 'web-push';
 import { PrismaService } from '../../prisma/prisma.service';
+import { getTenantId } from '../../common/tenant.context';
+import { endpointDePushValido } from './push-endpoint';
+
+const MAX_APARELHOS_POR_USUARIO = 10;
 
 export type AvisoPush = { titulo: string; corpo: string; url?: string; tag?: string };
 
@@ -17,7 +21,7 @@ export class PushService {
 
   private async carregarChaves() {
     if (this.chaves) return this.chaves;
-    const db = this.prisma as any;
+    const db = this.prisma;
     let linha = await db.pushConfig.findUnique({ where: { id: 1 } });
     if (!linha) {
       const k = webpush.generateVAPIDKeys();
@@ -27,6 +31,7 @@ export class PushService {
         linha = await db.pushConfig.findUnique({ where: { id: 1 } }); // outra instância criou antes
       }
     }
+    if (!linha) throw new Error('Chaves de aviso indisponíveis');
     this.chaves = { publica: linha.chavePublica, privada: linha.chavePrivada };
     webpush.setVapidDetails(process.env.PUSH_CONTATO ?? 'mailto:contato@orbitalis.com.br', this.chaves.publica, this.chaves.privada);
     return this.chaves;
@@ -37,12 +42,21 @@ export class PushService {
   }
 
   async assinar(usuarioId: string, sub: { endpoint: string; keys: { p256dh: string; auth: string } }) {
-    const dados = { usuarioId, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth };
-    await this.prisma.pushAssinatura.upsert({
-      where: { endpoint: sub.endpoint },
-      create: dados,
-      update: { usuarioId, p256dh: dados.p256dh, auth: dados.auth },
+    if (!endpointDePushValido(sub.endpoint)) throw new BadRequestException('Endereço de aviso inválido');
+    const empresaId = getTenantId() ?? null;
+    // Mesmo aparelho pode trocar de conta (ou de empresa): o endereço é único no banco inteiro,
+    // então a troca é feita em uma única instrução, sem passar pelo filtro de empresa.
+    await this.prisma.$executeRaw`
+      INSERT INTO push_assinaturas (id, usuario_id, empresa_id, endpoint, p256dh, auth)
+      VALUES (gen_random_uuid(), ${usuarioId}::uuid, ${empresaId}::uuid, ${sub.endpoint}, ${sub.keys.p256dh}, ${sub.keys.auth})
+      ON CONFLICT (endpoint) DO UPDATE
+        SET usuario_id = EXCLUDED.usuario_id, empresa_id = EXCLUDED.empresa_id,
+            p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth, criado_em = now()`;
+    // Limite de aparelhos por usuário: mantém os mais recentes
+    const manter = await this.prisma.pushAssinatura.findMany({
+      where: { usuarioId }, orderBy: { criadoEm: 'desc' }, take: MAX_APARELHOS_POR_USUARIO, select: { id: true },
     });
+    await this.prisma.pushAssinatura.deleteMany({ where: { usuarioId, id: { notIn: manter.map((m) => m.id) } } });
     return { ok: true };
   }
 

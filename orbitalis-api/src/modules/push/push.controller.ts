@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { PushService } from './push.service';
+import { AssinarPushDto, DesassinarPushDto } from './push.dto';
 
 @Controller('push')
 @UseGuards(JwtAuthGuard)
@@ -14,12 +15,12 @@ export class PushController {
   }
 
   @Post('assinar')
-  assinar(@Body() body: { endpoint: string; keys: { p256dh: string; auth: string } }, @CurrentUser() user: AuthUser) {
+  assinar(@Body() body: AssinarPushDto, @CurrentUser() user: AuthUser) {
     return this.push.assinar(user.id, body);
   }
 
   @Post('desassinar')
-  desassinar(@Body() body: { endpoint: string }, @CurrentUser() user: AuthUser) {
+  desassinar(@Body() body: DesassinarPushDto, @CurrentUser() user: AuthUser) {
     return this.push.desassinar(user.id, body.endpoint);
   }
 
