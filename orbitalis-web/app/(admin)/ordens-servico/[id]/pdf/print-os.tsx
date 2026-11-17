@@ -28,6 +28,8 @@ export type OS = {
   tipo?: string | null
   observacoesGerais: string | null
   assinaturaBase64: string | null
+  recebidoPor?: string | null
+  auxiliares?: { tecnico: { nome: string | null; email: string } }[]
   tipoGas: string | null
   quantidadeGasGramas: number | null
   dias?: { id?: string; data: string; horaInicio: string | null; horaFim: string | null }[]
@@ -85,7 +87,9 @@ export const PRINT_CSS = `
         * { box-sizing: border-box; }
       `
 
-export function PrintOS({ os, config }: { os: OS; config?: Config }) {
+export type FotoLaudo = { id: string; itemId: string | null; checklistItemId: string | null; momento: string }
+
+export function PrintOS({ os, config, fotos = [] }: { os: OS; config?: Config; fotos?: FotoLaudo[] }) {
   const numero = os.numero != null
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
@@ -122,7 +126,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
       </div>
       <div className="no-print h-14" />
 
-      <DocumentoOS os={os} config={config} formato={formato} />
+      <DocumentoOS os={os} config={config} formato={formato} fotos={fotos} />
     </>
   )
 }
@@ -130,7 +134,7 @@ export function PrintOS({ os, config }: { os: OS; config?: Config }) {
 /** O documento da O.S. (sem a barra de ações). `modoDia` = folha do técnico, com mais espaço para anotações. */
 export type Formato = 'tabela' | 'blocos'
 
-export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }: { os: OS; config?: Config; modoDia?: boolean; formato?: Formato }) {
+export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela', fotos = [] }: { os: OS; config?: Config; modoDia?: boolean; formato?: Formato; fotos?: FotoLaudo[] }) {
   const numero = os.numero != null
     ? `OS-${String(os.numero).padStart(4, '0')}`
     : `OS-${os.id.slice(0, 6).toUpperCase()}`
@@ -223,6 +227,9 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }:
         <div style={{ borderLeft: borda, padding: '6px 8px', lineHeight: 1.5 }}>
           <p style={rotulo}>Técnico responsável</p>
           <p style={{ margin: '2px 0 0 0', fontWeight: 700 }}>{tecnicoLabel}</p>
+          {(os.auxiliares?.length ?? 0) > 0 && (
+            <p style={{ margin: '4px 0 0 0', fontSize: '8pt' }}><span style={{ color: '#666' }}>Auxiliar{os.auxiliares!.length > 1 ? 'es' : ''}:</span> {os.auxiliares!.map((a) => a.tecnico.nome ?? a.tecnico.email).join(', ')}</p>
+          )}
         </div>
       </div>
 
@@ -351,30 +358,52 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }:
         </div>
       </Secao>
 
+      {/* REGISTRO FOTOGRÁFICO */}
+      {fotos.length > 0 && (
+        <Secao titulo="Registro fotográfico">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', padding: '8px' }}>
+            {fotos.map((f) => {
+              const eq = os.itens.find((i) => i.id === f.itemId)?.equipamento.nome
+              const ck = f.checklistItemId ? parseSnapshot(os.itens.find((i) => i.id === f.itemId)?.checklistSnapshot).find((x) => x.id === f.checklistItemId)?.descricao : null
+              return (
+                <div key={f.id} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/os-foto/${f.id}`} alt="" style={{ width: '100%', height: '48mm', objectFit: 'cover', border: borda }} />
+                  <p style={{ fontSize: '7pt', margin: '2px 0 0 0', color: '#333' }}>
+                    <strong>{{ antes: 'Antes', depois: 'Depois', problema: 'Problema', outra: 'Foto' }[f.momento] ?? 'Foto'}</strong>{eq ? ` · ${eq}` : ''}{ck ? ` · ${ck}` : ''}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </Secao>
+      )}
+
       {/* ASSINATURAS */}
       <div style={{ border: borda, borderTop: 'none', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', padding: '10px 16px 8px 16px', breakInside: 'avoid' }}>
         <div>
-          {os.assinaturaBase64 ? (
-            <div style={{ height: '52px', display: 'flex', alignItems: 'flex-end', marginBottom: '3px' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={os.assinaturaBase64} alt="Assinatura do técnico" style={{ maxHeight: '48px', width: 'auto' }} />
-            </div>
-          ) : (
-            <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '3px' }} />
-          )}
+          <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '3px' }} />
           <p style={{ fontSize: '8pt', textAlign: 'center', margin: 0, color: '#333' }}>Assinatura do técnico</p>
           <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{tecnicoLabel}</p>
         </div>
         <div>
-          <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '3px' }} />
+          {/* A assinatura colhida no portal do técnico é a do cliente */}
+          {os.assinaturaBase64 ? (
+            <div style={{ height: '52px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', marginBottom: '3px', borderBottom: '1px solid #555' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={os.assinaturaBase64} alt="Assinatura do cliente" style={{ maxHeight: '48px', width: 'auto' }} />
+            </div>
+          ) : (
+            <div style={{ height: '52px', borderBottom: '1px solid #555', marginBottom: '3px' }} />
+          )}
           <p style={{ fontSize: '8pt', textAlign: 'center', margin: 0, color: '#333' }}>Assinatura do cliente</p>
-          <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{c.razaoSocial}</p>
+          <p style={{ fontSize: '7.5pt', textAlign: 'center', margin: 0, color: '#888' }}>{os.recebidoPor ? `Recebido por ${os.recebidoPor} · ` : ''}{c.razaoSocial}</p>
         </div>
       </div>
 
       {/* RODAPÉ */}
       <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-        <p style={{ fontSize: '7pt', color: '#999', margin: 0 }}>{numero} · {nomeEmpresa}{config?.cnpj ? ` · CNPJ ${config.cnpj}` : ''}</p>
+        <p style={{ fontSize: '7pt', color: '#999', margin: 0 }}>{numeroCompleto} · {nomeEmpresa}{config?.cnpj ? ` · CNPJ ${config.cnpj}` : ''}</p>
         <p style={{ fontSize: '7pt', color: '#999', margin: 0 }}>{modoDia ? dataLonga : new Date().toLocaleString('pt-BR')}</p>
       </div>
     </div>

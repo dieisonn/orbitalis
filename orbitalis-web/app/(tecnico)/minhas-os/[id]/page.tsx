@@ -2,8 +2,8 @@ import { api } from '@/lib/api'
 import { getUserId } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { OsExecucao, type OsParaExecucao } from './os-execucao'
-import { ArrowLeft, MapPin, Building2, Calendar, Package, Navigation, Phone } from 'lucide-react'
+import { OsExecucao, type OsParaExecucao, type FotoOs } from './os-execucao'
+import { ArrowLeft, Users, MapPin, Building2, Calendar, Package, Navigation, Phone } from 'lucide-react'
 import { numeroOs } from '@/lib/os-numero'
 import { mapaUrl, wazeUrl } from '@/lib/agenda'
 
@@ -20,6 +20,9 @@ type OrdemServico = OsParaExecucao & {
   observacoesGerais: string | null
   assinaturaBase64: string | null
   enderecoServico?: { rotulo: string | null; endereco: string }
+  recebidoPor?: string | null
+  tecnico?: { id: string; nome: string | null } | null
+  auxiliares?: { tecnicoId: string; tecnico: { id: string; nome: string | null; email: string } }[]
   ambiente: {
     nome: string
     localizacaoInterna: string
@@ -52,6 +55,10 @@ export default async function OsDetailPage({ params }: Props) {
     // not found or forbidden
   }
 
+  const fotos = os
+    ? await api.get<FotoOs[]>(`/ordens-servico/${id}/fotos`).catch(() => [] as FotoOs[])
+    : []
+
   if (!os) {
     return (
       <div className="text-center py-12">
@@ -68,6 +75,7 @@ export default async function OsDetailPage({ params }: Props) {
   // Visita com equipamentos em vários ambientes: o título vira o cliente e o local, a contagem de ambientes
   const nAmbientes = new Set(os.itens.map((i) => i.equipamento.ambiente?.nome).filter(Boolean)).size
   const varios = nAmbientes > 1
+  const souAuxiliar = os.auxiliares?.some((a) => a.tecnicoId === userId) ?? false
 
   return (
     <div className="space-y-4">
@@ -180,9 +188,23 @@ export default async function OsDetailPage({ params }: Props) {
         )}
       </div>
 
+      {/* Equipe da O.S. */}
+      {(souAuxiliar || (os.auxiliares?.length ?? 0) > 0) && (
+        <div className="bg-white rounded-2xl border border-border p-4 text-xs flex items-start gap-2.5">
+          <Users size={14} className="text-primary/50 mt-0.5 shrink-0" />
+          <div className="space-y-0.5">
+            {souAuxiliar && <p className="font-semibold text-primary">Você é auxiliar nesta O.S.</p>}
+            <p className="text-gray-600"><span className="text-gray-400">Responsável:</span> {os.tecnico?.nome ?? '—'}</p>
+            {(os.auxiliares?.length ?? 0) > 0 && (
+              <p className="text-gray-600"><span className="text-gray-400">Auxiliares:</span> {os.auxiliares!.map((a) => a.tecnico.nome ?? a.tecnico.email).join(', ')}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Parte interativa */}
       <OsExecucao
-        os={{ id: os.id, status: os.status, itens: os.itens, dataInicio: os.dataInicio, dataConclusao: os.dataConclusao }}
+        os={{ id: os.id, status: os.status, itens: os.itens, dataInicio: os.dataInicio, dataConclusao: os.dataConclusao, recebidoPor: os.recebidoPor, fotos }}
       />
     </div>
   )

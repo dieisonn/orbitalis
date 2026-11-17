@@ -51,3 +51,12 @@ export async function alterarStatusLote(ids: string[], status: string, quando?: 
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao alterar status em lote' }
   }
 }
+
+export async function definirAuxiliares(osId: string, tecnicoIds: string[]) {
+  try {
+    await api.patch(`/ordens-servico/${osId}/auxiliares`, { tecnicoIds })
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar auxiliares' }
+  }
+}

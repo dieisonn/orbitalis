@@ -5,9 +5,10 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
 import {
   MapPin, User, Calendar, Clock, CheckSquare, Wrench,
-  FileText, DollarSign, ClipboardCheck, AlertCircle, Wind,
+  FileText, DollarSign, ClipboardCheck, AlertCircle, Wind, Camera,
 } from 'lucide-react'
 import { numeroOs } from '@/lib/os-numero'
+import { AuxiliaresOs } from './auxiliares-os'
 import { ConcluirOsBtn } from '@/components/ui/concluir-os-btn'
 
 type Props = { params: Promise<{ id: string }> }
@@ -62,6 +63,8 @@ type OrdemServico = {
     cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
   }
   tecnico: Tecnico | null
+  auxiliares?: { tecnicoId: string }[]
+  recebidoPor?: string | null
   tipoServico?: { sigla: string; nome: string; corHex: string } | null
   dias?: { id: string; data: string; horaInicio: string | null; horaFim: string | null }[]
   enderecoServico?: { rotulo: string | null; endereco: string }
@@ -131,6 +134,7 @@ export default async function OsDetailPage({ params }: Props) {
 
   let os: OrdemServico
   let tecnicos: Tecnico[] = []
+  let fotos: { id: string; itemId: string | null; momento: string }[] = []
 
   try {
     const [osData, tecnicosRes] = await Promise.all([
@@ -139,6 +143,7 @@ export default async function OsDetailPage({ params }: Props) {
     ])
     os       = osData
     tecnicos = tecnicosRes.data
+    fotos    = await api.get<typeof fotos>(`/ordens-servico/${id}/fotos`).catch(() => [])
   } catch {
     notFound()
   }
@@ -248,6 +253,14 @@ export default async function OsDetailPage({ params }: Props) {
           </div>
         </div>
 
+        <AuxiliaresOs
+          osId={os.id}
+          responsavelId={os.tecnico?.id ?? null}
+          tecnicos={tecnicos}
+          atuais={(os.auxiliares ?? []).map((a) => a.tecnicoId)}
+          editavel={os.status !== 'concluida' && os.status !== 'cancelada'}
+        />
+
         {(os.dias?.length ?? 0) >= 2 && (
           <div className="mt-4 pt-4 border-t border-border">
             <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
@@ -273,6 +286,25 @@ export default async function OsDetailPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {/* Fotos da execução */}
+      {fotos.length > 0 && (
+        <div className="bg-white rounded-xl border border-border p-5 mb-4">
+          <h2 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Camera size={15} /> Fotos da execução <span className="text-xs font-normal text-gray-400">({fotos.length})</span></h2>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+            {fotos.map((f) => {
+              const eq = os.itens.find((i) => i.id === f.itemId)?.equipamento?.nome
+              return (
+                <a key={f.id} href={`/api/os-foto/${f.id}`} target="_blank" rel="noopener noreferrer" className="block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/os-foto/${f.id}`} alt="" loading="lazy" className="w-full aspect-square object-cover rounded-lg border border-border" />
+                  <p className="text-[11px] text-gray-500 mt-1 truncate">{{ antes: 'Antes', depois: 'Depois', problema: 'Problema', outra: 'Foto' }[f.momento] ?? 'Foto'}{eq ? ` · ${eq}` : ''}</p>
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Financeiro */}
       {(os.valorMaoObra != null || os.valorPecas != null) && (

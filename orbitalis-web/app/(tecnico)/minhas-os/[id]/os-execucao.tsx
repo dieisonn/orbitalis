@@ -15,9 +15,14 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  Camera,
+  Mic,
+  History,
+  X,
 } from 'lucide-react'
 import SignatureCanvas, { type SignatureCanvasHandle } from '@/components/ui/signature-canvas'
-import { atualizarStatusOs, sincronizarOs } from './actions'
+import { atualizarStatusOs, sincronizarOs, ultimoChecklist } from './actions'
+import { reduzirImagem } from '@/lib/foto'
 import { saveLocalSync, loadLocalSync, clearLocalSync, hasPendingSync } from '@/lib/sync-queue'
 
 type Resultado = 'C' | 'NC' | 'NA'
@@ -35,6 +40,7 @@ type ChecklistItem = {
 
 type OsItem = {
   id: string
+  equipamentoId?: string
   statusItem: string
   observacoesTecnicas: string | null
   checklistSnapshot: unknown
@@ -48,10 +54,14 @@ type OsItem = {
   }
 }
 
+export type FotoOs = { id: string; itemId: string | null; checklistItemId: string | null; momento: string; legenda: string | null }
+
 export type OsParaExecucao = {
   id: string
   status: string
   itens: OsItem[]
+  recebidoPor?: string | null
+  fotos?: FotoOs[]
   dataInicio?: string | null
   dataConclusao?: string | null
 }
@@ -72,6 +82,74 @@ function parseSnapshot(snapshot: unknown): ChecklistItem[] {
   }
 }
 
+function BotaoFoto({ rotulo, ocupado, onArquivo, destaque }: { rotulo: string; ocupado?: boolean; onArquivo: (f: File) => void; destaque?: boolean }) {
+  return (
+    <label className={['inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border cursor-pointer active:scale-95 transition',
+      destaque ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 text-gray-600 hover:border-primary hover:text-primary', ocupado ? 'opacity-60 pointer-events-none' : ''].join(' ')}>
+      {ocupado ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} {rotulo}
+      <input type="file" accept="image/*" capture="environment" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onArquivo(f) }} />
+    </label>
+  )
+}
+
+function Miniaturas({ fotos, onRemover }: { fotos: FotoOs[]; onRemover?: (id: string) => void }) {
+  if (fotos.length === 0) return null
+  const ROTULO: Record<string, string> = { antes: 'Antes', depois: 'Depois', problema: 'Problema', outra: 'Foto' }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {fotos.map((f) => (
+        <div key={f.id} className="relative">
+          <a href={`/api/os-foto/${f.id}`} target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/os-foto/${f.id}`} alt={ROTULO[f.momento] ?? 'Foto'} loading="lazy" className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+          </a>
+          <span className="absolute bottom-0 inset-x-0 text-[9px] font-semibold text-white bg-black/55 text-center rounded-b-lg py-px">{ROTULO[f.momento] ?? 'Foto'}</span>
+          {onRemover && (
+            <button type="button" onClick={() => onRemover(f.id)} aria-label="Remover foto"
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white border border-gray-300 text-gray-500 flex items-center justify-center shadow-sm"><X size={11} /></button>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Ditado por voz (reconhecimento do próprio navegador); só aparece onde houver suporte. */
+function BotaoDitado({ onTexto }: { onTexto: (texto: string) => void }) {
+  const [suportado, setSuportado] = useState(false)
+  const [ouvindo, setOuvindo] = useState(false)
+  const ref = useRef<{ stop: () => void } | null>(null)
+  useEffect(() => {
+    const w = window as unknown as Record<string, unknown>
+    setSuportado(!!(w.SpeechRecognition || w.webkitSpeechRecognition))
+  }, [])
+  if (!suportado) return null
+  function alternar() {
+    if (ouvindo) { ref.current?.stop(); return }
+    const w = window as unknown as Record<string, new () => any> // eslint-disable-line @typescript-eslint/no-explicit-any
+    const R = w.SpeechRecognition || w.webkitSpeechRecognition
+    const r = new R()
+    r.lang = 'pt-BR'; r.interimResults = false; r.continuous = true
+    r.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      let t = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) t += e.results[i][0].transcript
+      if (t.trim()) onTexto(t.trim())
+    }
+    r.onend = () => setOuvindo(false)
+    r.onerror = () => setOuvindo(false)
+    ref.current = r
+    r.start()
+    setOuvindo(true)
+  }
+  return (
+    <button type="button" onClick={alternar}
+      className={['inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border', ouvindo ? 'bg-red-500 border-red-500 text-white animate-pulse' : 'border-gray-200 text-gray-600'].join(' ')}>
+      <Mic size={12} /> {ouvindo ? 'Ouvindo… toque para parar' : 'Ditar'}
+    </button>
+  )
+}
+
 export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -82,14 +160,18 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const [entrada, setEntrada] = useState(() => paraCampo(os.dataInicio))
   const [saida, setSaida] = useState(() => paraCampo(os.dataConclusao))
   const [confirmando, setConfirmando] = useState(false)
+  const [fotos, setFotos] = useState<FotoOs[]>(os.fotos ?? [])
+  const [enviandoFoto, setEnviandoFoto] = useState<string | null>(null)
+  const [recebidoPor, setRecebidoPor] = useState(os.recebidoPor ?? '')
+  const [aviso, setAviso] = useState<string | null>(null)
   const [base, setBase] = useState<string | null>(null)
   // Ao iniciar, a O.S. é recarregada com a entrada gravada pelo servidor
   useEffect(() => {
     if (!os.dataInicio || entrada) return
     const novo = paraCampo(os.dataInicio)
-    const limpo = base === JSON.stringify({ checked, obs, itemStatus, entrada, saida })
+    const limpo = base === JSON.stringify({ checked, obs, itemStatus, entrada, saida, recebidoPor })
     setEntrada(novo)
-    if (limpo) setBase(JSON.stringify({ checked, obs, itemStatus, entrada: novo, saida }))
+    if (limpo) setBase(JSON.stringify({ checked, obs, itemStatus, entrada: novo, saida, recebidoPor }))
   }, [os.dataInicio])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resultado de cada item do checklist: Conforme, Não conforme ou Não se aplica (ausente = ainda não respondido)
@@ -268,9 +350,55 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
         }
       }),
       assinaturaBase64: sigRef.current?.toDataURL() ?? undefined,
+      recebidoPor: recebidoPor.trim() || undefined,
       entrada: paraIso(entrada),
       saida: concluindo ? paraIso(saida || agoraCampo()) : undefined,
     }
+  }
+
+  async function enviarFoto(file: File, ctx: { itemId: string; checklistItemId?: string; momento: string }) {
+    if (!navigator.onLine) { setError('Sem internet: as fotos só podem ser enviadas com conexão. Tente de novo quando voltar o sinal.'); return }
+    const chave = `${ctx.itemId}:${ctx.checklistItemId ?? ctx.momento}`
+    setEnviandoFoto(chave)
+    setError(null)
+    try {
+      const dados = await reduzirImagem(file)
+      const r = await fetch(`/api/os-fotos/${os.id}`, { method: 'POST', body: JSON.stringify({ ...ctx, dados }) })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(Array.isArray(j.message) ? j.message[0] : j.message ?? 'Não foi possível enviar a foto')
+      setFotos((f) => [...f, j as FotoOs])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível enviar a foto')
+    } finally {
+      setEnviandoFoto(null)
+    }
+  }
+
+  async function removerFoto(id: string) {
+    if (!window.confirm('Remover esta foto?')) return
+    const r = await fetch(`/api/os-foto/${id}`, { method: 'DELETE' })
+    if (r.ok) setFotos((f) => f.filter((x) => x.id !== id))
+    else setError('Não foi possível remover a foto')
+  }
+
+  /** Repete as respostas da última visita concluída deste equipamento (só onde o item for o mesmo). */
+  async function usarUltimaVisita(item: OsItem) {
+    if (!item.equipamentoId) return
+    setAviso(null)
+    const ult = await ultimoChecklist(item.equipamentoId)
+    if (!ult) { setAviso(`${item.equipamento.nome}: não há visita anterior concluída.`); return }
+    const norm = (t: string) => t.trim().toLowerCase()
+    const anteriores = new Map(ult.checklist.map((c) => [norm(c.descricao), (c.resultado ?? (c.marcado ? 'C' : null)) as Resultado | null]))
+    const novos: Record<string, Resultado> = { ...(checked[item.id] ?? {}) }
+    let n = 0
+    for (const c of parseSnapshot(item.checklistSnapshot)) {
+      const r = anteriores.get(norm(c.descricao))
+      if (r) { novos[c.id] = r; n++ }
+    }
+    setChecked((prev) => ({ ...prev, [item.id]: novos }))
+    setSaved(false)
+    const dt = ult.data ? new Date(ult.data).toLocaleDateString('pt-BR') : ''
+    setAviso(n > 0 ? `${item.equipamento.nome}: ${n} item(ns) copiados da visita ${ult.osNumero}${dt ? ` de ${dt}` : ''}. Confira antes de concluir.` : `${item.equipamento.nome}: a visita anterior tinha outro checklist.`)
   }
 
   function handleIniciar() {
@@ -313,7 +441,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   }
 
   // Alterações ainda não salvas (compara com o último estado salvo)
-  const estado = JSON.stringify({ checked, obs, itemStatus, entrada, saida })
+  const estado = JSON.stringify({ checked, obs, itemStatus, entrada, saida, recebidoPor })
   useEffect(() => { setBase((b) => b ?? estado) }, [])  // eslint-disable-line react-hooks/exhaustive-deps
   const naoSalvo = base !== null && base !== estado
 
@@ -410,30 +538,6 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Banner: iniciar */}
-      {canStart && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-amber-800 text-sm">Serviço ainda não iniciado</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              Toque em Iniciar para registrar o começo do atendimento.
-            </p>
-          </div>
-          <button
-            onClick={handleIniciar}
-            disabled={isPending}
-            className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl px-4 py-2.5 text-sm transition-colors disabled:opacity-60 shrink-0"
-          >
-            {isPending ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <PlayCircle size={14} />
-            )}
-            Iniciar
-          </button>
         </div>
       )}
 
@@ -616,12 +720,47 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
               </div>
             )}
 
+            {/* Fotos do equipamento */}
+            {(() => {
+              const fotosItem = fotos.filter((f) => f.itemId === item.id && !f.checklistItemId)
+              const problemas = fotos.filter((f) => f.itemId === item.id && f.checklistItemId)
+              if (isReadOnly && fotosItem.length === 0 && problemas.length === 0) return null
+              return (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Fotos</p>
+                  {!isReadOnly && (
+                    <div className="flex flex-wrap gap-2">
+                      {([['antes', 'Antes'], ['depois', 'Depois'], ['outra', 'Outra']] as const).map(([m, r]) => (
+                        <BotaoFoto key={m} rotulo={r} ocupado={enviandoFoto === `${item.id}:${m}`} onArquivo={(f) => enviarFoto(f, { itemId: item.id, momento: m })} />
+                      ))}
+                    </div>
+                  )}
+                  <Miniaturas fotos={[...fotosItem, ...problemas]} onRemover={isReadOnly ? undefined : removerFoto} />
+                  {!isReadOnly && cl.some((c) => res[c.id] === 'NC') && (
+                    <div className="space-y-1.5 rounded-xl bg-red-50 border border-red-100 p-3">
+                      <p className="text-[11px] font-semibold text-red-700">Itens não conformes: registre uma foto do problema</p>
+                      {cl.filter((c) => res[c.id] === 'NC').map((c) => (
+                        <div key={c.id} className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-gray-700 min-w-0 flex-1">{c.descricao}</span>
+                          <span className="shrink-0 flex items-center gap-1.5">
+                            {fotos.some((f) => f.itemId === item.id && f.checklistItemId === c.id) && <span className="text-[10px] text-green-700 font-semibold">✓ {fotos.filter((f) => f.itemId === item.id && f.checklistItemId === c.id).length}</span>}
+                            <BotaoFoto destaque rotulo="Foto" ocupado={enviandoFoto === `${item.id}:${c.id}`} onArquivo={(f) => enviarFoto(f, { itemId: item.id, checklistItemId: c.id, momento: 'problema' })} />
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* Observações */}
             {!isReadOnly ? (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">
-                  Observações técnicas
-                </p>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Observações técnicas</p>
+                  <BotaoDitado onTexto={(t) => setObs((prev) => ({ ...prev, [item.id]: `${prev[item.id] ? prev[item.id] + ' ' : ''}${t}` }))} />
+                </div>
                 <textarea
                   rows={2}
                   value={obs[item.id] ?? ''}
@@ -643,6 +782,12 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
 
             {/* Ações do equipamento */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
+              {!isReadOnly && cl.length > 0 && item.equipamentoId && (
+                <button type="button" onClick={() => usarUltimaVisita(item)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">
+                  <History size={12} /> Igual à última visita
+                </button>
+              )}
               {!isReadOnly && iguaisPendentes(item) > 0 && (
                 <button type="button" onClick={() => aplicarAosIguais(item)}
                   className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 text-gray-600 hover:border-primary hover:text-primary">
@@ -679,6 +824,11 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
               Limpar
             </button>
           </div>
+          <div>
+            <label className="block text-[11px] text-gray-500 mb-1">Nome de quem recebeu o serviço</label>
+            <input value={recebidoPor} onChange={(e) => { setRecebidoPor(e.target.value); setSaved(false) }} maxLength={120} placeholder="Ex.: Maria (recepção)"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
           <SignatureCanvas
             ref={sigRef}
             className="w-full h-36 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50"
@@ -686,6 +836,14 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
           <p className="text-[10px] text-gray-400 text-center">
             Peça ao cliente para assinar acima
           </p>
+        </div>
+      )}
+
+      {aviso && (
+        <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-800">
+          <History size={14} className="shrink-0 mt-0.5" />
+          <span className="flex-1">{aviso}</span>
+          <button type="button" onClick={() => setAviso(null)} aria-label="Fechar"><X size={13} /></button>
         </div>
       )}
 
@@ -698,13 +856,24 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
       )}
 
       {/* Erro (fora da O.S. em andamento) */}
-      {error && !isWorking && (
+      {error && !isWorking && !canStart && (
         <p className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3">
           {error}
         </p>
       )}
 
       {/* Barra de ação fixa: um único passo claro por vez */}
+      {canStart && (
+        <div className="sticky bottom-[4.5rem] z-30 -mx-1 px-1">
+          {error && <p className="text-sm text-destructive bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 mb-2 shadow-sm">{error}</p>}
+          <button onClick={handleIniciar} disabled={isPending}
+            className="w-full h-14 rounded-2xl bg-action text-white font-semibold shadow-lg flex flex-col items-center justify-center leading-tight disabled:opacity-60">
+            <span className="flex items-center gap-2 text-base">{isPending ? <Loader2 size={17} className="animate-spin" /> : <PlayCircle size={17} />} Cheguei · Iniciar atendimento</span>
+            <span className="text-[10px] font-normal opacity-90">Registra a hora de chegada</span>
+          </button>
+        </div>
+      )}
+
       {isWorking && (() => {
         const faltam = os.itens.length - feitos
         const primeiroPendente = itens.find((i) => itemStatus[i.id] !== 'concluido')
@@ -744,6 +913,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
       {/* Confirmação final */}
       {confirmando && (() => {
         const nc = os.itens.reduce((t, i) => t + Object.values(checked[i.id] ?? {}).filter((r) => r === 'NC').length, 0)
+        const ncSemFoto = os.itens.reduce((t, i) => t + Object.entries(checked[i.id] ?? {}).filter(([cid, r]) => r === 'NC' && !fotos.some((f) => f.itemId === i.id && f.checklistItemId === cid)).length, 0)
         const semAssinatura = !sigRef.current || sigRef.current.isEmpty?.() === true
         return (
           <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-3" onClick={() => !isPending && setConfirmando(false)}>
@@ -753,6 +923,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
                 <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-green-600" /> {os.itens.length} equipamento{os.itens.length === 1 ? '' : 's'} concluído{os.itens.length === 1 ? '' : 's'}</li>
                 <li className="flex items-center gap-2"><Clock size={15} className="text-gray-400" /> Entrada {entrada ? entrada.replace('T', ' ') : 'registrada ao iniciar'} · Saída {saida ? saida.replace('T', ' ') : 'agora'}</li>
                 {nc > 0 && <li className="text-red-700 font-medium">⚠ {nc} item{nc > 1 ? 's' : ''} não conforme{nc > 1 ? 's' : ''} registrado{nc > 1 ? 's' : ''}</li>}
+                {ncSemFoto > 0 && <li className="text-amber-700">{ncSemFoto} item(ns) não conforme sem foto do problema. Dá para voltar e fotografar.</li>}
                 {semAssinatura && <li className="text-amber-700">Sem assinatura do cliente (opcional). Role a tela para colher agora.</li>}
               </ul>
               {error && <p className="text-sm text-destructive">{error}</p>}

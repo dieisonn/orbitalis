@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { StatusBadge, osAtrasada } from '@/components/ui/status-badge'
+import { AvisosPush } from '@/components/ui/avisos-push'
 import { ClipboardList, Navigation, Phone, Search, Clock, MapPin } from 'lucide-react'
 import { mapaUrl } from '@/lib/agenda'
 import { numeroOs as formatarNumero } from '@/lib/os-numero'
@@ -19,6 +20,7 @@ export type OrdemServicoLista = {
   enderecoServico?: { rotulo: string | null; endereco: string }
   itens: { id: string }[]
   dias?: { data: string }[]
+  souAuxiliar?: boolean
 }
 
 type Tab = 'hoje' | 'pendentes' | 'concluidas'
@@ -82,6 +84,7 @@ function Cartao({ os }: { os: OrdemServicoLista }) {
         </div>
         <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
           <span className="text-[11px] font-mono text-gray-400">{numeroOs(os)}</span>
+          {os.souAuxiliar && <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">Auxiliar</span>}
           <StatusBadge status={os.status as 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'} />
           {os.tipoServico && <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">{os.tipoServico.nome}</span>}
           {os.tipo === 'preventiva' && !os.tipoServico && <span className="text-[11px] text-gray-500">Preventiva</span>}
@@ -165,6 +168,8 @@ export function OsList({ ordens }: { ordens: OrdemServicoLista[] }) {
           {hoje.length > 0 ? `${hoje.length} para hoje · ` : ''}{pendentes.length} pendente{pendentes.length === 1 ? '' : 's'}
         </p>
       </div>
+
+      <AvisosPush />
 
       <div className="flex gap-1 bg-surface rounded-xl p-1 mb-3 border border-border">
         {tabs.map((t) => (
