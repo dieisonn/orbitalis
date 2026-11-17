@@ -448,8 +448,8 @@ export class OrdensServicoService {
   }
 
   // GET /ordens-servico/tecnico/:tecnicoId — fila do técnico (§US08)
-  findByTecnico(tecnicoId: string) {
-    return this.prisma.ordemServico.findMany({
+  async findByTecnico(tecnicoId: string) {
+    const lista = await this.prisma.ordemServico.findMany({
       where: {
         tecnicoId,
         // pendentes + as concluídas/canceladas dos últimos 60 dias (aba "Concluídas" do portal do técnico)
@@ -458,9 +458,16 @@ export class OrdensServicoService {
           { status: { in: ['concluida', 'cancelada'] }, dataAgendamento: { gte: new Date(Date.now() - 60 * 86_400_000) } },
         ],
       },
-      include: { itens: { include: { equipamento: true } }, ambiente: true, dias: { orderBy: { data: 'asc' } } },
+      include: {
+        itens: { include: { equipamento: true } },
+        ambiente: { include: { cliente: true } },
+        tipoServico: true,
+        dias: { orderBy: { data: 'asc' } },
+      },
       orderBy: { dataAgendamento: 'asc' },
     });
+    // Lista do técnico: cliente, endereço do atendimento e telefone, para ele ver quem/onde sem abrir a O.S.
+    return lista.map((o) => ({ ...o, enderecoServico: enderecoDaOs(o.ambiente.cliente, o.enderecoId) }));
   }
 
   // PATCH /ordens-servico/:id/sincronizar (§6.3 + §6.4)
