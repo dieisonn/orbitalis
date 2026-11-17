@@ -181,7 +181,7 @@ export default async function OsDetailPage({ params }: Props) {
 
       {/* Parte interativa */}
       <OsExecucao
-        os={{ id: os.id, status: os.status, itens: os.itens }}
+        os={{ id: os.id, status: os.status, itens: os.itens, dataInicio: os.dataInicio, dataConclusao: os.dataConclusao }}
       />
     </div>
   )

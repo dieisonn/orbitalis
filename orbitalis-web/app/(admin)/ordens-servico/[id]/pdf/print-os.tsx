@@ -5,6 +5,8 @@ import { Printer } from 'lucide-react'
 
 type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; tipo?: string; unidade?: string; opcoes?: string[]; marcado?: boolean; resultado?: 'C' | 'NC' | 'NA' | null }
 
+const dataHoraBr = (iso: string) => new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', ' ')
+
 // Itens antigos só têm `marcado`: contam como Conforme
 const resultadoDe = (c: ChecklistItem) => c.resultado ?? (c.marcado ? 'C' : null)
 
@@ -202,8 +204,8 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela' }:
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: borda }}>
-          <Campo rotulo="Chegada (técnico)" valor={<span style={{ color: '#777' }}>____/____/______  ____:____</span>} />
-          <Campo rotulo="Saída (técnico)" valor={<span style={{ color: '#777' }}>____/____/______  ____:____</span>} esquerda />
+          <Campo rotulo="Chegada (técnico)" valor={os.dataInicio ? <strong>{dataHoraBr(os.dataInicio)}</strong> : <span style={{ color: '#777' }}>____/____/______  ____:____</span>} />
+          <Campo rotulo="Saída (técnico)" valor={os.dataConclusao ? <strong>{dataHoraBr(os.dataConclusao)}</strong> : <span style={{ color: '#777' }}>____/____/______  ____:____</span>} esquerda />
         </div>
       </Secao>
 

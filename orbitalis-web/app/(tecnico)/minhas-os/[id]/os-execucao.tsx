@@ -52,7 +52,14 @@ export type OsParaExecucao = {
   id: string
   status: string
   itens: OsItem[]
+  dataInicio?: string | null
+  dataConclusao?: string | null
 }
+
+// Entrada/saída são digitadas em horário de Brasília (AAAA-MM-DDTHH:mm)
+const paraCampo = (iso?: string | null) => (iso ? new Date(Date.parse(iso) - 3 * 3600_000).toISOString().slice(0, 16) : '')
+const agoraCampo = () => paraCampo(new Date().toISOString())
+const paraIso = (v: string) => (v ? `${v}:00-03:00` : undefined)
 
 function parseSnapshot(snapshot: unknown): ChecklistItem[] {
   if (!snapshot) return []
@@ -72,6 +79,10 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const [saved, setSaved] = useState(false)
   const [pendingSync, setPendingSync] = useState(false)
   const sigRef = useRef<SignatureCanvasHandle>(null)
+  const [entrada, setEntrada] = useState(() => paraCampo(os.dataInicio))
+  const [saida, setSaida] = useState(() => paraCampo(os.dataConclusao))
+  // Ao iniciar, a O.S. é recarregada com a entrada gravada pelo servidor
+  useEffect(() => { if (os.dataInicio) setEntrada((e) => e || paraCampo(os.dataInicio)) }, [os.dataInicio])
 
   // Resultado de cada item do checklist: Conforme, Não conforme ou Não se aplica (ausente = ainda não respondido)
   const [checked, setChecked] = useState<Record<string, Record<string, Resultado>>>(() => {
@@ -249,6 +260,8 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
         }
       }),
       assinaturaBase64: sigRef.current?.toDataURL() ?? undefined,
+      entrada: paraIso(entrada),
+      saida: concluindo ? paraIso(saida || agoraCampo()) : undefined,
     }
   }
 
@@ -292,6 +305,10 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   function handleConcluir() {
     if (!allItemsDone) {
       setError('Marque todos os equipamentos como concluídos antes de encerrar a O.S.')
+      return
+    }
+    if (entrada && (saida || agoraCampo()) < entrada) {
+      setError('A saída não pode ser anterior à entrada.')
       return
     }
     setError(null)
@@ -369,6 +386,28 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
             )}
             Iniciar
           </button>
+        </div>
+      )}
+
+      {/* Entrada e saída no cliente */}
+      {(isWorking || isReadOnly) && (
+        <div className="bg-white rounded-2xl border border-border p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2 flex items-center gap-1.5"><Clock size={12} /> Entrada e saída</p>
+          <div className="grid grid-cols-2 gap-3">
+            {([['Entrada', entrada, setEntrada], ['Saída', saida, setSaida]] as const).map(([rotulo, valor, set]) => (
+              <div key={rotulo}>
+                <label className="block text-[11px] text-gray-500 mb-1">{rotulo}</label>
+                <input type="datetime-local" value={valor} disabled={isReadOnly}
+                  onChange={(e) => { set(e.target.value); setSaved(false) }}
+                  className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                {!isReadOnly && (
+                  <button type="button" onClick={() => { set(agoraCampo()); setSaved(false) }}
+                    className="mt-1 text-xs font-semibold text-primary">Agora</button>
+                )}
+              </div>
+            ))}
+          </div>
+          {!isReadOnly && <p className="text-[11px] text-gray-400 mt-2">A entrada é gravada ao iniciar. A saída fica no horário do envio se você não informar.</p>}
         </div>
       )}
 
