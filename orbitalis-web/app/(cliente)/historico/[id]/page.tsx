@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { StatusBadge, type OsStatus } from '@/components/ui/status-badge'
 import { ArrowLeft, Cpu, ClipboardCheck } from 'lucide-react'
 
-type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; marcado: boolean }
+type ChecklistItem = { id: string; descricao: string; obrigatorio: boolean; marcado: boolean; resultado?: 'C' | 'NC' | 'NA' | null }
 
 type OsItem = {
   id: string
@@ -66,7 +66,7 @@ export default async function OsClienteDetalhePage({
   )
   const checklistDone = os.itens.reduce(
     (acc, item) =>
-      acc + (item.checklistSnapshot?.filter((c) => c.marcado).length ?? 0),
+      acc + (item.checklistSnapshot?.filter((c) => c.resultado ? true : c.marcado).length ?? 0),
     0,
   )
 
@@ -139,8 +139,9 @@ export default async function OsClienteDetalhePage({
           </div>
           <div className="divide-y divide-border">
             {os.itens.map((item) => {
-              const done = item.checklistSnapshot?.filter((c) => c.marcado).length ?? 0
+              const done = item.checklistSnapshot?.filter((c) => c.resultado ? true : c.marcado).length ?? 0
               const total = item.checklistSnapshot?.length ?? 0
+              const nc = item.checklistSnapshot?.filter((c) => c.resultado === 'NC').length ?? 0
               return (
                 <div key={item.id} className="px-5 py-3.5">
                   <div className="flex items-center justify-between gap-3">
@@ -159,7 +160,7 @@ export default async function OsClienteDetalhePage({
                   </div>
                   {total > 0 && (
                     <p className="text-xs text-gray-400 mt-1.5">
-                      {done}/{total} itens do checklist marcados
+                      {done}/{total} itens do checklist verificados{nc > 0 ? ` · ${nc} não conforme${nc > 1 ? 's' : ''}` : ''}
                     </p>
                   )}
                   {item.observacoesTecnicas && (

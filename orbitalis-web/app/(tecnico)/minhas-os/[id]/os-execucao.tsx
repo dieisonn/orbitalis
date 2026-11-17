@@ -20,11 +20,17 @@ import SignatureCanvas, { type SignatureCanvasHandle } from '@/components/ui/sig
 import { atualizarStatusOs, sincronizarOs } from './actions'
 import { saveLocalSync, loadLocalSync, clearLocalSync, hasPendingSync } from '@/lib/sync-queue'
 
+type Resultado = 'C' | 'NC' | 'NA'
+
+// Itens antigos só têm `marcado`: contam como Conforme
+const resultadoInicial = (c: ChecklistItem): Resultado | undefined => c.resultado ?? (c.marcado ? 'C' : undefined)
+
 type ChecklistItem = {
   id: string
   descricao: string
   obrigatorio: boolean
   marcado?: boolean
+  resultado?: Resultado
 }
 
 type OsItem = {
@@ -67,11 +73,16 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const [pendingSync, setPendingSync] = useState(false)
   const sigRef = useRef<SignatureCanvasHandle>(null)
 
-  const [checked, setChecked] = useState<Record<string, Set<string>>>(() => {
-    const init: Record<string, Set<string>> = {}
+  // Resultado de cada item do checklist: Conforme, Não conforme ou Não se aplica (ausente = ainda não respondido)
+  const [checked, setChecked] = useState<Record<string, Record<string, Resultado>>>(() => {
+    const init: Record<string, Record<string, Resultado>> = {}
     for (const item of os.itens) {
-      const cl = parseSnapshot(item.checklistSnapshot)
-      init[item.id] = new Set(cl.filter((c) => c.marcado).map((c) => c.id))
+      const m: Record<string, Resultado> = {}
+      for (const c of parseSnapshot(item.checklistSnapshot)) {
+        const r = resultadoInicial(c)
+        if (r) m[c.id] = r
+      }
+      init[item.id] = m
     }
     return init
   })
@@ -118,12 +129,12 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
 
   function aplicarAosIguais(item: OsItem) {
     const sig = assinatura(item)
-    const origem = checked[item.id] ?? new Set<string>()
+    const origem = checked[item.id] ?? {}
     setSaved(false)
     setChecked((prev) => {
       const n = { ...prev }
       for (const o of itens) {
-        if (o.id !== item.id && itemStatus[o.id] !== 'concluido' && assinatura(o) === sig) n[o.id] = new Set(origem)
+        if (o.id !== item.id && itemStatus[o.id] !== 'concluido' && assinatura(o) === sig) n[o.id] = { ...origem }
       }
       return n
     })
@@ -154,15 +165,19 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     return () => window.removeEventListener('online', trySync)
   }, [os.id])
 
-  function toggleChecklist(itemId: string, clId: string) {
+  // Toca no mesmo resultado de novo para limpar a resposta
+  function definirResultado(itemId: string, clId: string, r: Resultado) {
     setSaved(false)
     setChecked((prev) => {
-      const set = new Set(prev[itemId])
-      if (set.has(clId)) set.delete(clId)
-      else set.add(clId)
-      return { ...prev, [itemId]: set }
+      const m = { ...(prev[itemId] ?? {}) }
+      if (m[clId] === r) delete m[clId]
+      else m[clId] = r
+      return { ...prev, [itemId]: m }
     })
   }
+
+  const todosConformes = (item: OsItem): Record<string, Resultado> =>
+    Object.fromEntries(parseSnapshot(item.checklistSnapshot).map((c) => [c.id, 'C' as Resultado]))
 
   function toggleItemDone(itemId: string) {
     setSaved(false)
@@ -196,8 +211,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   // Marca (ou desmarca) todo o checklist de um equipamento de uma vez
   function marcarTudo(item: OsItem, marcar: boolean) {
     setSaved(false)
-    const todos = parseSnapshot(item.checklistSnapshot).map((c) => c.id)
-    setChecked((prev) => ({ ...prev, [item.id]: marcar ? new Set(todos) : new Set() }))
+    setChecked((prev) => ({ ...prev, [item.id]: marcar ? todosConformes(item) : {} }))
   }
 
   // Marca o checklist de todos os equipamentos ainda não concluídos (visita com muitos equipamentos iguais)
@@ -206,7 +220,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     setChecked((prev) => {
       const n = { ...prev }
       for (const i of os.itens) {
-        if (itemStatus[i.id] !== 'concluido') n[i.id] = new Set(parseSnapshot(i.checklistSnapshot).map((c) => c.id))
+        if (itemStatus[i.id] !== 'concluido') n[i.id] = todosConformes(i)
       }
       return n
     })
@@ -214,8 +228,8 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
 
   function mandatoryOk(item: OsItem): boolean {
     const cl = parseSnapshot(item.checklistSnapshot)
-    const checkedSet = checked[item.id] ?? new Set()
-    return cl.filter((c) => c.obrigatorio).every((c) => checkedSet.has(c.id))
+    const res = checked[item.id] ?? {}
+    return cl.filter((c) => c.obrigatorio).every((c) => !!res[c.id])
   }
 
   const feitos = os.itens.filter((i) => itemStatus[i.id] === 'concluido').length
@@ -226,12 +240,12 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     return {
       itens: os.itens.map((item) => {
         const cl = parseSnapshot(item.checklistSnapshot)
-        const checkedSet = checked[item.id] ?? new Set()
+        const res = checked[item.id] ?? {}
         return {
           itemId: item.id,
           statusItem: (concluindo ? 'concluido' : (itemStatus[item.id] ?? 'pendente')) as 'pendente' | 'concluido',
           observacoesTecnicas: obs[item.id] || undefined,
-          checklist: cl.map((c) => ({ ...c, marcado: checkedSet.has(c.id) })),
+          checklist: cl.map((c) => ({ ...c, resultado: res[c.id] ?? null, marcado: res[c.id] === 'C' })),
         }
       }),
       assinaturaBase64: sigRef.current?.toDataURL() ?? undefined,
@@ -366,7 +380,8 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
       {itens.map((item, idx) => {
         if (filtro === 'pendentes' && itemStatus[item.id] === 'concluido') return null
         const cl = parseSnapshot(item.checklistSnapshot)
-        const checkedSet = checked[item.id] ?? new Set()
+        const res = checked[item.id] ?? {}
+        const respondidos = cl.filter((c) => res[c.id]).length
         const isDone = itemStatus[item.id] === 'concluido'
         const canMarkDone = mandatoryOk(item)
         const aberto = abertos.has(item.id)
@@ -388,7 +403,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
                   <span className="block font-semibold text-gray-800 text-sm truncate">{item.equipamento.nome}</span>
                   <span className="block text-xs text-gray-500 truncate">{item.equipamento.marca}{item.equipamento.modelo ? ` ${item.equipamento.modelo}` : ''}</span>
                 </span>
-                <span className="text-[11px] text-gray-400 shrink-0">{cl.length > 0 ? `${checkedSet.size}/${cl.length}` : ''}</span>
+                <span className="text-[11px] text-gray-400 shrink-0">{cl.length > 0 ? `${respondidos}/${cl.length}` : ''}</span>
                 <span className={['text-[10px] font-bold px-2 py-0.5 rounded shrink-0', isDone ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'].join(' ')}>
                   {isDone ? 'Concluído' : 'Pendente'}
                 </span>
@@ -467,38 +482,42 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    Checklist <span className="normal-case font-medium">· {cl.filter((c) => checkedSet.has(c.id)).length}/{cl.length}</span>
+                    Checklist <span className="normal-case font-medium">· {respondidos}/{cl.length}</span>
                   </p>
                   {!isReadOnly && (
-                    <button type="button" onClick={() => marcarTudo(item, checkedSet.size < cl.length)}
+                    <button type="button" onClick={() => marcarTudo(item, respondidos < cl.length)}
                       className="inline-flex items-center gap-1 text-xs font-semibold text-primary px-2.5 py-1 rounded-full border border-primary/30 hover:bg-primary/5">
-                      <CheckCheck size={12} /> {checkedSet.size < cl.length ? 'Marcar tudo' : 'Desmarcar tudo'}
+                      <CheckCheck size={12} /> {respondidos < cl.length ? 'Tudo conforme' : 'Limpar tudo'}
                     </button>
                   )}
                 </div>
-                <div className="space-y-2">
+                <div className="divide-y divide-gray-100">
                   {cl.map((ci) => (
-                    <label
-                      key={ci.id}
-                      className={[
-                        'flex items-center gap-3 select-none',
-                        isReadOnly ? 'cursor-default' : 'cursor-pointer',
-                      ].join(' ')}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checkedSet.has(ci.id)}
-                        onChange={() => !isReadOnly && toggleChecklist(item.id, ci.id)}
-                        disabled={isReadOnly}
-                        className="w-4 h-4 rounded accent-primary shrink-0"
-                      />
-                      <span className="text-sm text-gray-700 leading-snug">
+                    <div key={ci.id} className="flex items-center gap-3 py-2">
+                      <span className="flex-1 min-w-0 text-sm text-gray-700 leading-snug">
                         {ci.descricao}
-                        {ci.obrigatorio && (
-                          <span className="text-destructive ml-1 text-[10px]">*</span>
-                        )}
+                        {ci.obrigatorio && <span className="text-destructive ml-1 text-[10px]">*</span>}
                       </span>
-                    </label>
+                      <div className="flex gap-1 shrink-0" role="group" aria-label={ci.descricao}>
+                        {([['C', 'Conforme', 'bg-green-500 border-green-500 text-white'], ['NC', 'Não conforme', 'bg-red-500 border-red-500 text-white'], ['NA', 'Não se aplica', 'bg-gray-500 border-gray-500 text-white']] as const).map(([r, nome, ativo]) => (
+                          <button
+                            key={r}
+                            type="button"
+                            title={nome}
+                            aria-label={nome}
+                            aria-pressed={res[ci.id] === r}
+                            disabled={isReadOnly}
+                            onClick={() => definirResultado(item.id, ci.id, r)}
+                            className={[
+                              'w-10 h-9 rounded-lg border text-xs font-bold transition-colors disabled:cursor-default',
+                              res[ci.id] === r ? ativo : 'bg-white border-gray-200 text-gray-400 hover:border-gray-400',
+                            ].join(' ')}
+                          >
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
