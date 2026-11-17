@@ -442,58 +442,73 @@ function montarBlocos(itens: Item[], formato: Formato): BlocoDoc[] {
   return blocos
 }
 
+/** Três quadradinhos C / NC / NA; o escolhido (O.S. já executada) sai preenchido. */
+function TresCaixas({ escolhido }: { escolhido: string | null }) {
+  return (
+    <span style={{ display: 'inline-flex', gap: '1.5px', justifyContent: 'center' }}>
+      {(['C', 'NC', 'NA'] as const).map((r) => (
+        <span key={r} style={{
+          display: 'inline-block', minWidth: '5.2mm', height: '4.4mm', lineHeight: '4.2mm', textAlign: 'center', boxSizing: 'border-box',
+          border: '1px solid #444', borderRadius: '2px', fontSize: '6pt', fontWeight: 700,
+          background: escolhido === r ? '#222' : '#fff', color: escolhido === r ? '#fff' : '#555',
+        }}>{r}</span>
+      ))}
+    </span>
+  )
+}
+
 /**
- * Tabela de marcação: uma linha por equipamento, uma coluna por item do checklist (numeradas, com a
- * legenda acima). Itens de escolha usam letras (a, b, c) para anotar na célula.
+ * Equipamentos com o mesmo checklist: uma linha por item (descrição completa à esquerda) e, para cada
+ * equipamento, as três caixas C / NC / NA. Em grupos de até 6 equipamentos por tabela para caber na folha.
  */
 function MatrizChecklist({ itens, checklist, numeros, mostrarAmbiente }: {
   itens: Item[]; checklist: ChecklistItem[]; numeros: Map<string, number>; mostrarAmbiente: boolean
 }) {
   const letras = 'abcdefghij'
+  const POR_TABELA = 6
+  const grupos: Item[][] = []
+  for (let i = 0; i < itens.length; i += POR_TABELA) grupos.push(itens.slice(i, i + POR_TABELA))
   const cel: React.CSSProperties = { border: borda, padding: '2px 3px', textAlign: 'center', fontSize: '8pt' }
+  const resultadoItem = (it: Item, id: string) => {
+    const ck = parseSnapshot(it.checklistSnapshot).find((x) => x.id === id)
+    return ck ? resultadoDe(ck) : null
+  }
   return (
     <div style={{ padding: '6px 8px' }}>
-      <p style={rotulo}>Checklist de serviços — anote C (conforme), NC (não conforme) ou NA (não se aplica) em cada equipamento; nos itens de escolha ou medição, anote também a letra / o valor</p>
-      <div style={{ columnCount: 2, columnGap: '14px', marginTop: '3px', fontSize: '7.5pt', lineHeight: 1.25 }}>
-        {checklist.map((ci, n) => (
-          <div key={ci.id} style={{ breakInside: 'avoid', marginBottom: '2px' }}>
-            <strong>{n + 1}.</strong> {ci.descricao}{ci.obrigatorio ? ' *' : ''}
-            {ci.tipo === 'numero' && <span style={{ color: '#555' }}>{` — valor${ci.unidade ? ` (${ci.unidade})` : ''}`}</span>}
-            {ci.opcoes && ci.opcoes.length > 0 && (
-              <span style={{ color: '#444' }}>{' — '}{ci.opcoes.map((o, k) => `${letras[k] ?? k + 1}) ${o}`).join('  ')}</span>
-            )}
-          </div>
-        ))}
-      </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '5px', tableLayout: 'fixed' }}>
-        <thead>
-          <tr style={{ background: '#f1f1f1' }}>
-            <th style={{ ...cel, width: '5mm' }}>Nº</th>
-            <th style={{ ...cel, textAlign: 'left', width: mostrarAmbiente ? '30mm' : '38mm' }}>Equipamento</th>
-            {mostrarAmbiente && <th style={{ ...cel, textAlign: 'left', width: '22mm' }}>Ambiente</th>}
-            {checklist.map((ci, n) => <th key={ci.id} style={{ ...cel, fontWeight: 700, width: ci.tipo === 'numero' || ci.tipo === 'texto' ? '11mm' : undefined }}>{n + 1}</th>)}
-            <th style={{ ...cel, width: '24mm' }}>Obs.</th>
-          </tr>
-        </thead>
-        <tbody>
-          {itens.map((it) => (
-            <tr key={it.id} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-              <td style={cel}>{numeros.get(it.id)}</td>
-              <td style={{ ...cel, textAlign: 'left', height: '7mm', overflowWrap: 'anywhere' }}>
-                <strong>{it.equipamento.nome}</strong>
-                <div style={{ fontSize: '6.5pt', color: '#666', lineHeight: 1.1 }}>{[it.equipamento.marca, it.equipamento.modelo].filter(Boolean).join(' ')}</div>
-              </td>
-              {mostrarAmbiente && <td style={{ ...cel, textAlign: 'left', fontSize: '7pt', overflowWrap: 'anywhere' }}>{it.equipamento.ambiente?.nome ?? ''}</td>}
-              {checklist.map((ci) => {
-                const ck = parseSnapshot(it.checklistSnapshot).find((x) => x.id === ci.id)
-                const r = ck ? resultadoDe(ck) : null
-                return <td key={ci.id} style={{ ...cel, fontWeight: 700, fontSize: '7.5pt' }}>{r ?? ''}</td>
-              })}
-              <td style={{ ...cel, textAlign: 'left', fontSize: '7pt' }}>{it.observacoesTecnicas ?? ''}</td>
+      <p style={rotulo}>Checklist de serviços <span style={{ textTransform: 'none', fontWeight: 400 }}>· C = Conforme · NC = Não conforme · NA = Não se aplica</span></p>
+      {grupos.map((grupo, gi) => (
+        <table key={gi} style={{ width: '100%', borderCollapse: 'collapse', marginTop: '5px', tableLayout: 'fixed' }}>
+          <thead>
+            <tr style={{ background: '#f1f1f1' }}>
+              <th style={{ ...cel, textAlign: 'left' }}>Item</th>
+              {grupo.map((it) => (
+                <th key={it.id} style={{ ...cel, width: '22mm', fontSize: '7pt', overflowWrap: 'anywhere' }}>
+                  {numeros.get(it.id)} · {it.equipamento.nome}
+                  {mostrarAmbiente && it.equipamento.ambiente && <div style={{ fontWeight: 400, fontSize: '6pt', color: '#555' }}>{it.equipamento.ambiente.nome}</div>}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {checklist.map((ci) => (
+              <tr key={ci.id} style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                <td style={{ ...cel, textAlign: 'left', fontSize: '7.5pt', lineHeight: 1.2 }}>
+                  {ci.descricao}{ci.obrigatorio ? ' *' : ''}
+                  {ci.tipo === 'numero' && <span style={{ color: '#555' }}>{` — valor${ci.unidade ? ` (${ci.unidade})` : ''}`}</span>}
+                  {ci.opcoes && ci.opcoes.length > 0 && (
+                    <span style={{ color: '#555' }}>{' — '}{ci.opcoes.map((o, k) => `${letras[k] ?? k + 1}) ${o}`).join('  ')}</span>
+                  )}
+                </td>
+                {grupo.map((it) => <td key={it.id} style={{ ...cel, padding: '2px 1px' }}><TresCaixas escolhido={resultadoItem(it, ci.id)} /></td>)}
+              </tr>
+            ))}
+            <tr style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <td style={{ ...cel, textAlign: 'left', fontSize: '7.5pt' }}>Observações</td>
+              {grupo.map((it) => <td key={it.id} style={{ ...cel, height: '9mm', fontSize: '6.5pt', textAlign: 'left', verticalAlign: 'top', overflowWrap: 'anywhere' }}>{it.observacoesTecnicas ?? ''}</td>)}
+            </tr>
+          </tbody>
+        </table>
+      ))}
     </div>
   )
 }
