@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { aceitarConvite } from '@/lib/convites'
 import { User, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
+import { Logo } from '@/components/ui/logo'
 
 type Props = {
   token: string
@@ -51,8 +52,8 @@ export function ConviteForm({ token, tipo, emailPreenchido, nomeEmpresa, razaoSo
 
         {/* Logo + empresa */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center bg-primary rounded-2xl p-4 mb-4 shadow-lg">
-            <img src="/logo.png" alt="Orbitalis" className="h-12 w-auto object-contain" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <Logo className="h-11 w-auto" />
           </div>
           {nomeEmpresa && (
             <p className="text-primary font-bold text-sm">{nomeEmpresa}</p>

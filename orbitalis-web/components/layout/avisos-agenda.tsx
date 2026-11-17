@@ -117,7 +117,7 @@ export function AvisosAgendaNotificador() {
         try {
           if ('Notification' in window && Notification.permission === 'granted') {
             const nt = new Notification(n.titulo, {
-              body: `${n.quando}${n.detalhe ? `\n${n.detalhe}` : ''}`, tag: n.id, icon: '/logo.png',
+              body: `${n.quando}${n.detalhe ? `\n${n.detalhe}` : ''}`, tag: n.id, icon: '/icons/icon-192.png',
               silent: false,
             })
             nt.onclick = () => { window.focus(); window.location.href = '/agenda'; nt.close() }

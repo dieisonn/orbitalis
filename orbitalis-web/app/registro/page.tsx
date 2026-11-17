@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { registrar } from '@/lib/auth'
 import { Building2, User, Mail, Lock, ArrowRight, Loader2, QrCode, ClipboardList, BarChart3 } from 'lucide-react'
+import { Logo } from '@/components/ui/logo'
 
 const FEATURES = [
   { icon: QrCode,        text: 'Gestão de ativos com QR Code' },
@@ -70,10 +71,7 @@ export default function RegistroPage() {
         </div>
 
         <div className="relative z-10">
-          <div className="bg-white rounded-3xl p-5 shadow-xl inline-flex">
-            <img src="/logo.png" alt="Orbitalis" className="h-24 w-auto object-contain" />
-          </div>
-          <p className="text-white font-black text-2xl tracking-tight mt-3">Orbitalis</p>
+          <Logo variante="branco" className="h-14 w-auto" />
         </div>
 
         <div className="relative z-10 space-y-8">
@@ -107,10 +105,7 @@ export default function RegistroPage() {
         <div className="w-full max-w-sm py-6">
           {/* Logo mobile */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center bg-primary rounded-3xl p-4 mb-3 shadow-lg">
-              <img src="/logo.png" alt="Orbitalis" className="h-14 w-auto object-contain" />
-            </div>
-            <p className="text-primary font-black text-xl tracking-tight">Orbitalis</p>
+            <Logo className="h-12 w-auto" />
           </div>
 
           <div className="mb-8">

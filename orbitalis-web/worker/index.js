@@ -4,8 +4,8 @@ self.addEventListener('push', (event) => {
   try { d = event.data ? event.data.json() : {} } catch { d = { titulo: 'Orbitalis', corpo: event.data ? event.data.text() : '' } }
   event.waitUntil(self.registration.showNotification(d.titulo || 'Orbitalis', {
     body: d.corpo || '',
-    icon: '/logo.png',
-    badge: '/logo.png',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
     tag: d.tag || undefined,
     renotify: !!d.tag,
     data: { url: d.url || '/minhas-os' },

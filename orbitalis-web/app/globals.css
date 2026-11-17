@@ -281,3 +281,8 @@ tbody tr { transition: background-color .12s; }
   :root.is-dark select:not([multiple]):not([size]) option:checked { background: rgba(99,120,255,.16); color: #fff; }
   :root.is-dark select:not([multiple]):not([size])::picker-icon { border-color: #98a3b6; }
 }
+
+/* Logotipo: versão clara no tema escuro */
+.logo-escuro { display: none; }
+:root.is-dark .logo-claro { display: none; }
+:root.is-dark .logo-escuro { display: inline-block; }

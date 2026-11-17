@@ -1,3 +1,4 @@
+import { Logo } from '@/components/ui/logo'
 import Link from 'next/link'
 import { DadosOperador } from '@/components/legal/legal-shell'
 import {
@@ -129,10 +130,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center gap-4">
           <div className="flex items-center gap-2.5 flex-1">
-            <div className="bg-primary rounded-md p-1.5">
-              <img src="/logo.png" alt="Orbitalis" className="h-7 w-auto object-contain" />
-            </div>
-            <span className="font-semibold text-gray-900 text-lg tracking-tight">Orbitalis</span>
+            <Logo className="h-8 w-auto" />
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-500">
             <a href="#features"      className="hover:text-gray-900 transition-colors">Funcionalidades</a>
@@ -308,10 +306,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2.5">
-              <div className="bg-primary rounded-md p-1.5">
-                <img src="/logo.png" alt="Orbitalis" className="h-7 w-auto object-contain" />
-              </div>
-              <span className="font-semibold text-white text-base">Orbitalis</span>
+              <Logo variante="branco" className="h-8 w-auto" />
             </div>
             <div className="flex flex-wrap justify-center gap-6 text-sm">
               <a href="#features"      className="hover:text-white transition-colors">Funcionalidades</a>

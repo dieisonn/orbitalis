@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { login } from '@/lib/auth'
 import { Mail, Lock, ArrowRight, QrCode, ClipboardList, BarChart3 } from 'lucide-react'
+import { Logo } from '@/components/ui/logo'
 
 const FEATURES = [
   { icon: QrCode,        text: 'Gestão de ativos com QR Code' },
@@ -44,10 +45,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden bg-primary flex-col justify-between p-12">
         {/* Logo */}
         <div className="relative z-10">
-          <div className="bg-white rounded-md px-6 py-4 inline-flex">
-            <img src="/logo.png" alt="Orbitalis" className="h-24 w-auto object-contain" />
-          </div>
-          <p className="text-white font-semibold text-xl mt-3">Orbitalis</p>
+          <Logo variante="branco" className="h-14 w-auto" />
         </div>
 
         {/* Hero */}
@@ -85,7 +83,7 @@ export default function LoginPage() {
           {/* Logo (mobile) */}
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex items-center justify-center mb-3">
-              <img src="/logo.png" alt="Orbitalis" className="h-16 w-auto object-contain" />
+              <Logo className="h-12 w-auto" />
             </div>
           </div>
 

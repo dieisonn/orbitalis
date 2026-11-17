@@ -113,7 +113,7 @@ export default function Sidebar({ config, alertasCount = 0, user }: { config?: C
     .map((g) => ({ ...g, items: g.items.filter((i) => rotaPermitida(i.href, acesso)) }))
     .filter((g) => g.items.length > 0)
 
-  const logoSrc = config?.logoUrl || '/logo.png'
+  const logoSrc = config?.logoUrl || '/brand/logo.svg'
   const nomeExibido = config?.nomeFantasia || config?.nomeEmpresa || 'Orbitalis'
 
   return (

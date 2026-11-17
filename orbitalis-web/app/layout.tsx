@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Orbitalis — Gestão de Ativos',
   description: 'DADOS EM ÓRBITA. MANUTENÇÃO EM DIA.',
-  icons: { icon: '/favicon.ico', apple: '/logo.png' },
+  icons: { icon: [{ url: '/icon.svg', type: 'image/svg+xml' }, { url: '/favicon.ico' }], apple: '/icons/apple-touch-icon.png' },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

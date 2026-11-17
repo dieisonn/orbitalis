@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><rect width="1000" height="1000" rx="0" fill="#0B2463"/><g transform="translate(111.58536585365857 177.7439024390244) scale(0.8536585365853658)">
+<defs>
+  <mask id="mri1" maskUnits="userSpaceOnUse" x="0" y="0" width="880" height="760">
+    <rect width="880" height="760" fill="#fff"/>
+    <g transform="translate(457 382) rotate(-21)"><path d="M -400 0 A 400 127 0 0 0 400 0" fill="none" stroke="#000" stroke-width="90"/></g>
+    <circle cx="716" cy="190" r="76" fill="#000"/>
+  </mask>
+  <mask id="moi1" maskUnits="userSpaceOnUse" x="0" y="0" width="880" height="760">
+    <rect width="880" height="760" fill="#fff"/>
+    <circle cx="716" cy="190" r="76" fill="#000"/>
+  </mask>
+</defs>
+<g mask="url(#moi1)"><g transform="translate(457 382) rotate(-21)"><ellipse rx="400" ry="127" fill="none" stroke="#1F62E0" stroke-width="42"/></g></g>
+<path mask="url(#mri1)" fill="#fff" fill-rule="evenodd" d="M 135 375 a 322 322 0 1 0 644 0 a 322 322 0 1 0 -644 0 Z M 250 378 a 207 207 0 1 0 414 0 a 207 207 0 1 0 -414 0 Z"/>
+<g mask="url(#moi1)"><g transform="translate(457 382) rotate(-21)"><path d="M -400 0 A 400 127 0 0 0 400 0" fill="none" stroke="#1F62E0" stroke-width="42"/></g></g>
+<circle cx="716" cy="190" r="48" fill="#1F62E0"/>
+</g></svg>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { LEGAL } from '@/lib/legal'
+import { Logo } from '@/components/ui/logo'
 
 export function DadosOperador({ className = '' }: { className?: string }) {
   const linhas = [
@@ -22,10 +23,7 @@ export function LegalShell({ titulo, children }: { titulo: string; children: Rea
       <header className="border-b border-gray-200">
         <div className="max-w-3xl mx-auto px-5 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 font-semibold text-gray-900">
-            <span className="bg-primary rounded-md p-1">
-              <img src="/logo.png" alt="" className="h-6 w-auto object-contain" />
-            </span>
-            Orbitalis
+            <Logo className="h-7 w-auto" />
           </Link>
           <Link href="/" className="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-1">
             <ArrowLeft size={14} /> Voltar

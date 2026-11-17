@@ -1,4 +1,5 @@
 'use client'
+import { Logo } from '@/components/ui/logo'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -33,7 +34,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
       <aside className="hidden md:flex flex-col w-56 shrink-0 sticky top-0 h-screen bg-[var(--nav-bg)] border-r border-[var(--nav-border)] print:hidden">
         <div className="px-3 pt-3 pb-2">
           <div className="bg-white rounded-md h-14 px-3 flex items-center justify-center border border-[var(--nav-border)]">
-            <img src="/logo.png" alt="Orbitalis" className="max-h-10 w-auto max-w-full object-contain" />
+            <Logo className="max-h-9 w-auto max-w-full" />
           </div>
           <p className="text-xs text-gray-500 mt-2 px-1">Portal do cliente</p>
         </div>
@@ -73,7 +74,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
 
       {/* Barra superior — celular */}
       <header className="md:hidden fixed top-0 inset-x-0 z-40 h-14 flex items-center gap-3 px-3 bg-[var(--nav-bg)] border-b border-[var(--nav-border)] print:hidden">
-        <img src="/logo.png" alt="Orbitalis" className="h-8 w-auto object-contain" />
+        <Logo className="h-7 w-auto" />
         <span className="text-sm text-gray-600">Portal do cliente</span>
         <form action={logout} className="ml-auto">
           <button type="submit" className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-gray-600 rounded-md hover:bg-white/70">
