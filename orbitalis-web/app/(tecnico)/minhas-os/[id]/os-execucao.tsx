@@ -81,8 +81,16 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const sigRef = useRef<SignatureCanvasHandle>(null)
   const [entrada, setEntrada] = useState(() => paraCampo(os.dataInicio))
   const [saida, setSaida] = useState(() => paraCampo(os.dataConclusao))
+  const [confirmando, setConfirmando] = useState(false)
+  const [base, setBase] = useState<string | null>(null)
   // Ao iniciar, a O.S. é recarregada com a entrada gravada pelo servidor
-  useEffect(() => { if (os.dataInicio) setEntrada((e) => e || paraCampo(os.dataInicio)) }, [os.dataInicio])
+  useEffect(() => {
+    if (!os.dataInicio || entrada) return
+    const novo = paraCampo(os.dataInicio)
+    const limpo = base === JSON.stringify({ checked, obs, itemStatus, entrada, saida })
+    setEntrada(novo)
+    if (limpo) setBase(JSON.stringify({ checked, obs, itemStatus, entrada: novo, saida }))
+  }, [os.dataInicio])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resultado de cada item do checklist: Conforme, Não conforme ou Não se aplica (ausente = ainda não respondido)
   const [checked, setChecked] = useState<Record<string, Record<string, Resultado>>>(() => {
@@ -284,6 +292,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
 
     if (!navigator.onLine) {
       saveLocalSync(os.id, payload)
+      setBase(estado)
       setSaved(true)
       setPendingSync(true)
       return
@@ -293,6 +302,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
       try {
         await sincronizarOs(os.id, payload)
         setSaved(true)
+        setBase(estado)
         clearLocalSync(os.id)
         setPendingSync(false)
         router.refresh()
@@ -300,6 +310,24 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
         setError(e instanceof Error ? e.message : 'Erro ao salvar progresso')
       }
     })
+  }
+
+  // Alterações ainda não salvas (compara com o último estado salvo)
+  const estado = JSON.stringify({ checked, obs, itemStatus, entrada, saida })
+  useEffect(() => { setBase((b) => b ?? estado) }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+  const naoSalvo = base !== null && base !== estado
+
+  function pedirConclusao() {
+    if (!allItemsDone) {
+      setError('Marque todos os equipamentos como concluídos antes de encerrar a O.S.')
+      return
+    }
+    if (entrada && (saida || agoraCampo()) < entrada) {
+      setError('A saída não pode ser anterior à entrada.')
+      return
+    }
+    setError(null)
+    setConfirmando(true)
   }
 
   function handleConcluir() {
@@ -315,6 +343,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     startTransition(async () => {
       try {
         await sincronizarOs(os.id, buildPayload(true))
+        setBase(estado)
         router.push('/minhas-os')
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erro ao concluir O.S.')
@@ -325,6 +354,25 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const isReadOnly = os.status === 'concluida' || os.status === 'cancelada'
   const canStart = os.status === 'aberta' || os.status === 'agendada'
   const isWorking = os.status === 'em_andamento'
+
+  // Aviso ao sair: fechar a aba/recarregar e tocar em qualquer link (voltar, Agenda, menu) com a O.S. em andamento
+  const pendenciasSaida = isWorking && (naoSalvo || !allItemsDone)
+  useEffect(() => {
+    if (!pendenciasSaida) return
+    function antes(e: BeforeUnloadEvent) { if (naoSalvo) { e.preventDefault(); e.returnValue = '' } }
+    function clique(e: MouseEvent) {
+      const a = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null
+      if (!a || a.target === '_blank' || a.href.startsWith('tel:') || a.href.startsWith('mailto:') || !a.href.startsWith(location.origin)) return
+      if (a.pathname === location.pathname) return
+      const msg = naoSalvo
+        ? 'Você tem alterações NÃO SALVAS nesta O.S. Se sair agora, elas serão perdidas.\n\nSair mesmo assim?'
+        : 'Esta O.S. ainda NÃO foi concluída.\n\nSair mesmo assim? (o que já foi salvo continua)'
+      if (!window.confirm(msg)) { e.preventDefault(); e.stopPropagation() }
+    }
+    window.addEventListener('beforeunload', antes)
+    document.addEventListener('click', clique, true)
+    return () => { window.removeEventListener('beforeunload', antes); document.removeEventListener('click', clique, true) }
+  }, [pendenciasSaida, naoSalvo])
 
   return (
     <div className="space-y-4">
@@ -516,6 +564,12 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
               )}
             </div>
 
+            {!isReadOnly && !isDone && !canMarkDone && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                Faltam {cl.filter((c) => c.obrigatorio && !res[c.id]).length} item(ns) obrigatório(s) (*) para concluir este equipamento.
+              </p>
+            )}
+
             {/* Checklist */}
             {cl.length > 0 && (
               <div>
@@ -643,47 +697,75 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
         </div>
       )}
 
-      {/* Erro */}
-      {error && (
+      {/* Erro (fora da O.S. em andamento) */}
+      {error && !isWorking && (
         <p className="text-sm text-destructive bg-destructive/10 rounded-xl px-4 py-3">
           {error}
         </p>
       )}
 
-      {/* Botões de ação */}
-      {isWorking && (
-        <div className="space-y-2 pb-2">
-          <button
-            onClick={handleSalvar}
-            disabled={isPending}
-            className="w-full flex items-center justify-center gap-2 py-3.5 border border-primary text-primary font-semibold rounded-xl text-sm hover:bg-primary/5 transition-colors disabled:opacity-60"
-          >
-            {isPending ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : (
-              <Save size={15} />
+      {/* Barra de ação fixa: um único passo claro por vez */}
+      {isWorking && (() => {
+        const faltam = os.itens.length - feitos
+        const primeiroPendente = itens.find((i) => itemStatus[i.id] !== 'concluido')
+        let acao: { rotulo: string; sub?: string; fazer: () => void; tom: 'verde' | 'azul' }
+        if (allItemsDone) acao = { rotulo: 'Concluir O.S.', sub: 'Revisar e finalizar', fazer: pedirConclusao, tom: 'verde' }
+        else if (prontosParaConcluir > 0) acao = { rotulo: `Concluir ${prontosParaConcluir} pronto${prontosParaConcluir > 1 ? 's' : ''}`, sub: `${faltam} equipamento${faltam > 1 ? 's' : ''} para finalizar`, fazer: concluirProntos, tom: 'azul' }
+        else acao = {
+          rotulo: 'Ir para o próximo pendente', sub: `${faltam} equipamento${faltam > 1 ? 's' : ''} para finalizar`, tom: 'azul',
+          fazer: () => {
+            if (!primeiroPendente) return
+            setFiltro('pendentes')
+            setAbertos((prev) => new Set(prev).add(primeiroPendente.id))
+          },
+        }
+        return (
+          <div className="sticky bottom-[4.5rem] z-30 -mx-1 px-1">
+            {error && <p className="text-sm text-destructive bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 mb-2 shadow-sm">{error}</p>}
+            <div className="bg-white/95 backdrop-blur rounded-2xl border border-border shadow-lg p-2 flex items-center gap-2">
+              <button onClick={handleSalvar} disabled={isPending}
+                className={['shrink-0 flex flex-col items-center justify-center w-16 h-12 rounded-xl border text-[11px] font-semibold disabled:opacity-60', naoSalvo ? 'border-amber-400 bg-amber-50 text-amber-700' : 'border-gray-200 text-gray-500'].join(' ')}>
+                {isPending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                {naoSalvo ? 'Salvar' : 'Salvo ✓'}
+              </button>
+              <button onClick={acao.fazer} disabled={isPending}
+                className={['flex-1 min-w-0 h-12 rounded-xl text-white font-semibold text-sm flex flex-col items-center justify-center leading-tight disabled:opacity-50', acao.tom === 'verde' ? 'bg-green-600 hover:bg-green-700' : 'bg-action hover:opacity-90'].join(' ')}>
+                <span className="flex items-center gap-1.5"><CheckCheck size={15} />{acao.rotulo}</span>
+                {acao.sub && <span className="text-[10px] font-normal opacity-90">{acao.sub}</span>}
+              </button>
+            </div>
+            {pendingSync && (
+              <p className="text-[11px] text-amber-700 text-center mt-1">Salvo no aparelho; envia quando houver internet.</p>
             )}
-            {saved ? 'Progresso salvo ✓' : 'Salvar Progresso'}
-          </button>
-          <button
-            onClick={handleConcluir}
-            disabled={isPending || !allItemsDone}
-            className="w-full flex items-center justify-center gap-2 py-3.5 bg-action text-white font-semibold rounded-xl text-sm hover:opacity-90 transition-opacity disabled:opacity-40"
-          >
-            {isPending ? (
-              <Loader2 size={15} className="animate-spin" />
-            ) : (
-              <CheckCheck size={15} />
-            )}
-            Concluir O.S.
-          </button>
-          {!allItemsDone && os.itens.length > 0 && (
-            <p className="text-center text-[11px] text-gray-400">
-              Marque todos os equipamentos como concluídos para encerrar a O.S.
-            </p>
-          )}
-        </div>
-      )}
+          </div>
+        )
+      })()}
+
+      {/* Confirmação final */}
+      {confirmando && (() => {
+        const nc = os.itens.reduce((t, i) => t + Object.values(checked[i.id] ?? {}).filter((r) => r === 'NC').length, 0)
+        const semAssinatura = !sigRef.current || sigRef.current.isEmpty?.() === true
+        return (
+          <div className="fixed inset-0 z-[60] bg-black/50 flex items-end sm:items-center justify-center p-3" onClick={() => !isPending && setConfirmando(false)}>
+            <div className="bg-white rounded-2xl w-full max-w-md p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-bold text-gray-900 text-lg">Concluir esta O.S.?</h3>
+              <ul className="text-sm text-gray-700 space-y-1.5">
+                <li className="flex items-center gap-2"><CheckCircle2 size={15} className="text-green-600" /> {os.itens.length} equipamento{os.itens.length === 1 ? '' : 's'} concluído{os.itens.length === 1 ? '' : 's'}</li>
+                <li className="flex items-center gap-2"><Clock size={15} className="text-gray-400" /> Entrada {entrada ? entrada.replace('T', ' ') : 'registrada ao iniciar'} · Saída {saida ? saida.replace('T', ' ') : 'agora'}</li>
+                {nc > 0 && <li className="text-red-700 font-medium">⚠ {nc} item{nc > 1 ? 's' : ''} não conforme{nc > 1 ? 's' : ''} registrado{nc > 1 ? 's' : ''}</li>}
+                {semAssinatura && <li className="text-amber-700">Sem assinatura do cliente (opcional). Role a tela para colher agora.</li>}
+              </ul>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button onClick={() => setConfirmando(false)} disabled={isPending} className="h-12 rounded-xl border border-gray-200 text-gray-600 font-semibold text-sm">Voltar</button>
+                <button onClick={handleConcluir} disabled={isPending} className="h-12 rounded-xl bg-green-600 text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60">
+                  {isPending ? <Loader2 size={15} className="animate-spin" /> : <CheckCheck size={15} />} Concluir
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
