@@ -10,6 +10,9 @@ type Props = { params: Promise<{ id: string }> }
 
 type OrdemServico = OsParaExecucao & {
   origem: string
+  numero?: number | null
+  tipoServico?: { nome: string } | null
+  horaInicio?: string | null
   dataAgendamento: string
   dataInicio: string | null
   dataConclusao: string | null
@@ -59,7 +62,7 @@ export default async function OsDetailPage({ params }: Props) {
     )
   }
 
-  const shortId = `OS-${os.id.slice(0, 6).toUpperCase()}`
+  const shortId = os.numero ? `O.S. #${os.numero}` : `OS-${os.id.slice(0, 6).toUpperCase()}`
   const cliente = os.ambiente.cliente.nomeFantasia ?? os.ambiente.cliente.razaoSocial
   // Visita com equipamentos em vários ambientes: o título vira o cliente e o local, a contagem de ambientes
   const nAmbientes = new Set(os.itens.map((i) => i.equipamento.ambiente?.nome).filter(Boolean)).size
@@ -82,10 +85,10 @@ export default async function OsDetailPage({ params }: Props) {
           <div className="min-w-0">
             <p className="text-xs font-mono text-gray-400">{shortId}</p>
             <h1 className="text-lg font-bold text-primary mt-0.5 truncate">
-              {varios ? cliente : os.ambiente.nome}
+              {cliente}
             </h1>
             <p className="text-xs text-gray-500 mt-0.5">
-              {ORIGEM_LABEL[os.origem] ?? os.origem}
+              {[os.tipoServico?.nome, varios ? `${nAmbientes} ambientes` : os.ambiente.nome].filter(Boolean).join(' · ')}
             </p>
           </div>
           <StatusBadge
@@ -119,7 +122,7 @@ export default async function OsDetailPage({ params }: Props) {
             <Calendar size={12} className="text-primary/40 mt-0.5 shrink-0" />
             <div>
               <p className="text-gray-400 uppercase tracking-wide text-[10px]">Agendamento</p>
-              <p className="font-medium text-gray-700">{fmt(os.dataAgendamento)}</p>
+              <p className="font-medium text-gray-700">{fmt(os.dataAgendamento)}{os.horaInicio ? ` · ${os.horaInicio}` : ''}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">

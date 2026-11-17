@@ -2,174 +2,185 @@
 
 import { useState } from 'react'
 import { StatusBadge, osAtrasada } from '@/components/ui/status-badge'
-import { ClipboardList, AlertTriangle } from 'lucide-react'
+import { ClipboardList, Navigation, Phone, Search, Clock, MapPin } from 'lucide-react'
+import { mapaUrl } from '@/lib/agenda'
 
-type OrdemServico = {
+export type OrdemServicoLista = {
   id: string
+  numero?: number | null
   status: string
+  tipo?: string | null
   origem: string
   dataAgendamento: string
-  ambiente: { nome: string; localizacaoInterna: string }
+  horaInicio?: string | null
+  ambiente: { nome: string; localizacaoInterna: string; cliente?: { razaoSocial: string; nomeFantasia: string | null; telefone?: string | null; celular?: string | null } }
+  tipoServico?: { sigla: string; nome: string } | null
+  enderecoServico?: { rotulo: string | null; endereco: string }
   itens: { id: string }[]
   dias?: { data: string }[]
 }
 
-type Tab = 'pendentes' | 'hoje' | 'concluidas'
+type Tab = 'hoje' | 'pendentes' | 'concluidas'
 
-const ORIGEM_LABEL: Record<string, string> = {
-  manual_admin: 'Manual',
-  preventiva_automatica: 'Preventiva',
-  portal_cliente: 'Portal',
-  orcamento_aprovado: 'Orçamento aprovado',
+const FINAIS = ['concluida', 'cancelada']
+const hojeBr = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
+
+// A data da O.S. é só o dia (meia-noite UTC) e "hoje" é o dia em Brasília: compara como texto AAAA-MM-DD.
+function diasDa(os: OrdemServicoLista): string[] {
+  return os.dias?.length ? os.dias.map((d) => d.data.slice(0, 10)) : [os.dataAgendamento.slice(0, 10)]
+}
+const isHoje = (os: OrdemServicoLista) => diasDa(os).includes(hojeBr())
+
+function diffDias(iso: string): number {
+  const a = Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10))
+  const h = hojeBr()
+  const b = Date.UTC(+h.slice(0, 4), +h.slice(5, 7) - 1, +h.slice(8, 10))
+  return Math.round((a - b) / 86_400_000)
 }
 
-// A data da O.S. é só o dia (guardada à meia-noite UTC) e "hoje" é o dia em Brasília: compara como texto AAAA-MM-DD.
-// (Usar getDate() local deslocava a O.S. um dia para trás, e a aba "Hoje" ficava errada.)
-function isHoje(os: { dataAgendamento: string; dias?: { data: string }[] }): boolean {
-  const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
-  // O.S. de vários dias vale em qualquer um dos seus dias
-  const datas = os.dias?.length ? os.dias.map((d) => d.data) : [os.dataAgendamento]
-  return datas.some((d) => d.slice(0, 10) === hoje)
+function quando(os: OrdemServicoLista): { texto: string; tom: 'ruim' | 'hoje' | 'normal' } {
+  const iso = os.dataAgendamento.slice(0, 10)
+  const dia = isHoje(os) ? hojeBr() : iso
+  const n = diffDias(dia)
+  const hora = os.horaInicio ? ` · ${os.horaInicio}` : ''
+  if (n === 0) return { texto: `Hoje${hora}`, tom: 'hoje' }
+  if (n < 0) return { texto: n === -1 ? 'Ontem' : `Há ${-n} dias`, tom: 'ruim' }
+  if (n === 1) return { texto: `Amanhã${hora}`, tom: 'normal' }
+  const d = new Date(`${iso}T00:00:00Z`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', timeZone: 'UTC' })
+  return { texto: `${d}${hora}`, tom: 'normal' }
 }
 
-function isAtrasada(os: OrdemServico): boolean {
-  if (os.status === 'concluida' || os.status === 'cancelada') return false
-  return osAtrasada(os.status, os.dataAgendamento)
+const nomeCliente = (os: OrdemServicoLista) => os.ambiente.cliente?.nomeFantasia || os.ambiente.cliente?.razaoSocial || os.ambiente.nome
+const numeroOs = (os: OrdemServicoLista) => (os.numero ? `#${os.numero}` : `OS-${os.id.slice(0, 6).toUpperCase()}`)
+
+function Cartao({ os }: { os: OrdemServicoLista }) {
+  const atrasada = !FINAIS.includes(os.status) && osAtrasada(os.status, os.dataAgendamento) && !isHoje(os)
+  const q = quando(os)
+  const endereco = os.enderecoServico?.endereco
+  const tel = os.ambiente.cliente?.celular || os.ambiente.cliente?.telefone
+  const local = [os.ambiente.nome, os.ambiente.localizacaoInterna].filter((x, i, a) => x && a.indexOf(x) === i).join(' · ')
+  const aberto = !FINAIS.includes(os.status)
+
+  return (
+    <div className={['rounded-2xl border overflow-hidden', atrasada ? 'bg-red-50/60 border-red-200' : os.status === 'em_andamento' ? 'bg-amber-50/60 border-amber-200' : 'bg-white border-border'].join(' ')}>
+      <a href={`/minhas-os/${os.id}`} className="block p-4 active:bg-black/5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-bold text-gray-900 text-base leading-tight">{nomeCliente(os)}</p>
+            {endereco && (
+              <p className="text-xs text-gray-500 mt-1 flex items-start gap-1"><MapPin size={12} className="shrink-0 mt-0.5" /><span className="line-clamp-2">{endereco}</span></p>
+            )}
+            {local && local !== nomeCliente(os) && <p className="text-xs text-gray-400 mt-0.5 truncate">{local}</p>}
+          </div>
+          <div className="text-right shrink-0">
+            <p className={['text-xs font-semibold flex items-center justify-end gap-1', q.tom === 'ruim' ? 'text-red-600' : q.tom === 'hoje' ? 'text-primary' : 'text-gray-600'].join(' ')}>
+              <Clock size={11} />{q.texto}
+            </p>
+            {os.itens.length > 0 && <p className="text-[11px] text-gray-400 mt-0.5">{os.itens.length} equip.</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+          <span className="text-[11px] font-mono text-gray-400">{numeroOs(os)}</span>
+          <StatusBadge status={os.status as 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'} />
+          {os.tipoServico && <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">{os.tipoServico.nome}</span>}
+          {os.tipo === 'preventiva' && !os.tipoServico && <span className="text-[11px] text-gray-500">Preventiva</span>}
+        </div>
+      </a>
+      {aberto && (endereco || tel) && (
+        <div className="flex border-t border-black/5 text-xs font-semibold">
+          {endereco && (
+            <a href={mapaUrl(endereco)} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-action active:bg-black/5">
+              <Navigation size={14} /> Rota
+            </a>
+          )}
+          {tel && (
+            <a href={`tel:${tel}`} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-gray-700 border-l border-black/5 active:bg-black/5">
+              <Phone size={14} /> Ligar
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
-export function OsList({ ordens }: { ordens: OrdemServico[] }) {
-  const [tab, setTab] = useState<Tab>('pendentes')
+function Grupo({ titulo, tom, lista }: { titulo: string; tom?: 'ruim'; lista: OrdemServicoLista[] }) {
+  if (lista.length === 0) return null
+  return (
+    <section className="space-y-3">
+      <h2 className={['text-[11px] font-bold uppercase tracking-wide pt-1', tom === 'ruim' ? 'text-red-600' : 'text-gray-400'].join(' ')}>{titulo} · {lista.length}</h2>
+      {lista.map((os) => <Cartao key={os.id} os={os} />)}
+    </section>
+  )
+}
 
-  const pendentes = ordens.filter(
-    (os) => !['concluida', 'cancelada'].includes(os.status),
-  )
-  const hoje = ordens.filter(
-    (os) => isHoje(os) && !['concluida', 'cancelada'].includes(os.status),
-  )
-  const concluidas = ordens.filter((os) =>
-    ['concluida', 'cancelada'].includes(os.status),
-  )
+export function OsList({ ordens }: { ordens: OrdemServicoLista[] }) {
+  const pendentes = ordens.filter((os) => !FINAIS.includes(os.status))
+  const hoje = pendentes.filter(isHoje)
+  const concluidas = ordens.filter((os) => FINAIS.includes(os.status)).reverse()
+  const [tab, setTab] = useState<Tab>(hoje.length > 0 ? 'hoje' : 'pendentes')
+  const [busca, setBusca] = useState('')
 
   const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: 'pendentes', label: 'Pendentes', count: pendentes.length },
     { key: 'hoje', label: 'Hoje', count: hoje.length },
+    { key: 'pendentes', label: 'Pendentes', count: pendentes.length },
     { key: 'concluidas', label: 'Concluídas', count: concluidas.length },
   ]
 
-  const filtered =
-    tab === 'pendentes' ? pendentes : tab === 'hoje' ? hoje : concluidas
+  const base = tab === 'pendentes' ? pendentes : tab === 'hoje' ? hoje : concluidas
+  const termo = busca.trim().toLowerCase()
+  const filtradas = termo
+    ? base.filter((os) => `${nomeCliente(os)} ${os.ambiente.nome} ${os.enderecoServico?.endereco ?? ''} ${os.numero ?? ''}`.toLowerCase().includes(termo))
+    : base
+
+  // Em andamento primeiro, depois por horário
+  const porHorario = (a: OrdemServicoLista, b: OrdemServicoLista) =>
+    (a.status === 'em_andamento' ? 0 : 1) - (b.status === 'em_andamento' ? 0 : 1) || (a.horaInicio ?? '99:99').localeCompare(b.horaInicio ?? '99:99')
+  const atrasadas = filtradas.filter((os) => !isHoje(os) && osAtrasada(os.status, os.dataAgendamento))
+  const doDia = filtradas.filter(isHoje).sort(porHorario)
+  const proximas = filtradas.filter((os) => !isHoje(os) && !osAtrasada(os.status, os.dataAgendamento))
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="mb-3">
         <h1 className="text-xl font-bold text-primary">Minhas O.S.</h1>
         <p className="text-gray-500 text-xs mt-0.5">
-          {pendentes.length} ordem(ns) pendente(s) atribuída(s) a você
+          {hoje.length > 0 ? `${hoje.length} para hoje · ` : ''}{pendentes.length} pendente{pendentes.length === 1 ? '' : 's'}
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-surface rounded-xl p-1 mb-4 border border-border">
+      <div className="flex gap-1 bg-surface rounded-xl p-1 mb-3 border border-border">
         {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={[
-              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors',
-              tab === t.key
-                ? 'bg-white text-primary shadow-sm'
-                : 'text-gray-500 hover:text-gray-700',
-            ].join(' ')}
-          >
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={['flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-colors', tab === t.key ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700'].join(' ')}>
             {t.label}
-            {t.count > 0 && (
-              <span
-                className={[
-                  'min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold px-1',
-                  tab === t.key
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-200 text-gray-600',
-                ].join(' ')}
-              >
-                {t.count}
-              </span>
-            )}
+            {t.count > 0 && <span className={['min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold px-1', tab === t.key ? 'bg-primary text-white' : 'bg-gray-200 text-gray-600'].join(' ')}>{t.count}</span>}
           </button>
         ))}
       </div>
 
-      {/* Lista */}
-      {filtered.length === 0 ? (
+      {base.length > 4 && (
+        <div className="relative mb-3">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar cliente, endereço ou nº da O.S."
+            className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+        </div>
+      )}
+
+      {filtradas.length === 0 ? (
         <div className="bg-white rounded-2xl p-10 text-center border border-border">
           <ClipboardList size={36} className="mx-auto text-primary/20 mb-2" />
           <p className="text-gray-400 text-sm">
-            {tab === 'hoje'
-              ? 'Nenhuma O.S. agendada para hoje.'
-              : tab === 'concluidas'
-              ? 'Nenhuma O.S. concluída.'
-              : 'Nenhuma O.S. pendente no momento.'}
+            {termo ? 'Nada encontrado.' : tab === 'hoje' ? 'Nenhuma O.S. para hoje.' : tab === 'concluidas' ? 'Nenhuma O.S. concluída.' : 'Nenhuma O.S. pendente.'}
           </p>
         </div>
+      ) : tab === 'concluidas' ? (
+        <div className="space-y-3">{filtradas.map((os) => <Cartao key={os.id} os={os} />)}</div>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((os) => {
-            const atrasada = isAtrasada(os)
-            return (
-              <a
-                key={os.id}
-                href={`/minhas-os/${os.id}`}
-                className={[
-                  'block rounded-2xl p-4 border transition-colors',
-                  atrasada
-                    ? 'bg-red-50 border-red-200 hover:bg-red-100/70'
-                    : 'bg-white border-border hover:bg-surface',
-                ].join(' ')}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                      <span className="text-[10px] font-mono text-gray-400">
-                        OS-{os.id.slice(0, 6).toUpperCase()}
-                      </span>
-                      <StatusBadge
-                        status={
-                          os.status as
-                            | 'aberta'
-                            | 'agendada'
-                            | 'em_andamento'
-                            | 'concluida'
-                            | 'cancelada'
-                        }
-                      />
-                      {atrasada && (
-                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-red-600">
-                          <AlertTriangle size={10} />
-                          Atrasada
-                        </span>
-                      )}
-                    </div>
-                    <p className="font-semibold text-gray-800 text-sm truncate">
-                      {os.ambiente.nome}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
-                      {os.ambiente.localizacaoInterna}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[10px] text-gray-400">
-                      {ORIGEM_LABEL[os.origem] ?? os.origem}
-                    </p>
-                    <p className="text-xs font-medium text-gray-600 mt-0.5">
-                      {new Date(os.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {os.itens.length} equip.
-                    </p>
-                  </div>
-                </div>
-              </a>
-            )
-          })}
+        <div className="space-y-4">
+          <Grupo titulo="Atrasadas" tom="ruim" lista={atrasadas} />
+          {tab === 'pendentes' ? <Grupo titulo="Hoje" lista={doDia} /> : <div className="space-y-3">{doDia.map((os) => <Cartao key={os.id} os={os} />)}</div>}
+          <Grupo titulo="Próximas" lista={proximas} />
         </div>
       )}
     </div>
