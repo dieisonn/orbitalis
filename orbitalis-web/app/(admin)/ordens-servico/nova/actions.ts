@@ -7,6 +7,7 @@ export async function criarOs(params: {
   clienteId: string
   ambienteId: string
   tecnicoId: string
+  auxiliaresIds?: string[]
   dataAgendamento: string
   observacoesGerais: string
   tipo?: string
@@ -24,6 +25,7 @@ export async function criarOs(params: {
     // sem ambiente escolhido, a API usa o ambiente padrão "Sem local definido" do cliente
     ...(params.ambienteId ? { ambienteId: params.ambienteId } : { clienteId: params.clienteId }),
     tecnicoId:         params.tecnicoId        || undefined,
+    ...(params.tecnicoId && params.auxiliaresIds?.length ? { auxiliaresIds: params.auxiliaresIds } : {}),
     tipo:              params.tipo             || undefined,
     modeloChecklistId: params.semChecklist ? undefined : params.modeloChecklistId || undefined,
     ...(params.semChecklist ? { semChecklist: true } : {}),

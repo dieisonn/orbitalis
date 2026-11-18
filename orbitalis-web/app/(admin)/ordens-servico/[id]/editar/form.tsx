@@ -6,6 +6,9 @@ import { SeletorTiposServico } from '@/components/ui/seletor-tipos-servico'
 import { useTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { editarOs } from './actions'
+import { AjudantesSelect } from '@/components/ui/ajudantes-select'
+import { NENHUM_CHECKLIST } from '@/components/ui/checklist-select'
+import { TIPO_OS_LABEL, type ModeloResumo } from '@/lib/checklist'
 import { Wrench, ShieldCheck } from 'lucide-react'
 import { ClienteSelect } from '@/components/ui/cliente-select'
 import { textoSobre } from '@/lib/cor'
@@ -23,6 +26,7 @@ export function EditarOsForm({
   ambientes,
   tiposServico,
   localTravado,
+  modelos,
 }: {
   osId: string
   initialValues: {
@@ -38,12 +42,14 @@ export function EditarOsForm({
     horaFim: string
     clienteId: string
     ambienteId: string
+    auxiliaresIds: string[]
   }
   tecnicos: Tecnico[]
   clientes: Cliente[]
   ambientes: Ambiente[]
   tiposServico: TipoServico[]
   localTravado: boolean
+  modelos: ModeloResumo[]
 }) {
   const router = useRouter()
   const [clienteId, setClienteId] = useState(initialValues.clienteId)
@@ -55,6 +61,9 @@ export function EditarOsForm({
   const tipoServicoId = tiposIds[0] ?? ''
   const ambientesDoCliente = ambientes.filter((a) => a.clienteId === clienteId)
 
+  const [tecnicoId, setTecnicoId] = useState(initialValues.tecnicoId ?? '')
+  const [ajudantes, setAjudantes] = useState<string[]>(initialValues.auxiliaresIds)
+  const [checklistId, setChecklistId] = useState('') // '' = manter o atual
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [tipo, setTipo] = useState<'corretiva' | 'preventiva' | 'nao_se_aplica'>(
@@ -66,7 +75,6 @@ export function EditarOsForm({
     const fd = new FormData(e.currentTarget)
     const dataAgendamento   = fd.get('dataAgendamento')   as string
     const observacoesGerais = fd.get('observacoesGerais') as string
-    const tecnicoId         = fd.get('tecnicoId')         as string
     const horaInicio        = fd.get('horaInicio')        as string
     const horaFim           = fd.get('horaFim')           as string
     const diasJson          = fd.get('diasJson')          as string
@@ -78,8 +86,9 @@ export function EditarOsForm({
     setError(null)
     startTransition(async () => {
       const res = await editarOs(osId, {
-        dataAgendamento, observacoesGerais, tecnicoId, tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, dias, horaInicio, horaFim,
+        dataAgendamento, observacoesGerais, tecnicoId, auxiliaresIds: ajudantes.filter((a) => a !== tecnicoId), tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, dias, horaInicio, horaFim,
         ...(localMudou ? { clienteId, ambienteId } : {}),
+        ...(checklistId === NENHUM_CHECKLIST ? { semChecklist: true } : checklistId ? { modeloChecklistId: checklistId } : {}),
       })
       if (!res.ok) { setError(res.error); return }
       router.push(`/ordens-servico/${osId}`)
@@ -178,7 +187,8 @@ export function EditarOsForm({
         </label>
         <select
           name="tecnicoId"
-          defaultValue={initialValues.tecnicoId ?? ''}
+          value={tecnicoId}
+          onChange={(e) => setTecnicoId(e.target.value)}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
           <option value="">A definir na triagem…</option>
@@ -186,6 +196,23 @@ export function EditarOsForm({
             <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>
           ))}
         </select>
+      </div>
+
+      {/* Ajudantes */}
+      <AjudantesSelect tecnicos={tecnicos} responsavelId={tecnicoId} value={ajudantes} onChange={setAjudantes} />
+
+      {/* Checklist */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Checklist</label>
+        <select value={checklistId} onChange={(e) => setChecklistId(e.target.value)}
+          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white">
+          <option value="">Manter o checklist atual</option>
+          <option value={NENHUM_CHECKLIST}>Sem checklist nesta O.S.</option>
+          {modelos.map((m) => (
+            <option key={m.id} value={m.id}>{m.nome}{m.tipo ? ` (${TIPO_OS_LABEL[m.tipo]})` : ''}</option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 mt-1">Vale para os equipamentos que o técnico ainda não começou. O que já foi preenchido não é alterado.</p>
       </div>
 
       {/* Data e horários */}

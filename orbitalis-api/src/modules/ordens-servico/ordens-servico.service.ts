@@ -125,6 +125,8 @@ export class OrdensServicoService {
     const multiDia = !!diasOs && diasOs.length >= 2;
     if (diasOs && diasOs.length === 1) { dto.dataAgendamento = diasOs[0].data; dto.horaInicio = diasOs[0].horaInicio ?? undefined; dto.horaFim = diasOs[0].horaFim ?? undefined; }
 
+    if (dto.auxiliaresIds?.length && !dto.tecnicoId) throw new BadRequestException('Escolha o técnico responsável antes de adicionar ajudantes');
+
     // Com técnico definido já nasce agendada (não precisa passar pela triagem)
     const statusInicial: OsStatus = dto.tecnicoId ? 'agendada' : 'aberta';
 
@@ -184,6 +186,8 @@ export class OrdensServicoService {
         },
       });
     });
+
+    if (result && dto.auxiliaresIds?.length) await this.definirAuxiliares(result.id, dto.auxiliaresIds);
 
     // Avisa o técnico quando a O.S. já nasce agendada
     if (result && statusInicial === 'agendada' && dto.tecnicoId) {
@@ -1122,9 +1126,19 @@ export class OrdensServicoService {
     horaFim?: string | null;
     ambienteId?: string;
     clienteId?: string;
+    auxiliaresIds?: string[];
+    modeloChecklistId?: string | null;
+    semChecklist?: boolean;
   }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (dto.auxiliaresIds !== undefined && (!Array.isArray(dto.auxiliaresIds) || dto.auxiliaresIds.length > 20 || !dto.auxiliaresIds.every((x) => typeof x === 'string' && UUID.test(x)))) {
+      throw new BadRequestException('Lista de ajudantes inválida');
+    }
+    if (dto.modeloChecklistId && !UUID.test(dto.modeloChecklistId)) throw new BadRequestException('Checklist inválido');
+    const tecnicoFinal = dto.tecnicoId !== undefined ? dto.tecnicoId || null : os.tecnicoId;
+    if (dto.auxiliaresIds?.length && !tecnicoFinal) throw new BadRequestException('Escolha o técnico responsável antes de adicionar ajudantes');
 
     // Dias de trabalho: com 2 ou mais dias a O.S. passa a ser de vários dias (data/hora da O.S. = as do 1º dia);
     // com 0 ou 1 dia volta a ser de um dia só.
@@ -1215,6 +1229,10 @@ export class OrdensServicoService {
       });
     });
 
+    // Ajudantes e checklist (só atinge o que o técnico ainda não começou)
+    if (dto.auxiliaresIds !== undefined) await this.definirAuxiliares(id, dto.auxiliaresIds);
+    const checklist = await this.aplicarChecklist(id, dto);
+
     await this.agenda.sincronizarOs(id);
 
     // Avisos no celular: nova atribuição, retirada da O.S. ou mudança de dia/horário
@@ -1230,7 +1248,24 @@ export class OrdensServicoService {
       void this.avisarEquipe(id, 'O.S. reagendada', `${desc}: confira o novo dia/horário.`);
     }
 
-    return updated;
+    return { ...updated, checklistAplicado: checklist.aplicados, checklistPreservados: checklist.preservados };
+  }
+
+  /**
+   * Troca o checklist dos equipamentos da O.S. Só atinge item ainda não iniciado (pendente, sem observação
+   * e sem nada marcado); o que o técnico já preencheu fica como está.
+   */
+  private async aplicarChecklist(id: string, dto: { modeloChecklistId?: string | null; semChecklist?: boolean }) {
+    if (!dto.semChecklist && !dto.modeloChecklistId) return { aplicados: 0, preservados: 0 };
+    const snapshot = dto.semChecklist ? [] : await resolverChecklistItens(this.prisma, { modeloChecklistId: dto.modeloChecklistId! });
+    const itens = await this.prisma.ordemServicoItem.findMany({
+      where: { ordemServicoId: id },
+      select: { id: true, statusItem: true, observacoesTecnicas: true, checklistSnapshot: true },
+    });
+    const comMarcas = (snap: unknown) => Array.isArray(snap) && snap.some((x: any) => x && (x.resultado || x.marcado));
+    const livres = itens.filter((i) => i.statusItem === 'pendente' && !i.observacoesTecnicas && !comMarcas(i.checklistSnapshot));
+    if (livres.length) await this.prisma.ordemServicoItem.updateMany({ where: { id: { in: livres.map((i) => i.id) } }, data: { checklistSnapshot: snapshot } });
+    return { aplicados: livres.length, preservados: itens.length - livres.length };
   }
 
   // GET /ordens-servico/historico?ano=XXXX

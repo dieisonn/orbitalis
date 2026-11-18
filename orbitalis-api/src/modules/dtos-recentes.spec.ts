@@ -67,3 +67,16 @@ describe('SincronizarOsDto', () => {
     expect(await erros(SincronizarOsDto, { itens: [{ itemId: 'x', statusItem: 'concluido' }] })).toBeGreaterThan(0);
   });
 });
+
+import { CreateOrdemServicoDto } from './ordens-servico/dto/create-os.dto';
+describe('CreateOrdemServicoDto – ajudantes', () => {
+  const base = { ambienteId: UUID, dataAgendamento: '2026-11-18' };
+  it('aceita lista de ajudantes válida ou ausente', async () => {
+    expect(await erros(CreateOrdemServicoDto, { ...base, auxiliaresIds: [UUID] })).toBe(0);
+    expect(await erros(CreateOrdemServicoDto, base)).toBe(0);
+  });
+  it('recusa ajudantes que não são UUID ou não são lista', async () => {
+    expect(await erros(CreateOrdemServicoDto, { ...base, auxiliaresIds: ['x'] })).toBeGreaterThan(0);
+    expect(await erros(CreateOrdemServicoDto, { ...base, auxiliaresIds: 'abc' })).toBeGreaterThan(0);
+  });
+});

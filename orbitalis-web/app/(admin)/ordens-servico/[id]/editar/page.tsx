@@ -1,6 +1,7 @@
 import { api } from '@/lib/api'
 import { notFound } from 'next/navigation'
 import { EditarOsForm } from './form'
+import type { ModeloResumo } from '@/lib/checklist'
 
 type Props = { params: Promise<{ id: string }> }
 type Tecnico = { id: string; email: string; nome: string | null }
@@ -13,6 +14,7 @@ type OsEdicao = {
   ambienteId?: string; tipoServicoId?: string | null; tiposServicoExtras?: string[]; enderecoId?: string | null
   dias?: { data: string; horaInicio: string | null; horaFim: string | null }[]
   tecnico?: { id: string } | null
+  auxiliares?: { tecnicoId: string }[]
   tipoServico?: { id: string } | null
   ambiente?: { id?: string; clienteId?: string; cliente?: { id: string } | null } | null
   itens?: { statusItem: string; observacoesTecnicas: string | null }[]
@@ -29,11 +31,12 @@ export default async function EditarOsPage({ params }: Props) {
   }
   if (!os) notFound()
 
-  const [tecnicosRes, clientesRes, ambientesRes, tiposRes] = await Promise.all([
+  const [tecnicosRes, clientesRes, ambientesRes, tiposRes, modelosRes] = await Promise.all([
     api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] })),
     api.get<{ data: Cliente[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as Cliente[] })),
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<TipoServico[]>('/tipos-servico').catch(() => [] as TipoServico[]),
+    api.get<{ data: ModeloResumo[] }>('/modelos-checklist?perPage=500').catch(() => ({ data: [] as ModeloResumo[] })),
   ])
 
   const dataAgendamento = os.dataAgendamento
@@ -85,7 +88,9 @@ export default async function EditarOsPage({ params }: Props) {
               horaFim: os.horaFim ?? '',
               clienteId: os.ambiente?.cliente?.id ?? os.ambiente?.clienteId ?? '',
               ambienteId: os.ambienteId ?? os.ambiente?.id ?? '',
+              auxiliaresIds: (os.auxiliares ?? []).map((a) => a.tecnicoId),
             }}
+            modelos={modelosRes.data}
             tecnicos={tecnicosRes.data}
             clientes={clientesRes.data}
             ambientes={ambientesRes.data}

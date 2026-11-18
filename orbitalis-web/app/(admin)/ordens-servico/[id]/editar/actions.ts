@@ -9,6 +9,9 @@ export async function editarOs(
     dataAgendamento: string
     observacoesGerais: string
     tecnicoId: string
+    auxiliaresIds?: string[]
+    modeloChecklistId?: string      // '' = manter o atual
+    semChecklist?: boolean
     tipo: string
     tipoServicoId: string
     tiposServicoExtras?: string[]
@@ -25,6 +28,8 @@ export async function editarOs(
       dataAgendamento: data.dataAgendamento,
       observacoesGerais: data.observacoesGerais || null,
       tecnicoId: data.tecnicoId || null,
+      ...(data.auxiliaresIds ? { auxiliaresIds: data.tecnicoId ? data.auxiliaresIds : [] } : {}),
+      ...(data.semChecklist ? { semChecklist: true } : data.modeloChecklistId ? { modeloChecklistId: data.modeloChecklistId } : {}),
       tipo: data.tipo,
       tipoServicoId: data.tipoServicoId || null,
       tiposServicoExtras: data.tiposServicoExtras ?? [],

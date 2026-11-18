@@ -3,6 +3,7 @@ import { SeletorEnderecoOs, type EnderecoCliente } from '@/components/ui/seletor
 
 import { useTransition, useState } from 'react'
 import { criarOs } from './actions'
+import { AjudantesSelect } from '@/components/ui/ajudantes-select'
 import { ChecklistSelect, NENHUM_CHECKLIST } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
 import { textoSobre } from '@/lib/cor'
@@ -48,6 +49,8 @@ export function NovaOsForm({
   const tipoServicoId = tiposIds[0] ?? ''
   const [tipo, setTipo]                   = useState<TipoOs | null>(null)
   const [modeloChecklistId, setModeloChecklistId] = useState('')
+  const [tecnicoId, setTecnicoId] = useState('')
+  const [ajudantes, setAjudantes] = useState<string[]>([])
   const [ambientes, setAmbientes] = useState<Ambiente[]>(ambientesIniciais)   // cresce com o cadastro rápido
   const [clientesExtras, setClientesExtras] = useState<{ id: string; razaoSocial: string; nomeFantasia: string | null }[]>([])
   const [cadastrando, setCadastrando] = useState<string | null>(null)
@@ -73,7 +76,6 @@ export function NovaOsForm({
     e.preventDefault()
     if (!clienteId) return
     const fd = new FormData(e.currentTarget)
-    const tecnicoId         = fd.get('tecnicoId')         as string
     const dataAgendamento   = fd.get('dataAgendamento')   as string
     const horaInicio        = fd.get('horaInicio')        as string
     const horaFim           = fd.get('horaFim')           as string
@@ -88,6 +90,7 @@ export function NovaOsForm({
           clienteId,
           ambienteId,
           tecnicoId,
+          auxiliaresIds: tecnicoId ? ajudantes.filter((a) => a !== tecnicoId) : [],
           dataAgendamento,
           observacoesGerais,
           tipo: tipo ?? 'nao_se_aplica',
@@ -263,6 +266,8 @@ export function NovaOsForm({
         <label className="block text-sm font-medium text-gray-700 mb-1">Técnico Responsável</label>
         <select
           name="tecnicoId"
+          value={tecnicoId}
+          onChange={(e) => setTecnicoId(e.target.value)}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
           <option value="">A definir na triagem (O.S. fica “aberta”)…</option>
@@ -271,6 +276,9 @@ export function NovaOsForm({
           ))}
         </select>
       </div>
+
+      {/* Ajudantes */}
+      <AjudantesSelect tecnicos={tecnicos} responsavelId={tecnicoId} value={ajudantes} onChange={setAjudantes} />
 
       {/* Data e horários */}
       <HorarioOs dataInicial={hoje} />

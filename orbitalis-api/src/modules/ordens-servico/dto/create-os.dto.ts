@@ -72,6 +72,13 @@ export class CreateOrdemServicoDto {
   @IsBoolean()
   semChecklist?: boolean;
 
+  // Técnicos ajudantes (auxiliares): veem e preenchem a O.S. junto com o responsável
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  auxiliaresIds?: string[];
+
   @IsDateString()
   dataAgendamento: string;
 

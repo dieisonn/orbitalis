@@ -232,6 +232,9 @@ export class OrdensServicoController {
       horaFim?: string | null;
       ambienteId?: string;
       clienteId?: string;
+      auxiliaresIds?: string[];
+      modeloChecklistId?: string | null;
+      semChecklist?: boolean;
     },
   ) {
     return this.ordensServicoService.update(id, body);
