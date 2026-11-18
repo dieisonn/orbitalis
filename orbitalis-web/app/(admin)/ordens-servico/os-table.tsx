@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
 import { OsPagination } from '@/components/ui/os-pagination'
-import { alterarStatusLote } from './actions'
+import { alterarStatusLote, atribuirTecnicoLote } from './actions'
 import { excluirOsLote, unirOsLote } from './excluir-os-action'
 import { Trash2, X, Loader2, Layers } from 'lucide-react'
 
@@ -66,6 +66,9 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
   const [erro, setErro] = useState<string | null>(null)
   const [excluindo, setExcluindo] = useState(false)
   const [unindo, setUnindo] = useState(false)
+  const [bulkTecnico, setBulkTecnico] = useState('')
+  const [bulkData, setBulkData] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
 
   const allSelected = ordens.length > 0 && selected.size === ordens.length
   const someSelected = selected.size > 0 && !allSelected
@@ -84,6 +87,19 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
+    })
+  }
+
+  function atribuirLote() {
+    if (!bulkTecnico) { setErro('Escolha o técnico'); return }
+    setErro(null); setMsg(null)
+    const ids = Array.from(selected)
+    startTransition(async () => {
+      const res = await atribuirTecnicoLote(ids, bulkTecnico, bulkData || undefined)
+      if (!res.ok) { setErro(res.error ?? 'Erro desconhecido'); return }
+      setMsg(`${res.atribuidas} O.S. atribuída${res.atribuidas !== 1 ? 's' : ''}${res.agendadas ? ` (${res.agendadas} passou a agendada)` : ''}.`)
+      setSelected(new Set()); setBulkTecnico(''); setBulkData('')
+      router.refresh()
     })
   }
 
@@ -243,8 +259,43 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
         />
       )}
 
+      {msg && selected.size === 0 && (
+        <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-700 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+          {msg}
+          <button onClick={() => setMsg(null)} className="text-white/70 hover:text-white" aria-label="Fechar"><X size={14} /></button>
+        </div>
+      )}
+
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 max-w-[95vw]">
+        <div className="flex flex-wrap items-center justify-center gap-3 bg-gray-900 text-white px-5 py-2.5 rounded-2xl shadow-2xl">
+          <span className="text-sm font-semibold whitespace-nowrap">Triagem em bloco:</span>
+          <select
+            value={bulkTecnico}
+            onChange={(e) => setBulkTecnico(e.target.value)}
+            aria-label="Técnico da triagem em bloco"
+            className="bg-gray-800 text-white text-sm rounded-lg px-3 py-1.5 border border-white/20 focus:outline-none cursor-pointer max-w-52"
+          >
+            <option value="">Atribuir a…</option>
+            {tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>)}
+          </select>
+          <input
+            type="date"
+            value={bulkData}
+            onChange={(e) => setBulkData(e.target.value)}
+            title="Nova data para todas (vazio = cada O.S. mantém a sua)"
+            aria-label="Nova data para todas (vazio = cada O.S. mantém a sua)"
+            className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 border border-white/20 focus:outline-none [color-scheme:dark]"
+          />
+          <button
+            onClick={atribuirLote}
+            disabled={isPending || !bulkTecnico}
+            className="bg-white text-gray-900 text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            {isPending ? 'Atribuindo…' : 'Atribuir'}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl">
           <span className="text-sm font-semibold whitespace-nowrap">
             {selected.size} selecionada{selected.size !== 1 ? 's' : ''}
           </span>
@@ -303,6 +354,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
             Limpar
           </button>
           {erro && <span className="text-red-400 text-xs ml-1">{erro}</span>}
+        </div>
         </div>
       )}
     </>

@@ -12,6 +12,7 @@ import { getTenantId } from '../../common/tenant.context';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
+import { AtribuirTecnicoLoteDto } from './dto/atribuir-lote.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AgendaService } from '../agenda/agenda.service';
@@ -703,7 +704,7 @@ export class OrdensServicoService {
 
     const agora = new Date();
     const where: {
-      status?: any; tecnicoId?: string; dataAgendamento?: any;
+      status?: any; tecnicoId?: string | null; dataAgendamento?: any;
       ambiente?: any; OR?: any[];
     } = {};
 
@@ -715,7 +716,8 @@ export class OrdensServicoService {
       where.status = status;
     }
 
-    if (tecnicoId) where.tecnicoId = tecnicoId;
+    if (tecnicoId === 'sem') where.tecnicoId = null;
+    else if (tecnicoId) where.tecnicoId = tecnicoId;
     if (clienteId) where.ambiente = { clienteId };
 
     // Date range (só se não for filtro "atrasadas")
@@ -1023,6 +1025,38 @@ export class OrdensServicoService {
     }
     for (const o of antes) await this.registrarHistorico(o.id, o.status, status, user, { ocorridoEm: agora, observacao: extra?.observacao });
     return { atualizadas: count };
+  }
+
+  /**
+   * Triagem em bloco: define o técnico responsável de várias O.S. de uma vez.
+   * O.S. "aberta" passa a "agendada"; as demais (inclusive concluídas, para lançamento retroativo) mantêm o status.
+   * Com `dataAgendamento`, todas passam para essa data; sem ela cada uma mantém a sua.
+   */
+  async atribuirTecnicoLote(dto: AtribuirTecnicoLoteDto, user?: { id: string; role: string }) {
+    const ids = Array.from(new Set(dto.ids));
+    const tecnico = await this.prisma.usuario.findFirst({ where: { id: dto.tecnicoId, tipo: 'tecnico' }, select: { id: true } });
+    if (!tecnico) throw new NotFoundException('Técnico não encontrado');
+    const oss = await this.prisma.ordemServico.findMany({ where: { id: { in: ids } }, select: { id: true, status: true, tecnicoId: true } });
+    if (!oss.length) throw new NotFoundException('Nenhuma das O.S. foi encontrada');
+    const data = dto.dataAgendamento ? new Date(dto.dataAgendamento) : undefined;
+    const abertas = oss.filter((o) => o.status === 'aberta').map((o) => o.id);
+    const idsOk = oss.map((o) => o.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.ordemServico.updateMany({ where: { id: { in: idsOk } }, data: { tecnicoId: dto.tecnicoId, ...(data ? { dataAgendamento: data } : {}) } });
+      if (abertas.length) await tx.ordemServico.updateMany({ where: { id: { in: abertas } }, data: { status: 'agendada' } });
+      // o novo responsável não fica também como auxiliar da mesma O.S.
+      await tx.ordemServicoAuxiliar.deleteMany({ where: { ordemServicoId: { in: idsOk }, tecnicoId: dto.tecnicoId } });
+    });
+    for (const o of oss) {
+      if (o.status === 'aberta') await this.registrarHistorico(o.id, 'aberta', 'agendada', user, { observacao: 'Triagem em bloco' });
+      await this.agenda.sincronizarOs(o.id);
+    }
+    const mudaram = oss.filter((o) => o.tecnicoId !== dto.tecnicoId).length;
+    if (mudaram) {
+      void this.push.notificar([dto.tecnicoId], { titulo: 'Novas O.S. para você', corpo: `${mudaram} O.S. foram atribuídas a você.`, url: '/minhas-os' });
+    }
+    return { atribuidas: oss.length, agendadas: abertas.length, ignoradas: ids.length - oss.length };
   }
 
   // PATCH /ordens-servico/:id/financeiro — Admin registra valores da O.S.

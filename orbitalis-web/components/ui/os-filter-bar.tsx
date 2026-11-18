@@ -154,6 +154,7 @@ export function OsFilterBar({
           className="px-3 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
         >
           <option value="">Todos os técnicos</option>
+          <option value="sem">Sem técnico</option>
           {tecnicos.map((t) => (
             <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>
           ))}

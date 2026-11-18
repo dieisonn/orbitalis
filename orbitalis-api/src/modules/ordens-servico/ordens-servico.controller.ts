@@ -23,6 +23,7 @@ import { OrdensServicoService } from './ordens-servico.service';
 import { CreateOrdemServicoDto } from './dto/create-os.dto';
 import { SincronizarOsDto } from './dto/sincronizar-os.dto';
 import { TriarOsDto } from './dto/triar-os.dto';
+import { AtribuirTecnicoLoteDto } from './dto/atribuir-lote.dto';
 import { AdicionarFotoDto, DefinirAuxiliaresDto } from './dto/foto-auxiliares.dto';
 
 @Controller('ordens-servico')
@@ -183,6 +184,13 @@ export class OrdensServicoController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.ordensServicoService.concluir(id, body, user);
+  }
+
+  // PATCH /api/v1/ordens-servico/bulk-tecnico — Triagem em bloco: atribui um técnico a várias O.S.
+  @Patch('bulk-tecnico')
+  @Roles(UsuarioTipo.admin)
+  atribuirTecnicoLote(@Body() dto: AtribuirTecnicoLoteDto, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.atribuirTecnicoLote(dto, user);
   }
 
   // PATCH /api/v1/ordens-servico/bulk-status — Altera status em lote

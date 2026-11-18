@@ -368,6 +368,9 @@ export default async function DashboardPage({ searchParams }: Props) {
             <p className="text-sm text-gray-400 text-center py-6">Todas as O.S. têm técnico atribuído.</p>
           ) : (
             <div className="divide-y divide-border/60">
+              <a href="/ordens-servico?tecnicoId=sem" className="block pb-2 text-xs font-semibold text-primary hover:underline">
+                Atribuir técnico em bloco (selecione várias na lista) →
+              </a>
               {osSemTecnico.map((os) => {
                 const num = os.numero != null ? `OS-${String(os.numero).padStart(4, '0')}` : `OS-${os.id.slice(0, 6).toUpperCase()}`
                 const atrasada = new Date(os.dataAgendamento) < new Date()

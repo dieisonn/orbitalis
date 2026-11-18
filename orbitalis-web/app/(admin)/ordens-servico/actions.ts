@@ -10,6 +10,18 @@ export async function triarOs(osId: string, tecnicoId: string, dataAgendamento: 
   }
 }
 
+// Triagem em bloco: atribui um técnico (e, opcionalmente, uma nova data) a várias O.S.
+export async function atribuirTecnicoLote(ids: string[], tecnicoId: string, dataAgendamento?: string) {
+  try {
+    const r = await api.patch<{ atribuidas: number; agendadas: number; ignoradas: number }>('/ordens-servico/bulk-tecnico', {
+      ids, tecnicoId, ...(dataAgendamento ? { dataAgendamento } : {}),
+    })
+    return { ok: true as const, ...r }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao atribuir técnico' }
+  }
+}
+
 export async function cancelarOs(osId: string) {
   try {
     await api.patch(`/ordens-servico/${osId}/cancelar`, {})
