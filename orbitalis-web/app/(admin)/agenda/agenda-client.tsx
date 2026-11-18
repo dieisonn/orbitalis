@@ -179,7 +179,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
       : diaPorExtenso(cursor) + ` de ${cursor.y}`
 
   // Salva o novo horário de um evento (arrastar na grade/mês ou ajustar a duração). Atualiza a tela
-  // na hora e desfaz se a API recusar (ex.: O.S. encerrada, evento de O.S. atravessando a meia-noite)
+  // na hora e desfaz se a API recusar (ex.: evento de O.S. atravessando a meia-noite)
   async function salvarHorario(ev: EventoAgenda, novoIni: string, novoFim: string, escopo?: Escopo) {
     if (novoIni === ev.inicio && novoFim === ev.fim) return
     // Evento de uma série: pergunta se vale só para este, para os seguintes ou para todos
@@ -487,10 +487,9 @@ function BlocoEvento({ e, d, topo, altura, nivel, idx, de, esmaecido, onAbrir, o
   iniciar: (ev: React.PointerEvent, kind: Acao, col: HTMLElement, base: { dia: Dia; ini?: number; fim?: number; evento?: EventoAgenda }) => void
   suprimirClique: React.RefObject<boolean>
 }) {
-  const encerrada = e.ordemServico?.status === 'concluida' || e.ordemServico?.status === 'cancelada'
   const mesmoDiaInteiro = diffDias(relogio(e.inicio), relogio(new Date(new Date(e.fim).getTime() - 1))) === 0
   const leitura = useContext(ModoLeitura)
-  const arrastavel = !encerrada && mesmoDiaInteiro && !leitura
+  const arrastavel = e.ordemServico?.status !== 'cancelada' && mesmoDiaInteiro && !leitura // concluída pode ser movida (lançamento retroativo)
   const colEl = (ev: React.PointerEvent) => (ev.currentTarget as HTMLElement).closest('[data-coluna]') as HTMLElement
   const meiaNoite = new Date(instante(d.y, d.m, d.d)).getTime()
   const base = {

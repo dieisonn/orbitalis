@@ -540,10 +540,9 @@ export class AgendaService implements OnApplicationBootstrap {
     }
 
     // Evento de O.S.: horário e técnico voltam para a O.S. (ela é a fonte); cliente e tipo vêm dela
-    const encerrada = os.status === 'concluida' || os.status === 'cancelada';
+    // O.S. encerrada também pode ser reagendada/reatribuída pelo administrador (lançamento retroativo); o status não muda
     const osData: Prisma.OrdemServicoUpdateInput = {};
     if (mudouHorario) {
-      if (encerrada) throw new BadRequestException('Não é possível reagendar uma O.S. encerrada');
       const a = relogioLocal(inicio), b = relogioLocal(fimEfetivo);
       if (a.dia.getTime() !== b.dia.getTime()) {
         throw new BadRequestException('O evento de uma O.S. deve começar e terminar no mesmo dia');
@@ -574,7 +573,6 @@ export class AgendaService implements OnApplicationBootstrap {
       }
     }
     if (dto.tecnicoId !== undefined) {
-      if (encerrada) throw new BadRequestException('Não é possível trocar o técnico de uma O.S. encerrada');
       osData.tecnico = dto.tecnicoId ? { connect: { id: dto.tecnicoId } } : { disconnect: true };
     }
 
