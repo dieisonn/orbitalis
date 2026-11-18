@@ -70,7 +70,7 @@ describe('SincronizarOsDto', () => {
 
 import { CreateOrdemServicoDto } from './ordens-servico/dto/create-os.dto';
 describe('CreateOrdemServicoDto – ajudantes', () => {
-  const base = { ambienteId: UUID, dataAgendamento: '2026-11-18' };
+  const base = { ambienteId: UUID, dataAgendamento: '2026-11-18', origem: 'manual_admin' };
   it('aceita lista de ajudantes válida ou ausente', async () => {
     expect(await erros(CreateOrdemServicoDto, { ...base, auxiliaresIds: [UUID] })).toBe(0);
     expect(await erros(CreateOrdemServicoDto, base)).toBe(0);
