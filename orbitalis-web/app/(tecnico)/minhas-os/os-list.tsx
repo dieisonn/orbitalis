@@ -132,8 +132,9 @@ export function OsList({ ordens }: { ordens: OrdemServicoLista[] }) {
     { key: 'concluidas', label: 'Concluídas', count: concluidas.length },
   ]
 
-  const base = tab === 'pendentes' ? pendentes : tab === 'hoje' ? hoje : concluidas
   const termo = busca.trim().toLowerCase()
+  // Com texto na busca, procura em todas as O.S. (hoje, pendentes e concluídas), não só na aba aberta
+  const base = termo ? ordens : tab === 'pendentes' ? pendentes : tab === 'hoje' ? hoje : concluidas
   const passaChip = (os: OrdemServicoLista) =>
     chip === 'todas' ? true
     : chip === 'andamento' ? os.status === 'em_andamento'
@@ -143,7 +144,10 @@ export function OsList({ ordens }: { ordens: OrdemServicoLista[] }) {
   // Busca por cliente, endereço, ambiente, tipo de serviço ou número (com ou sem zeros e sigla: "123", "0123", "pm-0123")
   const alvo = (os: OrdemServicoLista) =>
     `${nomeCliente(os)} ${os.ambiente.nome} ${os.ambiente.localizacaoInterna} ${os.enderecoServico?.endereco ?? ''} ${os.tipoServico?.nome ?? ''} ${numeroOs(os)} ${os.numero ?? ''}`.toLowerCase()
-  const filtradas = base.filter(passaChip).filter((os) => !termo || termo.split(/\s+/).every((t) => alvo(os).includes(t)))
+  // "mc1013", "mc-1013" e "MC 1013" valem o mesmo: compara também sem espaços e hífens
+  const compacto = (t: string) => t.replace(/[\s\-_.]/g, '')
+  const filtradas = base.filter(passaChip).filter((os) => !termo || termo.split(/\s+/).every((t) => alvo(os).includes(t)) || compacto(alvo(os)).includes(compacto(termo)))
+  const emBuscaGeral = !!termo
   type Chip = typeof chip
   const chips = ([
     { key: 'todas', label: 'Todas' },
@@ -200,10 +204,10 @@ export function OsList({ ordens }: { ordens: OrdemServicoLista[] }) {
         <div className="bg-white rounded-2xl p-10 text-center border border-border">
           <ClipboardList size={36} className="mx-auto text-primary/20 mb-2" />
           <p className="text-gray-400 text-sm">
-            {termo || chip !== 'todas' ? 'Nada encontrado com esses filtros.' : tab === 'hoje' ? 'Nenhuma O.S. para hoje.' : tab === 'concluidas' ? 'Nenhuma O.S. concluída.' : 'Nenhuma O.S. pendente.'}
+            {termo || chip !== 'todas' ? (termo ? 'Nenhuma O.S. sua com esse texto. A busca olha só as O.S. atribuídas a você.' : 'Nada encontrado com esses filtros.') : tab === 'hoje' ? 'Nenhuma O.S. para hoje.' : tab === 'concluidas' ? 'Nenhuma O.S. concluída.' : 'Nenhuma O.S. pendente.'}
           </p>
         </div>
-      ) : tab === 'concluidas' ? (
+      ) : tab === 'concluidas' || emBuscaGeral ? (
         <div className="space-y-3">{filtradas.map((os) => <Cartao key={os.id} os={os} />)}</div>
       ) : (
         <div className="space-y-4">

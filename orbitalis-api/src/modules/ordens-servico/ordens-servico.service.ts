@@ -728,7 +728,14 @@ export class OrdensServicoService {
 
     // Busca textual: ambiente, cliente
     if (q) {
+      // Número da O.S. com ou sem sigla e zeros: "1013", "0123", "mc-1013", "mc1013"
+      const m = /^\s*(?:([a-z]{1,6})[\s\-_.]*)?0*(\d{1,9})\s*$/i.exec(q);
+      const porNumero: Prisma.OrdemServicoWhereInput[] = m
+        ? [{ numero: Number(m[2]), ...(m[1] ? { tipoServico: { sigla: { equals: m[1], mode: 'insensitive' as const } } } : {}) }]
+        : [];
       where.OR = [
+        ...porNumero,
+        { tipoServico: { nome: { contains: q, mode: 'insensitive' } } },
         { ambiente: { nome: { contains: q, mode: 'insensitive' } } },
         { ambiente: { cliente: { razaoSocial: { contains: q, mode: 'insensitive' } } } },
         { ambiente: { cliente: { nomeFantasia: { contains: q, mode: 'insensitive' } } } },
