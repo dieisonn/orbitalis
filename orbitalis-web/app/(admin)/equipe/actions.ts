@@ -13,17 +13,26 @@ export async function removerMembro(userId: string, transferirPara?: string) {
   }
 }
 
-export type CargaMembro = { osPendentes: number; planosAtivos: number; eventosAvulsos: number }
+export type CargaMembro = { osPendentes: number; planosAtivos: number; eventosAvulsos: number; osNoCriterio?: number }
+export type FiltroTransferencia = { escopo: 'pendentes' | 'todas'; de?: string; ate?: string }
 
-export async function cargaMembro(userId: string): Promise<CargaMembro | null> {
-  try { return await api.get<CargaMembro>(`/equipe/${userId}/carga`) } catch { return null }
+function qs(f?: FiltroTransferencia) {
+  if (!f) return ''
+  const p = new URLSearchParams({ escopo: f.escopo })
+  if (f.de) p.set('de', f.de)
+  if (f.ate) p.set('ate', f.ate)
+  return `?${p.toString()}`
+}
+
+export async function cargaMembro(userId: string, filtro?: FiltroTransferencia): Promise<CargaMembro | null> {
+  try { return await api.get<CargaMembro>(`/equipe/${userId}/carga${qs(filtro)}`) } catch { return null }
 }
 
 // Repassa O.S. pendentes, planos preventivos e agenda para outro técnico; opcionalmente remove o acesso de quem saiu
-export async function transferirOs(userId: string, paraUserId: string, remover: boolean) {
+export async function transferirOs(userId: string, paraUserId: string, remover: boolean, filtro: FiltroTransferencia = { escopo: 'pendentes' }) {
   try {
     const r = await api.post<{ osTransferidas: number; planosTransferidos: number; eventosTransferidos: number; para: string | null }>(
-      `/equipe/${userId}/transferir`, { paraUserId })
+      `/equipe/${userId}/transferir`, { paraUserId, escopo: filtro.escopo, ...(filtro.de ? { de: filtro.de } : {}), ...(filtro.ate ? { ate: filtro.ate } : {}) })
     if (remover) {
       const rm = await removerMembro(userId)
       if ('error' in rm) return { ok: false as const, error: rm.error }

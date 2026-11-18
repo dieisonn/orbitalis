@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
+import { FiltroTransferenciaDto, TransferirDto } from './dto/transferir.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -60,14 +61,15 @@ export class EquipeController {
 
   // GET /equipe/:userId/carga — O.S./planos que o membro ainda tem em aberto
   @Get(':userId/carga')
-  carga(@Param('userId') userId: string) {
-    return this.svc.carga(userId);
+  carga(@Param('userId') userId: string, @Query() filtro: FiltroTransferenciaDto) {
+    return this.svc.carga(userId, filtro);
   }
 
   // POST /equipe/:userId/transferir — repassa O.S. pendentes, planos e agenda para outro membro
   @Post(':userId/transferir')
   @HttpCode(HttpStatus.OK)
-  transferir(@Param('userId') userId: string, @Body() body: { paraUserId: string }) {
-    return this.svc.transferir(userId, body.paraUserId);
+  transferir(@Param('userId') userId: string, @Body() body: TransferirDto) {
+    const { paraUserId, ...filtro } = body;
+    return this.svc.transferir(userId, paraUserId, filtro);
   }
 }

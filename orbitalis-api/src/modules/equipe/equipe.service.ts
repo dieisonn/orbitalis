@@ -19,16 +19,29 @@ export class EquipeService {
   // O.S. ainda não concluídas: são as que precisam de responsável
   private static readonly OS_PENDENTES = ['aberta', 'agendada', 'em_andamento'] as const;
 
+  private static readonly OS_TODAS = ['aberta', 'agendada', 'em_andamento', 'concluida', 'cancelada'] as const;
+
+  /** Filtro de O.S. da transferência: escopo (pendentes/todas) e período opcional pela data de agendamento (horário de Brasília). */
+  private filtroOs(f: { escopo?: 'pendentes' | 'todas'; de?: string; ate?: string }) {
+    const status = f.escopo === 'todas' ? [...EquipeService.OS_TODAS] : [...EquipeService.OS_PENDENTES];
+    const periodo: { gte?: Date; lt?: Date } = {};
+    if (f.de) periodo.gte = new Date(`${f.de.slice(0, 10)}T00:00:00-03:00`);
+    if (f.ate) periodo.lt = new Date(new Date(`${f.ate.slice(0, 10)}T00:00:00-03:00`).getTime() + 86_400_000);
+    if (periodo.gte && periodo.lt && periodo.gte >= periodo.lt) throw new BadRequestException('O período está invertido: a data final é anterior à inicial');
+    return { status: { in: status }, ...(periodo.gte || periodo.lt ? { dataAgendamento: periodo } : {}) };
+  }
+
   /** O que o membro ainda tem sob sua responsabilidade (para decidir a transferência). */
-  async carga(userId: string) {
+  async carga(userId: string, filtro: { escopo?: 'pendentes' | 'todas'; de?: string; ate?: string } = {}) {
     const membro = await this.prisma.usuario.findFirst({ where: { id: userId }, select: { id: true } });
     if (!membro) throw new NotFoundException('Membro não encontrado');
-    const [os, planos, eventos] = await Promise.all([
+    const [os, planos, eventos, noCriterio] = await Promise.all([
       this.prisma.ordemServico.count({ where: { tecnicoId: userId, status: { in: [...EquipeService.OS_PENDENTES] } } }),
       this.prisma.planoManutencao.count({ where: { tecnicoId: userId, ativo: true } }),
       this.prisma.eventoAgenda.count({ where: { tecnicoId: userId, ordemServicoId: null, fim: { gte: new Date() } } }),
+      this.prisma.ordemServico.count({ where: { tecnicoId: userId, ...this.filtroOs(filtro) } }),
     ]);
-    return { osPendentes: os, planosAtivos: planos, eventosAvulsos: eventos };
+    return { osPendentes: os, planosAtivos: planos, eventosAvulsos: eventos, osNoCriterio: noCriterio };
   }
 
   /**
@@ -36,7 +49,7 @@ export class EquipeService {
    * delas na agenda), planos preventivos ativos (as O.S. futuras já nascem para o novo responsável) e
    * eventos avulsos futuros da agenda. O que já foi concluído continua no nome de quem executou.
    */
-  async transferir(userId: string, paraUserId: string) {
+  async transferir(userId: string, paraUserId: string, filtro: { escopo?: 'pendentes' | 'todas'; de?: string; ate?: string } = {}) {
     if (!paraUserId) throw new BadRequestException('Escolha o técnico que vai receber');
     if (userId === paraUserId) throw new BadRequestException('Escolha um técnico diferente do atual');
     const [de, para] = await Promise.all([
@@ -46,8 +59,11 @@ export class EquipeService {
     if (!de) throw new NotFoundException('Membro não encontrado');
     if (!para || para.tipo === UsuarioTipo.cliente) throw new BadRequestException('O destino precisa ser um técnico ou usuário do escritório');
 
+    const filtroOs = this.filtroOs(filtro);
+    // Com período escolhido, só as O.S. mudam de mãos: planos e agenda avulsa ficam como estão
+    const soOs = !!(filtro.de || filtro.ate);
     const osIds = (await this.prisma.ordemServico.findMany({
-      where: { tecnicoId: userId, status: { in: [...EquipeService.OS_PENDENTES] } },
+      where: { tecnicoId: userId, ...filtroOs },
       select: { id: true },
     })).map((o) => o.id);
 
@@ -59,7 +75,7 @@ export class EquipeService {
     }
     // O.S. em que o técnico era só auxiliar: o destino assume o apoio (se já não participa)
     const auxPendentes = await this.prisma.ordemServicoAuxiliar.findMany({
-      where: { tecnicoId: userId, ordemServico: { status: { in: [...EquipeService.OS_PENDENTES] } } },
+      where: { tecnicoId: userId, ordemServico: filtroOs },
       select: { id: true, ordemServicoId: true, ordemServico: { select: { tecnicoId: true } } },
     });
     let auxTransferidas = 0;
@@ -72,6 +88,7 @@ export class EquipeService {
     if (osIds.length || auxTransferidas) {
       void this.push.notificar([paraUserId], { titulo: 'O.S. repassadas para você', corpo: `${osIds.length + auxTransferidas} O.S. foram transferidas para você.`, url: '/minhas-os' });
     }
+    if (soOs) return { osTransferidas: osIds.length, auxiliaresTransferidas: auxTransferidas, planosTransferidos: 0, eventosTransferidos: 0, para: para.nome };
     const planos = await this.prisma.planoManutencao.updateMany({
       where: { tecnicoId: userId, ativo: true },
       data: { tecnicoId: paraUserId },
