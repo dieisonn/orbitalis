@@ -50,6 +50,12 @@ export class OrdensServicoService {
     return !!(await db.ordemServicoAuxiliar.findFirst({ where: { ordemServicoId: os.id, tecnicoId: userId }, select: { id: true } }));
   }
 
+  /** Conta de técnico com função administrativa: consulta o histórico (concluídas/canceladas) de toda a empresa, só leitura. */
+  private async consultaHistoricoCompleto(userId: string): Promise<boolean> {
+    const u = await this.prisma.usuario.findUnique({ where: { id: userId }, select: { tipo: true, especialidade: true } });
+    return u?.tipo === 'tecnico' && /^administrativ/i.test((u.especialidade ?? '').trim());
+  }
+
   /** Aviso no celular para responsável e auxiliares. */
   private async avisarEquipe(osId: string, titulo: string, corpo: string, extras: (string | null | undefined)[] = []) {
     const os = await this.prisma.ordemServico.findUnique({
@@ -483,9 +489,19 @@ export class OrdensServicoService {
 
   // GET /ordens-servico/tecnico/:tecnicoId — fila do técnico (§US08)
   async findByTecnico(tecnicoId: string) {
+    const historicoCompleto = await this.consultaHistoricoCompleto(tecnicoId);
+    const minhas = { OR: [{ tecnicoId }, { auxiliares: { some: { tecnicoId } } }] };
     const lista = await this.prisma.ordemServico.findMany({
-      where: {
-        AND: [{ OR: [{ tecnicoId }, { auxiliares: { some: { tecnicoId } } }] }],
+      where: historicoCompleto
+        ? {
+            // pendentes: só as dele; concluídas/canceladas: toda a empresa (consulta)
+            OR: [
+              { AND: [minhas, { status: { in: ['aberta', 'agendada', 'em_andamento'] } }] },
+              { status: { in: ['concluida', 'cancelada'] } },
+            ],
+          }
+        : {
+        AND: [minhas],
         // pendentes + as concluídas/canceladas dos últimos 60 dias (aba "Concluídas" do portal do técnico)
         OR: [
           { status: { in: ['aberta', 'agendada', 'em_andamento'] } },
@@ -846,7 +862,8 @@ export class OrdensServicoService {
 
     // Cliente só enxerga O.S. dos próprios ambientes. Responde "não encontrada"
     // (e não "proibido") para não revelar que o id existe.
-    if (user?.role === 'tecnico' && os.tecnicoId !== user.id && !os.auxiliares.some((a) => a.tecnicoId === user.id)) {
+    if (user?.role === 'tecnico' && os.tecnicoId !== user.id && !os.auxiliares.some((a) => a.tecnicoId === user.id)
+      && !(['concluida', 'cancelada'].includes(os.status) && await this.consultaHistoricoCompleto(user.id))) {
       throw new NotFoundException('Ordem de Serviço não encontrada');
     }
     if (user?.role === 'cliente' && os.ambiente.cliente.usuarioId !== user.id) {
@@ -1377,7 +1394,8 @@ export class OrdensServicoService {
   private async osAcessivel(id: string, user: { id: string; role: string }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id }, select: { id: true, status: true, tecnicoId: true } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
-    if (user.role === 'tecnico' && !(await this.tecnicoAtende(os, user.id))) throw new NotFoundException('Ordem de Serviço não encontrada');
+    if (user.role === 'tecnico' && !(await this.tecnicoAtende(os, user.id))
+      && !(['concluida', 'cancelada'].includes(os.status) && await this.consultaHistoricoCompleto(user.id))) throw new NotFoundException('Ordem de Serviço não encontrada');
     return os;
   }
 
