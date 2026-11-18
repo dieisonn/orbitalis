@@ -17,7 +17,7 @@ type OsEdicao = {
   auxiliares?: { tecnicoId: string }[]
   tipoServico?: { id: string } | null
   ambiente?: { id?: string; clienteId?: string; cliente?: { id: string } | null } | null
-  itens?: { statusItem: string; observacoesTecnicas: string | null }[]
+  itens?: { statusItem: string; observacoesTecnicas: string | null; checklistSnapshot?: unknown }[]
 }
 
 export default async function EditarOsPage({ params }: Props) {
@@ -91,6 +91,8 @@ export default async function EditarOsPage({ params }: Props) {
               auxiliaresIds: (os.auxiliares ?? []).map((a) => a.tecnicoId),
             }}
             modelos={modelosRes.data}
+            temEquipamentos={(os.itens ?? []).length > 0}
+            checklistAtualItens={Array.isArray(os.itens?.[0]?.checklistSnapshot) ? (os.itens?.[0]?.checklistSnapshot as unknown[]).length : 0}
             tecnicos={tecnicosRes.data}
             clientes={clientesRes.data}
             ambientes={ambientesRes.data}

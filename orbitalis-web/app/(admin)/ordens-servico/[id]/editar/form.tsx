@@ -27,6 +27,8 @@ export function EditarOsForm({
   tiposServico,
   localTravado,
   modelos,
+  temEquipamentos,
+  checklistAtualItens,
 }: {
   osId: string
   initialValues: {
@@ -50,6 +52,8 @@ export function EditarOsForm({
   tiposServico: TipoServico[]
   localTravado: boolean
   modelos: ModeloResumo[]
+  temEquipamentos: boolean
+  checklistAtualItens: number
 }) {
   const router = useRouter()
   const [clienteId, setClienteId] = useState(initialValues.clienteId)
@@ -206,12 +210,19 @@ export function EditarOsForm({
         <label className="block text-sm font-medium text-gray-700 mb-1">Checklist</label>
         <select value={checklistId} onChange={(e) => setChecklistId(e.target.value)}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white">
-          <option value="">Manter o checklist atual</option>
+          <option value="">
+            {!temEquipamentos ? 'Nenhum — esta O.S. não tem equipamento' : checklistAtualItens > 0 ? `Manter o checklist atual (${checklistAtualItens} itens)` : 'Manter (esta O.S. está sem checklist)'}
+          </option>
           <option value={NENHUM_CHECKLIST}>Sem checklist nesta O.S.</option>
           {modelos.map((m) => (
             <option key={m.id} value={m.id}>{m.nome}{m.tipo ? ` (${TIPO_OS_LABEL[m.tipo]})` : ''}</option>
           ))}
         </select>
+        {!temEquipamentos && (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+            Esta O.S. está sem equipamento, e o checklist é aplicado em cada equipamento. Para usar um checklist, escolha acima um <strong>ambiente com equipamentos cadastrados</strong> (ou cadastre o equipamento do cliente) e salve.
+          </p>
+        )}
         <p className="text-xs text-gray-400 mt-1">Vale para os equipamentos que o técnico ainda não começou. O que já foi preenchido não é alterado.</p>
       </div>
 

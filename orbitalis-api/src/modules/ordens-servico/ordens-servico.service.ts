@@ -1169,6 +1169,16 @@ export class OrdensServicoService {
       snapshotAtual = itensAtuais[0]?.checklistSnapshot ?? null;
     }
 
+    // Checklist é guardado em cada equipamento da O.S.: sem equipamento não há onde aplicar. Avisa em vez de "salvar" sem efeito.
+    if (dto.modeloChecklistId) {
+      const teraItens = novoAmbiente
+        ? novoAmbiente.equipamentos.length > 0
+        : (await this.prisma.ordemServicoItem.count({ where: { ordemServicoId: id } })) > 0;
+      if (!teraItens) {
+        throw new BadRequestException('Esta O.S. não tem equipamento, e o checklist é aplicado em cada equipamento. Escolha um ambiente que tenha equipamentos cadastrados (ou cadastre o equipamento do cliente) e salve de novo.');
+      }
+    }
+
     // Endereço do serviço: trocar de cliente zera a escolha (a menos que venha uma nova); senão só muda se informado
     let enderecoNovo: string | null | undefined;
     if (dto.enderecoId !== undefined || novoAmbienteId) {
