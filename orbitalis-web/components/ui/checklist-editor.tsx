@@ -1,7 +1,7 @@
 'use client'
 
 import { useTransition, useState } from 'react'
-import { Plus, Trash2, GripVertical, X } from 'lucide-react'
+import { Plus, Trash2, X, Pencil, Check, ChevronUp, ChevronDown } from 'lucide-react'
 import { criarChecklist, atualizarChecklist, type ChecklistItem } from '@/app/(admin)/checklists/actions'
 import { TIPO_OS_LABEL, type TipoOs } from '@/lib/checklist'
 
@@ -37,6 +37,8 @@ export function ChecklistEditor({
   const [itens, setItens] = useState<ChecklistItem[]>(
     initialItens.map((i) => ({ tipo: 'texto' as TipoItem, ...i }))
   )
+
+  const [editandoId, setEditandoId] = useState<string | null>(null)
 
   // estado do novo item a ser adicionado
   const [novoDescricao, setNovoDescricao]     = useState('')
@@ -85,6 +87,22 @@ export function ChecklistEditor({
 
   function removeItem(id: string) {
     setItens((prev) => prev.filter((i) => i.id !== id))
+  }
+
+  function salvarItem(id: string, novo: ChecklistItem) {
+    setItens((prev) => prev.map((i) => (i.id === id ? novo : i)))
+    setEditandoId(null)
+  }
+
+  function mover(id: string, delta: -1 | 1) {
+    setItens((prev) => {
+      const i = prev.findIndex((x) => x.id === id)
+      const j = i + delta
+      if (i < 0 || j < 0 || j >= prev.length) return prev
+      const c = [...prev]
+      ;[c[i], c[j]] = [c[j], c[i]]
+      return c
+    })
   }
 
   function toggleObrigatorio(id: string) {
@@ -267,12 +285,24 @@ export function ChecklistEditor({
           <div className="border border-border rounded-xl overflow-hidden">
             {itens.map((item, i) => {
               const tipoDef = TIPOS.find((t) => t.value === (item.tipo ?? 'texto'))
+              if (editandoId === item.id) {
+                return (
+                  <div key={item.id} className={`px-4 py-3 bg-primary/5 ${i !== 0 ? 'border-t border-border' : ''}`}>
+                    <EditarItem item={item} onSalvar={(n) => salvarItem(item.id, n)} onCancelar={() => setEditandoId(null)} />
+                  </div>
+                )
+              }
               return (
                 <div
                   key={item.id}
                   className={`flex items-start gap-3 px-4 py-3 text-sm ${i !== 0 ? 'border-t border-border' : ''} hover:bg-surface`}
                 >
-                  <GripVertical size={14} className="text-gray-300 shrink-0 mt-0.5" />
+                  <div className="flex flex-col shrink-0 -my-0.5">
+                    <button type="button" aria-label="Mover para cima" disabled={i === 0} onClick={() => mover(item.id, -1)}
+                      className="p-0.5 text-gray-400 hover:text-primary disabled:opacity-25 disabled:hover:text-gray-400"><ChevronUp size={14} /></button>
+                    <button type="button" aria-label="Mover para baixo" disabled={i === itens.length - 1} onClick={() => mover(item.id, 1)}
+                      className="p-0.5 text-gray-400 hover:text-primary disabled:opacity-25 disabled:hover:text-gray-400"><ChevronDown size={14} /></button>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-gray-800 text-sm">{item.descricao}</p>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -312,6 +342,15 @@ export function ChecklistEditor({
                   </label>
                   <button
                     type="button"
+                    aria-label="Editar item"
+                    onClick={() => setEditandoId(item.id)}
+                    className="p-1 text-gray-400 hover:text-primary transition-colors shrink-0 mt-0.5"
+                  >
+                    <Pencil size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Excluir item"
                     onClick={() => removeItem(item.id)}
                     className="p-1 text-gray-300 hover:text-destructive transition-colors shrink-0 mt-0.5"
                   >
@@ -324,7 +363,7 @@ export function ChecklistEditor({
         )}
 
         <p className="text-xs text-gray-400 mt-2">
-          Itens obrigatórios bloqueiam conclusão da O.S. se não forem respondidos.
+          Itens obrigatórios bloqueiam conclusão da O.S. se não forem respondidos. Use o lápis para editar um item e as setas para mudar a ordem.
         </p>
       </div>
 
@@ -348,5 +387,94 @@ export function ChecklistEditor({
         </button>
       </div>
     </form>
+  )
+}
+
+/** Edição de um item já adicionado: texto, tipo de resposta, unidade, opções e obrigatoriedade. */
+function EditarItem({ item, onSalvar, onCancelar }: {
+  item: ChecklistItem
+  onSalvar: (novo: ChecklistItem) => void
+  onCancelar: () => void
+}) {
+  const [descricao, setDescricao] = useState(item.descricao)
+  const [tipo, setTipo] = useState<TipoItem>((item.tipo as TipoItem) ?? 'texto')
+  const [unidade, setUnidade] = useState(item.unidade ?? '')
+  const [opcoes, setOpcoes] = useState<string[]>(item.opcoes ?? [])
+  const [nova, setNova] = useState('')
+  const [obrigatorio, setObrigatorio] = useState(!!item.obrigatorio)
+  const [erro, setErro] = useState<string | null>(null)
+  const escolha = tipo === 'escolha_unica' || tipo === 'multipla_escolha'
+
+  function addOpcao() {
+    const o = nova.trim()
+    if (!o || opcoes.includes(o)) return
+    setOpcoes((l) => [...l, o])
+    setNova('')
+  }
+
+  function salvar() {
+    if (!descricao.trim()) { setErro('Escreva a descrição do item'); return }
+    if (escolha && opcoes.length === 0) { setErro('Adicione ao menos uma opção de resposta'); return }
+    onSalvar({
+      ...item,
+      descricao: descricao.trim(),
+      tipo,
+      obrigatorio,
+      unidade: tipo === 'numero' ? unidade.trim() || undefined : undefined,
+      opcoes: escolha ? opcoes : undefined,
+    })
+  }
+
+  const campo = 'px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40'
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={2} autoFocus
+          className={`flex-1 resize-none ${campo}`} aria-label="Descrição do item" />
+        <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoItem)} className={`self-start ${campo}`} aria-label="Tipo de resposta">
+          {TIPOS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+      </div>
+      {tipo === 'numero' && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 whitespace-nowrap">Unidade de medida:</span>
+          <input value={unidade} onChange={(e) => setUnidade(e.target.value)} placeholder="ex: °C, bar, A, %, ppm…" className={`flex-1 ${campo}`} />
+        </div>
+      )}
+      {escolha && (
+        <div className="space-y-2">
+          <span className="text-xs text-gray-500">Opções de resposta:</span>
+          <div className="flex flex-wrap gap-1.5">
+            {opcoes.map((o) => (
+              <span key={o} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                {o}
+                <button type="button" aria-label={`Remover opção ${o}`} onClick={() => setOpcoes((l) => l.filter((x) => x !== o))}>
+                  <X size={10} className="hover:text-destructive" />
+                </button>
+              </span>
+            ))}
+            {opcoes.length === 0 && <span className="text-xs text-gray-400">Nenhuma opção ainda</span>}
+          </div>
+          <div className="flex gap-2">
+            <input value={nova} onChange={(e) => setNova(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addOpcao() } }}
+              placeholder="Digite uma opção e pressione Enter…" className={`flex-1 ${campo}`} />
+            <button type="button" onClick={addOpcao} className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-sm font-semibold hover:bg-primary/20">+ Opção</button>
+          </div>
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+          <input type="checkbox" checked={obrigatorio} onChange={(e) => setObrigatorio(e.target.checked)} className="rounded" />
+          Item obrigatório
+        </label>
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancelar} className="px-3 py-1.5 border border-border rounded-lg text-sm text-gray-600 bg-white">Cancelar</button>
+          <button type="button" onClick={salvar} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-semibold"><Check size={14} /> Aplicar</button>
+        </div>
+      </div>
+      {erro && <p className="text-xs text-destructive">{erro}</p>}
+      <p className="text-[11px] text-gray-400">Depois de aplicar, lembre de tocar em “Salvar Alterações” no fim da página.</p>
+    </div>
   )
 }
