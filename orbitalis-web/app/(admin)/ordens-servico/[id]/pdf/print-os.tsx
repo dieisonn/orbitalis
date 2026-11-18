@@ -29,6 +29,9 @@ export type OS = {
   observacoesGerais: string | null
   assinaturaBase64: string | null
   recebidoPor?: string | null
+  observacoesTecnico?: string | null
+  observacoesTecnicoPor?: string | null
+  observacoesTecnicoEm?: string | null
   auxiliares?: { tecnico: { nome: string | null; email: string } }[]
   tipoGas: string | null
   quantidadeGasGramas: number | null
@@ -351,8 +354,19 @@ export function DocumentoOS({ os, config, modoDia = false, formato = 'tabela', f
 
       {/* OBSERVAÇÕES DO TÉCNICO */}
       <Secao titulo="Observações do técnico">
+        {os.observacoesTecnico?.trim() && (
+          <div style={{ padding: '6px 8px 2px 8px', fontSize: '8.5pt', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{os.observacoesTecnico}</p>
+            {os.observacoesTecnicoPor && (
+              <p style={{ margin: '4px 0 0 0', fontSize: '7.5pt', color: '#666' }}>
+                Registrado por {os.observacoesTecnicoPor}
+                {os.observacoesTecnicoEm ? ` em ${new Date(os.observacoesTecnicoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}` : ''}
+              </p>
+            )}
+          </div>
+        )}
         <div style={{ padding: '0 8px 4px 8px' }}>
-          {Array.from({ length: linhasObs }).map((_, i) => (
+          {Array.from({ length: os.observacoesTecnico?.trim() ? 1 : linhasObs }).map((_, i) => (
             <div key={i} style={{ height: '22px', borderBottom: '1px solid #ccc' }} />
           ))}
         </div>

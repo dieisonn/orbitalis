@@ -2,6 +2,7 @@ import { OsItemStatus } from '@prisma/client';
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsOptional,
@@ -55,6 +56,17 @@ export class SincronizarOsDto {
   @IsString()
   @MaxLength(120)
   recebidoPor?: string;
+
+  // Observação geral do técnico sobre a O.S.; o autor e o horário são gravados pelo servidor
+  @IsOptional()
+  @IsString()
+  @MaxLength(5000)
+  observacoesTecnico?: string;
+
+  // Só vale para O.S. sem equipamento (visita): sem itens não há o que marcar como concluído
+  @IsOptional()
+  @IsBoolean()
+  concluir?: boolean;
 
   // Entrada e saída no cliente, informadas pelo técnico (ISO 8601); vazio = horário do envio
   @IsOptional()

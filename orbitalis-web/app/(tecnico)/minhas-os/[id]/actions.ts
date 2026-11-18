@@ -20,6 +20,8 @@ export async function sincronizarOs(
     assinaturaBase64?: string
     observacoesGerais?: string
     recebidoPor?: string
+    observacoesTecnico?: string
+    concluir?: boolean
     entrada?: string
     saida?: string
   },

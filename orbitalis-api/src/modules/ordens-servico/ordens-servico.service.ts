@@ -556,7 +556,8 @@ export class OrdensServicoService {
       const todosItens = await tx.ordemServicoItem.findMany({
         where: { ordemServicoId: id },
       });
-      const todasConcluidas = todosItens.every((i) => i.statusItem === 'concluido');
+      // O.S. sem equipamento (visita) não tem itens: só encerra quando o técnico pede
+      const todasConcluidas = todosItens.length > 0 ? todosItens.every((i) => i.statusItem === 'concluido') : dto.concluir === true;
 
       // Entrada/saída: o técnico pode informar o horário real; sem isso vale o horário do envio
       const entrada = dto.entrada ? new Date(dto.entrada) : (os.dataInicio ?? new Date());
@@ -565,9 +566,26 @@ export class OrdensServicoService {
         throw new BadRequestException('A saída não pode ser anterior à entrada');
       }
 
+      // Observação do técnico: o autor e o horário vêm do usuário autenticado, nunca do corpo da requisição
+      let obsTecnico: Prisma.OrdemServicoUpdateInput = {};
+      if (dto.observacoesTecnico !== undefined) {
+        const texto = dto.observacoesTecnico.trim();
+        if (!texto) {
+          obsTecnico = { observacoesTecnico: null, observacoesTecnicoPor: null, observacoesTecnicoEm: null };
+        } else if (texto !== (os.observacoesTecnico ?? '')) {
+          const autor = user?.id ? await tx.usuario.findUnique({ where: { id: user.id }, select: { nome: true, email: true } }) : null;
+          obsTecnico = {
+            observacoesTecnico: texto,
+            observacoesTecnicoPor: (autor?.nome ?? autor?.email ?? null)?.slice(0, 120) ?? null,
+            observacoesTecnicoEm: new Date(),
+          };
+        }
+      }
+
       return tx.ordemServico.update({
         where: { id },
         data: {
+          ...obsTecnico,
           status: todasConcluidas ? 'concluida' : 'em_andamento',
           assinaturaBase64: dto.assinaturaBase64,
           observacoesGerais: dto.observacoesGerais,

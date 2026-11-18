@@ -21,6 +21,9 @@ type OrdemServico = OsParaExecucao & {
   assinaturaBase64: string | null
   enderecoServico?: { rotulo: string | null; endereco: string }
   recebidoPor?: string | null
+  observacoesTecnico?: string | null
+  observacoesTecnicoPor?: string | null
+  observacoesTecnicoEm?: string | null
   tecnico?: { id: string; nome: string | null } | null
   auxiliares?: { tecnicoId: string; tecnico: { id: string; nome: string | null; email: string } }[]
   ambiente: {
@@ -204,7 +207,7 @@ export default async function OsDetailPage({ params }: Props) {
 
       {/* Parte interativa */}
       <OsExecucao
-        os={{ id: os.id, status: os.status, itens: os.itens, dataInicio: os.dataInicio, dataConclusao: os.dataConclusao, recebidoPor: os.recebidoPor, fotos }}
+        os={{ id: os.id, status: os.status, itens: os.itens, dataInicio: os.dataInicio, dataConclusao: os.dataConclusao, recebidoPor: os.recebidoPor, observacoesTecnico: os.observacoesTecnico, observacoesTecnicoPor: os.observacoesTecnicoPor, observacoesTecnicoEm: os.observacoesTecnicoEm, fotos }}
       />
     </div>
   )

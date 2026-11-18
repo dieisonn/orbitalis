@@ -65,6 +65,9 @@ type OrdemServico = {
   tecnico: Tecnico | null
   auxiliares?: { tecnicoId: string }[]
   recebidoPor?: string | null
+  observacoesTecnico?: string | null
+  observacoesTecnicoPor?: string | null
+  observacoesTecnicoEm?: string | null
   tipoServico?: { sigla: string; nome: string; corHex: string } | null
   dias?: { id: string; data: string; horaInicio: string | null; horaFim: string | null }[]
   enderecoServico?: { rotulo: string | null; endereco: string }

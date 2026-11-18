@@ -61,6 +61,9 @@ export type OsParaExecucao = {
   status: string
   itens: OsItem[]
   recebidoPor?: string | null
+  observacoesTecnico?: string | null
+  observacoesTecnicoPor?: string | null
+  observacoesTecnicoEm?: string | null
   fotos?: FotoOs[]
   dataInicio?: string | null
   dataConclusao?: string | null
@@ -163,15 +166,16 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   const [fotos, setFotos] = useState<FotoOs[]>(os.fotos ?? [])
   const [enviandoFoto, setEnviandoFoto] = useState<string[]>([])
   const [recebidoPor, setRecebidoPor] = useState(os.recebidoPor ?? '')
+  const [obsTecnico, setObsTecnico] = useState(os.observacoesTecnico ?? '')
   const [aviso, setAviso] = useState<string | null>(null)
   const [base, setBase] = useState<string | null>(null)
   // Ao iniciar, a O.S. é recarregada com a entrada gravada pelo servidor
   useEffect(() => {
     if (!os.dataInicio || entrada) return
     const novo = paraCampo(os.dataInicio)
-    const limpo = base === JSON.stringify({ checked, obs, itemStatus, entrada, saida, recebidoPor })
+    const limpo = base === JSON.stringify({ checked, obs, itemStatus, entrada, saida, recebidoPor, obsTecnico })
     setEntrada(novo)
-    if (limpo) setBase(JSON.stringify({ checked, obs, itemStatus, entrada: novo, saida, recebidoPor }))
+    if (limpo) setBase(JSON.stringify({ checked, obs, itemStatus, entrada: novo, saida, recebidoPor, obsTecnico }))
   }, [os.dataInicio])  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resultado de cada item do checklist: Conforme, Não conforme ou Não se aplica (ausente = ainda não respondido)
@@ -341,7 +345,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
 
   const feitos = os.itens.filter((i) => itemStatus[i.id] === 'concluido').length
   const prontosParaConcluir = os.itens.filter((i) => itemStatus[i.id] !== 'concluido' && mandatoryOk(i)).length
-  const allItemsDone = os.itens.length > 0 && os.itens.every((i) => itemStatus[i.id] === 'concluido')
+  const allItemsDone = os.itens.length === 0 || os.itens.every((i) => itemStatus[i.id] === 'concluido')
 
   function buildPayload(concluindo: boolean) {
     return {
@@ -357,6 +361,8 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
       }),
       assinaturaBase64: sigRef.current?.toDataURL() ?? undefined,
       recebidoPor: recebidoPor.trim() || undefined,
+      observacoesTecnico: obsTecnico,
+      concluir: concluindo,
       entrada: paraIso(entrada),
       saida: concluindo ? paraIso(saida || agoraCampo()) : undefined,
     }
@@ -447,7 +453,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
   }
 
   // Alterações ainda não salvas (compara com o último estado salvo)
-  const estado = JSON.stringify({ checked, obs, itemStatus, entrada, saida, recebidoPor })
+  const estado = JSON.stringify({ checked, obs, itemStatus, entrada, saida, recebidoPor, obsTecnico })
   useEffect(() => { setBase((b) => b ?? estado) }, [])  // eslint-disable-line react-hooks/exhaustive-deps
   const naoSalvo = base !== null && base !== estado
 
@@ -818,6 +824,30 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
           </div>
         )
       })}
+
+      {/* Observação geral do técnico (sempre disponível, inclusive em visitas sem equipamento) */}
+      {(isWorking || isReadOnly) && (
+        <div className="bg-white rounded-2xl border border-border p-4 space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-gray-400">Observações do técnico</p>
+          {isReadOnly ? (
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{obsTecnico.trim() || 'Nenhuma observação registrada.'}</p>
+          ) : (
+            <textarea
+              value={obsTecnico}
+              onChange={(e) => { setObsTecnico(e.target.value); setSaved(false) }}
+              maxLength={5000}
+              rows={4}
+              placeholder="Descreva o que foi feito, o que encontrou ou o que precisa de retorno"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          )}
+          <p className="text-[11px] text-gray-400">
+            {os.observacoesTecnicoPor
+              ? `Registrado por ${os.observacoesTecnicoPor}${os.observacoesTecnicoEm ? ` em ${new Date(os.observacoesTecnicoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}` : ''}.`
+              : 'Seu nome e o horário são registrados automaticamente e aparecem no PDF.'}
+          </p>
+        </div>
+      )}
 
       {/* Assinatura */}
       {isWorking && (

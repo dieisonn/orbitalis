@@ -338,6 +338,10 @@ model OrdemServico {
   horaFim               String?  @map("hora_fim") @db.VarChar(5)
   // Nome de quem recebeu o serviço no cliente (junto da assinatura)
   recebidoPor           String?  @map("recebido_por") @db.VarChar(120)
+  // Observação geral do técnico sobre a O.S. (vale também para visitas sem equipamento) e quem a registrou
+  observacoesTecnico    String?  @map("observacoes_tecnico") @db.Text
+  observacoesTecnicoPor String?  @map("observacoes_tecnico_por") @db.VarChar(120)
+  observacoesTecnicoEm  DateTime? @map("observacoes_tecnico_em")
   dataCriacao           DateTime @default(now()) @map("data_criacao")
   empresaId             String?  @map("empresa_id") @db.Uuid
 
