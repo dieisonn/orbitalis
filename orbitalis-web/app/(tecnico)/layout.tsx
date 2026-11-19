@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logout } from '@/lib/auth'
-import { CalendarDays, ClipboardList, LogOut } from 'lucide-react'
+import { CalendarDays, ClipboardList, KeyRound, LogOut } from 'lucide-react'
 import { OfflineBanner } from '@/components/ui/offline-banner'
 import { Logo } from '@/components/ui/logo'
 
@@ -44,6 +44,16 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
         >
           <CalendarDays size={22} />
           Agenda
+        </Link>
+        <Link
+          href="/trocar-senha"
+          className={[
+            'flex-1 flex flex-col items-center justify-center py-3 gap-0.5 text-xs font-medium transition-colors',
+            path.startsWith('/trocar-senha') ? 'text-action' : 'text-gray-500 hover:text-gray-800',
+          ].join(' ')}
+        >
+          <KeyRound size={22} />
+          Senha
         </Link>
         <form action={logout} className="flex-1">
           <button

@@ -4,6 +4,7 @@ import { DeleteButton } from '@/components/ui/delete-button'
 import { ConvidarBtn } from '@/components/ui/convidar-btn'
 import { removerMembro, revogarConvite } from './actions'
 import { TransferirOs } from './transferir-os'
+import { RedefinirSenha } from './redefinir-senha'
 import { PERFIS } from '@/lib/modulos'
 import { CopiarConvite } from './copiar-convite'
 import {
@@ -124,7 +125,8 @@ export default async function EquipePage() {
                   <>
                     <a href={`/equipe/${m.id}/acesso`} className="text-xs font-semibold text-primary hover:underline">Editar acesso</a>
                     <TransferirOs userId={m.id} nome={m.nome ?? m.email} destinos={[...tecnicos, ...admins]} />
-                    <DeleteButton action={removerMembro.bind(null, m.id)} label="Remover" />
+                    <RedefinirSenha userId={m.id} nome={m.nome ?? m.email} />
+<DeleteButton action={removerMembro.bind(null, m.id)} label="Remover" />
                   </>
                 )}
               </li>
@@ -159,7 +161,8 @@ export default async function EquipePage() {
                   desde {new Date(m.dataCriacao).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })}
                 </span>
                 <TransferirOs userId={m.id} nome={m.nome ?? m.email} destinos={[...tecnicos, ...admins]} />
-                <DeleteButton
+                <RedefinirSenha userId={m.id} nome={m.nome ?? m.email} />
+<DeleteButton
                   action={removerMembro.bind(null, m.id, undefined)}
                   label="Remover"
                 />
@@ -187,7 +190,8 @@ export default async function EquipePage() {
                   <p className="text-sm font-medium text-gray-900">{m.nome ?? '—'}</p>
                   <p className="text-xs text-gray-400 truncate">{m.email}</p>
                 </div>
-                <DeleteButton
+                <RedefinirSenha userId={m.id} nome={m.nome ?? m.email} />
+<DeleteButton
                   action={removerMembro.bind(null, m.id)}
                   label="Remover"
                 />

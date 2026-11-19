@@ -14,6 +14,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   LogOut,
+  KeyRound,
   Menu,
   X,
   Settings,
@@ -221,6 +222,10 @@ export default function Sidebar({ config, alertasCount = 0, user }: { config?: C
               </span>
             </Link>
           )}
+          <Link href="/trocar-senha" className="mt-1 flex items-center gap-2.5 w-full px-2.5 py-1.5 text-[13px] text-gray-600 hover:text-gray-900 hover:bg-white/70 transition-colors rounded-md">
+            <KeyRound size={14} />
+            Trocar senha
+          </Link>
           <div className="mt-1 grid grid-cols-2 gap-1">
             <ThemeToggle />
             <form action={logout}>

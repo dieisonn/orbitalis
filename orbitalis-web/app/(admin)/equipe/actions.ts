@@ -3,6 +3,15 @@
 import { revalidatePath } from 'next/cache'
 import { api } from '@/lib/api'
 
+export async function redefinirSenhaMembro(userId: string) {
+  try {
+    const r = await api.post<{ senhaTemporaria: string; nome: string; email: string }>(`/equipe/${userId}/redefinir-senha`, {})
+    return { ok: true as const, ...r }
+  } catch (e) {
+    return { ok: false as const, error: e instanceof Error ? e.message : 'Erro ao redefinir a senha' }
+  }
+}
+
 export async function removerMembro(userId: string, transferirPara?: string) {
   try {
     await api.delete(`/equipe/${userId}${transferirPara ? `?transferirPara=${transferirPara}` : ''}`)

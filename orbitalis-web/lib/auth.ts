@@ -36,7 +36,7 @@ export async function login(
     return { error: msg }
   }
 
-  const { access_token, role, permissoes } = await res.json()
+  const { access_token, role, permissoes, senhaProvisoria } = await res.json()
   const store = await cookies()
 
   store.set('orbitalis_token', access_token, {
@@ -54,6 +54,9 @@ export async function login(
     path: '/',
   })
   gravarAcesso(store, permissoes)
+
+  // Senha redefinida por um administrador: a pessoa precisa criar a própria antes de usar o sistema
+  if (senhaProvisoria === true) redirect('/trocar-senha?obrigatoria=1')
 
   // Redireciona pela role diretamente no Server Action
   redirect(
@@ -102,6 +105,63 @@ export async function registrar(
   gravarAcesso(store, permissoes)
 
   redirect('/dashboard')
+}
+
+function mensagemDeErro(body: { message?: string | string[] }, padrao: string) {
+  return Array.isArray(body.message) ? body.message[0] : (body.message ?? padrao)
+}
+
+/** "Esqueci minha senha": a resposta é sempre a mesma, exista ou não a conta. */
+export async function esqueciSenha(email: string): Promise<{ ok: true } | { error: string }> {
+  try {
+    const res = await fetch(`${BASE}/auth/esqueci-senha`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }), cache: 'no-store',
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      return { error: mensagemDeErro(body, 'Não foi possível enviar o link agora') }
+    }
+    return { ok: true }
+  } catch {
+    return { error: 'Não foi possível enviar o link agora. Tente de novo em instantes.' }
+  }
+}
+
+export async function redefinirSenha(token: string, novaSenha: string): Promise<{ ok: true } | { error: string }> {
+  try {
+    const res = await fetch(`${BASE}/auth/redefinir-senha`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, novaSenha }), cache: 'no-store',
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      return { error: mensagemDeErro(body, 'Não foi possível redefinir a senha') }
+    }
+    return { ok: true }
+  } catch {
+    return { error: 'Não foi possível redefinir a senha agora. Tente de novo.' }
+  }
+}
+
+/** Troca a senha de quem está logado (exige a senha atual). */
+export async function trocarSenha(senhaAtual: string, novaSenha: string): Promise<{ ok: true } | { error: string }> {
+  const token = (await cookies()).get('orbitalis_token')?.value
+  if (!token) return { error: 'Sessão expirada. Entre de novo.' }
+  try {
+    const res = await fetch(`${BASE}/auth/trocar-senha`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ senhaAtual, novaSenha }), cache: 'no-store',
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      return { error: mensagemDeErro(body, 'Não foi possível trocar a senha') }
+    }
+    return { ok: true }
+  } catch {
+    return { error: 'Não foi possível trocar a senha agora. Tente de novo.' }
+  }
 }
 
 export async function logout() {

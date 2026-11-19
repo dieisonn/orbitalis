@@ -4,7 +4,7 @@ import { rotaPermitida } from '@/lib/modulos'
 // Rotas públicas que não precisam de token
 // /o/ = orçamento público (link enviado ao cliente), /convite/ e /registro = cadastro por convite,
 // /privacidade e /termos = documentos legais, abertos a qualquer visitante
-const PUBLIC = ['/login', '/e/', '/o/', '/convite/', '/registro', '/privacidade', '/termos']
+const PUBLIC = ['/login', '/esqueci-senha', '/redefinir-senha', '/e/', '/o/', '/convite/', '/registro', '/privacidade', '/termos']
 
 // Rotas exclusivas de admin
 const ADMIN_ONLY = [
