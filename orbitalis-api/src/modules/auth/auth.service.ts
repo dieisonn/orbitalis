@@ -12,7 +12,10 @@ import { runWithTenant } from '../../common/tenant.context';
 import { TIPOS_SERVICO_PADRAO } from '../../common/tipos-servico-padrao';
 import { permissoesEfetivas } from '../../common/modulos';
 import { ModelosChecklistService } from '../modelos-checklist/modelos-checklist.service';
+import { createHash, randomBytes } from 'crypto';
+import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { LoginDto } from './dto/login.dto';
+import { RedefinirSenhaDto, TrocarSenhaDto } from './dto/senha.dto';
 import { RegistrarDto } from './dto/registrar.dto';
 
 @Injectable()
@@ -21,6 +24,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly checklists: ModelosChecklistService,
+    private readonly notificacoes: NotificacoesService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -28,8 +32,8 @@ export class AuthService {
     // e fica com as que batem com a senha informada.
     const email = dto.email.trim().toLowerCase();
     const candidatos = await this.prisma.$queryRaw<
-      { id: string; email: string; senhaHash: string; tipo: UsuarioTipo; empresaId: string | null; perfilAcesso: string | null; permissoes: string[] }[]
-    >`SELECT id, email, senha_hash AS "senhaHash", tipo, empresa_id AS "empresaId", perfil_acesso AS "perfilAcesso", permissoes
+      { id: string; email: string; senhaHash: string; tipo: UsuarioTipo; empresaId: string | null; perfilAcesso: string | null; permissoes: string[]; senhaProvisoria: boolean }[]
+    >`SELECT id, email, senha_hash AS "senhaHash", tipo, empresa_id AS "empresaId", perfil_acesso AS "perfilAcesso", permissoes, senha_provisoria AS "senhaProvisoria"
       FROM usuarios WHERE lower(email) = ${email} AND empresa_id IS NOT NULL`;
 
     if (candidatos.length === 0) throw new UnauthorizedException('Credenciais inválidas');
@@ -81,7 +85,68 @@ export class AuthService {
       access_token: this.jwt.sign(payload),
       role: usuario.tipo,
       permissoes: usuario.tipo === UsuarioTipo.admin ? permissoesEfetivas(usuario.perfilAcesso, usuario.permissoes) : null,
+      // true quando um administrador redefiniu a senha: o site leva a pessoa direto à troca
+      senhaProvisoria: usuario.senhaProvisoria === true,
     };
+  }
+
+  // ─── Senha ────────────────────────────────────────────────────────────────
+
+  /** Troca da própria senha (exige a senha atual; a provisória também vale como atual). */
+  async trocarSenha(usuarioId: string, dto: TrocarSenhaDto) {
+    const linhas = await this.prisma.$queryRaw<{ senhaHash: string }[]>`SELECT senha_hash AS "senhaHash" FROM usuarios WHERE id = ${usuarioId}::uuid`;
+    const atual = linhas[0];
+    if (!atual || !(await bcrypt.compare(dto.senhaAtual, atual.senhaHash))) {
+      throw new BadRequestException('A senha atual não confere');
+    }
+    if (dto.novaSenha === dto.senhaAtual) throw new BadRequestException('A nova senha precisa ser diferente da atual');
+    const hash = await bcrypt.hash(dto.novaSenha, 10);
+    await this.prisma.$executeRaw`UPDATE usuarios SET senha_hash = ${hash}, senha_provisoria = false WHERE id = ${usuarioId}::uuid`;
+    return { message: 'Senha alterada' };
+  }
+
+  /**
+   * "Esqueci minha senha": gera um link de uso único (1 hora) para cada conta com esse e-mail e o envia.
+   * A resposta é sempre a mesma, exista ou não a conta, para não revelar quem tem cadastro.
+   */
+  async esqueciSenha(emailBruto: string) {
+    const resposta = { message: 'Se esse e-mail tiver cadastro, enviamos um link para criar uma nova senha.' };
+    const email = emailBruto.trim().toLowerCase();
+    try {
+      const contas = await this.prisma.$queryRaw<{ id: string; nome: string | null }[]>`
+        SELECT id, nome FROM usuarios WHERE lower(email) = ${email} AND empresa_id IS NOT NULL LIMIT 5`;
+      const base = (process.env.FRONTEND_URL ?? 'https://www.orbitalis.com.br').replace(/\/$/, '');
+      for (const c of contas) {
+        // no máximo 1 pedido por minuto por conta
+        const recente = await this.prisma.$queryRaw<{ n: number }[]>`
+          SELECT count(*)::int AS n FROM redefinicoes_senha WHERE usuario_id = ${c.id}::uuid AND criado_em > now() - interval '1 minute'`;
+        if ((recente[0]?.n ?? 0) > 0) continue;
+        const token = randomBytes(32).toString('hex');
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+        await this.prisma.$executeRaw`DELETE FROM redefinicoes_senha WHERE usuario_id = ${c.id}::uuid AND usado_em IS NULL`;
+        await this.prisma.$executeRaw`
+          INSERT INTO redefinicoes_senha (usuario_id, token_hash, expira_em)
+          VALUES (${c.id}::uuid, ${tokenHash}, now() + interval '1 hour')`;
+        await this.notificacoes.enviarRedefinicaoSenha(email, c.nome, `${base}/redefinir-senha?token=${token}`);
+      }
+    } catch {
+      // nunca devolve erro aqui: nem a falha do e-mail pode revelar se a conta existe
+    }
+    return resposta;
+  }
+
+  /** Conclui a redefinição com o token do e-mail. */
+  async redefinirSenha(dto: RedefinirSenhaDto) {
+    const tokenHash = createHash('sha256').update(dto.token).digest('hex');
+    const achados = await this.prisma.$queryRaw<{ id: string; usuarioId: string }[]>`
+      SELECT id, usuario_id AS "usuarioId" FROM redefinicoes_senha
+      WHERE token_hash = ${tokenHash} AND usado_em IS NULL AND expira_em > now()`;
+    const r = achados[0];
+    if (!r) throw new BadRequestException('Este link expirou ou já foi usado. Peça um novo em "Esqueci minha senha".');
+    const hash = await bcrypt.hash(dto.novaSenha, 10);
+    await this.prisma.$executeRaw`UPDATE usuarios SET senha_hash = ${hash}, senha_provisoria = false WHERE id = ${r.usuarioId}::uuid`;
+    await this.prisma.$executeRaw`UPDATE redefinicoes_senha SET usado_em = now() WHERE usuario_id = ${r.usuarioId}::uuid`;
+    return { message: 'Senha redefinida' };
   }
 
   // Registro de atividades: entradas no sistema e tentativas de login com senha errada

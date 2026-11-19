@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -57,6 +58,13 @@ export class EquipeController {
     @Query('transferirPara') transferirPara?: string,
   ) {
     return this.svc.removerMembro(userId, user, transferirPara);
+  }
+
+  // POST /equipe/:userId/redefinir-senha — gera uma senha temporária (mostrada só nesta resposta)
+  @Post(':userId/redefinir-senha')
+  @HttpCode(HttpStatus.OK)
+  redefinirSenha(@Param('userId', ParseUUIDPipe) userId: string, @CurrentUser() user: AuthUser) {
+    return this.svc.redefinirSenha(userId, user);
   }
 
   // GET /equipe/:userId/carga — O.S./planos que o membro ainda tem em aberto

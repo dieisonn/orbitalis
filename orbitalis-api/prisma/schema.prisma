@@ -129,6 +129,8 @@ model Usuario {
   // Equipe do escritório (tipo admin): null/'administrador' = acesso total; senão só os módulos de `permissoes`
   perfilAcesso  String?     @map("perfil_acesso") @db.VarChar(30)
   permissoes    String[]    @default([])
+  // true depois que um administrador redefine a senha: a pessoa deve trocá-la no primeiro acesso
+  senhaProvisoria Boolean   @default(false) @map("senha_provisoria")
 
   cliente                        Cliente?
   ordensComoTecnico              OrdemServico[]    @relation("TecnicoOrdens")

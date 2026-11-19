@@ -82,6 +82,22 @@ export class NotificacoesService {
     }
   }
 
+  /** Link para a pessoa criar uma nova senha (vale 1 hora). Sem SMTP configurado, apenas registra no log do servidor. */
+  async enviarRedefinicaoSenha(to: string, nome: string | null, link: string) {
+    if (!this.transporter) {
+      this.logger.warn(`Redefinição de senha pedida para ${to}, mas o SMTP não está configurado: e-mail não enviado`);
+      return;
+    }
+    await this.send(
+      to,
+      'Orbitalis — redefinir sua senha',
+      `<p>Olá${nome ? `, ${nome}` : ''}.</p>
+       <p>Recebemos um pedido para redefinir a senha da sua conta no Orbitalis. Use o link abaixo para criar uma nova senha (vale por 1 hora):</p>
+       <p><a href="${link}">${link}</a></p>
+       <p>Se não foi você, ignore este e-mail: sua senha continua a mesma.</p>`,
+    );
+  }
+
   async notificarOsAgendada(params: {
     tecnicoEmail: string
     tecnicoNome: string | null

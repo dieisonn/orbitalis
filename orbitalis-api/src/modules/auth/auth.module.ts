@@ -6,11 +6,13 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { ModelosChecklistModule } from '../modelos-checklist/modelos-checklist.module';
+import { NotificacoesModule } from '../notificacoes/notificacoes.module';
 
 @Module({
   imports: [
     PassportModule,
     ModelosChecklistModule,
+    NotificacoesModule,
     JwtModule.register({
       secret: getJwtSecret(),
       signOptions: { expiresIn: (process.env.JWT_EXPIRES_IN ?? '8h') as any },

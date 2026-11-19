@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { PushService } from '../push/push.service';
 import { podeConceder, resolverAcesso } from '../../common/modulos';
+import { gerarSenhaTemporaria } from '../../common/senha-temporaria';
 
 type Quem = { id: string; permissoes?: string[] | null };
 
@@ -216,6 +217,28 @@ export class EquipeService {
       data: { perfilAcesso: acesso.perfilAcesso, permissoes: acesso.permissoes },
       select: { id: true, perfilAcesso: true, permissoes: true },
     });
+  }
+
+  /**
+   * Redefine a senha de um membro (técnico, cliente ou equipe do escritório): gera uma senha temporária,
+   * mostrada uma única vez a quem redefiniu, e a pessoa é obrigada a trocá-la no primeiro acesso.
+   */
+  async redefinirSenha(userId: string, quem: Quem) {
+    if (userId === quem.id) throw new BadRequestException('Para a sua própria senha, use "Trocar senha" no menu');
+    // findFirst aplica o filtro de empresa: só dá para redefinir a senha de quem é desta empresa
+    const alvo = await this.prisma.usuario.findFirst({
+      where: { id: userId },
+      select: { id: true, nome: true, email: true, tipo: true, perfilAcesso: true },
+    });
+    if (!alvo) throw new NotFoundException('Pessoa não encontrada');
+    // administrador com acesso total só é redefinido por outro com acesso total (evita tomada de conta)
+    if (alvo.tipo === UsuarioTipo.admin && (!alvo.perfilAcesso || alvo.perfilAcesso === 'administrador') && Array.isArray(quem.permissoes)) {
+      throw new ForbiddenException('Apenas um administrador com acesso total pode redefinir a senha de outro administrador');
+    }
+    const senhaTemporaria = gerarSenhaTemporaria();
+    const hash = await bcrypt.hash(senhaTemporaria, 10);
+    await this.prisma.$executeRaw`UPDATE usuarios SET senha_hash = ${hash}, senha_provisoria = true WHERE id = ${alvo.id}::uuid`;
+    return { senhaTemporaria, nome: alvo.nome ?? alvo.email, email: alvo.email };
   }
 
   async removerMembro(userId: string, quem: Quem, transferirPara?: string) {
