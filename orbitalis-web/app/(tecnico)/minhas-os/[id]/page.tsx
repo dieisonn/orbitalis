@@ -67,7 +67,7 @@ export default async function OsDetailPage({ params }: Props) {
       <div className="text-center py-12">
         <p className="text-gray-400 text-sm">O.S. não encontrada ou sem permissão de acesso.</p>
         <a href="/minhas-os" className="text-primary text-sm underline mt-2 block">
-          ← Voltar para Minhas O.S.
+          ← Voltar para Minhas ordens de serviço
         </a>
       </div>
     )
@@ -88,7 +88,7 @@ export default async function OsDetailPage({ params }: Props) {
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary transition-colors"
       >
         <ArrowLeft size={14} />
-        Minhas O.S.
+        Minhas ordens de serviço
       </a>
 
       {/* Cabeçalho da O.S. */}

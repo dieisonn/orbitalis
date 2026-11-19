@@ -167,7 +167,7 @@ export function OsList({ ordens }: { ordens: OrdemServicoLista[] }) {
   return (
     <div>
       <div className="mb-3">
-        <h1 className="text-xl font-bold text-primary">Minhas O.S.</h1>
+        <h1 className="text-xl font-bold text-primary">Minhas ordens de serviço</h1>
         <p className="text-gray-500 text-xs mt-0.5">
           {hoje.length > 0 ? `${hoje.length} para hoje · ` : ''}{pendentes.length} pendente{pendentes.length === 1 ? '' : 's'}
         </p>
