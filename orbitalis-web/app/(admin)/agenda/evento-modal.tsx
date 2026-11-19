@@ -3,7 +3,7 @@
 import { EnderecoInput } from '@/components/ui/endereco-input'
 import { ClienteRapidoModal } from '@/components/ui/cliente-rapido-modal'
 import { useEffect, useState } from 'react'
-import { X, MapPin, Loader2, User, Clock, Building2, Repeat, AlignLeft, Palette, Wrench } from 'lucide-react'
+import { X, MapPin, Loader2, User, Clock, Building2, Repeat, AlignLeft, Palette, Wrench, Bell } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, relogio, instante, hoje,
   duracaoLegivel, COR_PADRAO,
@@ -100,6 +100,11 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
     origem && origem.corHex.toLowerCase() !== (origem.tipoServico?.corHex ?? COR_PADRAO).toLowerCase() ? origem.corHex : null,
   )
   const [diaInteiro, setDiaInteiro] = useState(origem?.diaInteiro ?? false)
+  // avisos do evento: ligado/desligado e antecedências próprias (vazio = avisos padrão de cada pessoa)
+  const [avisar, setAvisar] = useState(origem?.avisar ?? true)
+  const [avisosMin, setAvisosMin] = useState<number[]>(origem?.avisosMinutos ?? [])
+  const [avisoCustom, setAvisoCustom] = useState('')
+  const [avisoUnid, setAvisoUnid] = useState<'min' | 'h'>('min')
   const [data, setData] = useState(dataInput(rIni))
   const [horaIni, setHoraIni] = useState(`${String(rIni.hh).padStart(2, '0')}:${String(rIni.mm).padStart(2, '0')}`)
   const rFimSug = !evento && fimSugerido ? relogio(fimSugerido) : null
@@ -177,6 +182,30 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   // Sem fim preenchido (novo evento), mostra a duração padrão
   const fimEfetivo = horaFim || somar(horaIni, duracaoTipos)
 
+  function alternarAviso(m: number) {
+    setAvisosMin((l) => l.includes(m) ? l.filter((x) => x !== m) : l.length >= 5 ? l : [...l, m].sort((a, b) => a - b))
+  }
+  function adicionarAvisoCustom() {
+    const n = Math.round(Number(avisoCustom.replace(',', '.')) * (avisoUnid === 'h' ? 60 : 1))
+    if (!Number.isFinite(n) || n < 1 || n > 1440) { setErro('Aviso personalizado: de 1 minuto até 24 horas'); return }
+    if (avisosMin.length >= 5 && !avisosMin.includes(n)) { setErro('No máximo 5 avisos por evento'); return }
+    setErro(null)
+    setAvisosMin((l) => l.includes(n) ? l : [...l, n].sort((a, b) => a - b))
+    setAvisoCustom('')
+  }
+  const rotuloAviso = (m: number) => m % 60 === 0 ? `${m / 60} h` : `${m} min`
+  const corpoAvisos = { avisar, avisosMinutos: avisar ? avisosMin : [] }
+  const avisosPadrao = avisar && avisosMin.length === 0
+  // "Criar também a O.S." gera o evento sozinha: aplica os avisos escolhidos a esse evento depois
+  async function avisosNoEventoDaOs(osId: string, y0: number, m0: number, d0: number) {
+    if (avisosPadrao) return
+    try {
+      const lista: { id: string; ordemServico?: { id: string } | null }[] = await chamar('GET', `/agenda?inicio=${encodeURIComponent(instante(y0, m0, d0, 0, 0))}&fim=${encodeURIComponent(instante(y0, m0, d0 + 1, 0, 0))}`)
+      const ev = lista.find((x) => x.ordemServico?.id === osId)
+      if (ev) await chamar('PATCH', `/agenda/${ev.id}`, corpoAvisos)
+    } catch { /* a O.S. já foi criada; os avisos podem ser ajustados editando o evento */ }
+  }
+
   async function salvar(escopo?: Escopo) {
     setErro(null)
     const [y, mo, d] = data.split('-').map(Number)
@@ -203,7 +232,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
       if (evento && !ehOs && criarOs && !diaInteiro) {
         // Evento avulso que agora ganha O.S.: cria a O.S. (que gera o próprio evento) e tira o evento avulso, para não duplicar
         if (!clienteId) { setSalvando(false); return setErro('Escolha o cliente para gerar a O.S.') }
-        await chamar('POST', '/ordens-servico', {
+        const osNova = await chamar('POST', '/ordens-servico', {
           clienteId,
           tecnicoId: tecnicoId || undefined,
           origem: 'manual_admin',
@@ -215,6 +244,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
           horaFim: fimEfetivo,
           observacoesGerais: [titulo.trim() && `Evento: ${titulo.trim()}`, descricao.trim()].filter(Boolean).join('\n') || undefined,
         })
+        if (osNova?.id) await avisosNoEventoDaOs(osNova.id, y, mo - 1, d)
         try {
           await chamar('DELETE', `/agenda/${evento.id}`)
         } catch {
@@ -232,6 +262,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
           tecnicoId: tecnicoId || null,
           ...(ehOs ? {} : { diaInteiro, tipoServicoId: tipoIds[0] || null, tiposExtrasIds: tipoIds.slice(1), clienteId: clienteId || null }),
           cor: corPropria,
+          ...corpoAvisos,
         })
       } else {
         if (regra && termino === 'ate' && !ate) { setSalvando(false); return setErro('Informe até quando repetir') }
@@ -253,13 +284,14 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
           tiposExtrasIds: tipoIds.slice(1),
           clienteId: clienteId || null,
           ...(corPropria ? { cor: corPropria } : {}),
+          ...corpoAvisos,
         }
         try {
           // Repetição: a API cria todas as ocorrências de uma vez, ligadas na mesma série (tudo ou nada)
           if (criarOs && lista.length === 1 && !diaInteiro) {
             if (!clienteId) throw new Error('Escolha o cliente para criar a O.S.')
             // A O.S. cria o evento da agenda sozinha: um só registro, sempre em sincronia
-            await chamar('POST', '/ordens-servico', {
+            const osNova = await chamar('POST', '/ordens-servico', {
               clienteId,
               tecnicoId: tecnicoId || undefined,
               origem: 'manual_admin',
@@ -271,6 +303,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
               horaFim: fimEfetivo,
               observacoesGerais: descricao.trim() || undefined,
             })
+            if (osNova?.id) await avisosNoEventoDaOs(osNova.id, y, mo - 1, d)
           } else if (lista.length > 1) await chamar('POST', '/agenda/serie', { ...corpo, ...janela(lista[0]), ocorrencias: lista.map(janela) })
           else await chamar('POST', '/agenda', { ...corpo, ...janela(lista[0]) })
         } catch (err) {
@@ -397,6 +430,52 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
             )}
           </Linha>
         )}
+
+        {/* Avisos do evento */}
+        <Linha icone={<Bell size={16} />}>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm text-gray-800 mt-2">
+              <input type="checkbox" checked={avisar} onChange={(e) => setAvisar(e.target.checked)} className="accent-action w-4 h-4" />
+              Avisar sobre este evento
+            </label>
+            {avisar && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Avisar antes do evento">
+                  {[5, 10, 15, 30, 60].map((m) => {
+                    const on = avisosMin.includes(m)
+                    return (
+                      <button key={m} type="button" onClick={() => alternarAviso(m)} aria-pressed={on}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${on ? 'bg-action text-white border-action' : 'bg-white text-gray-700 border-border hover:bg-surface'}`}>
+                        {rotuloAviso(m)}
+                      </button>
+                    )
+                  })}
+                  {avisosMin.filter((m) => ![5, 10, 15, 30, 60].includes(m)).map((m) => (
+                    <button key={m} type="button" onClick={() => alternarAviso(m)} aria-pressed title="Tirar este aviso"
+                      className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-action text-white border-action">
+                      {rotuloAviso(m)} ×
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="number" min={1} max={avisoUnid === 'h' ? 24 : 1440} value={avisoCustom} aria-label="Aviso personalizado"
+                    placeholder="Outro tempo" onChange={(e) => setAvisoCustom(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); adicionarAvisoCustom() } }}
+                    className={`${campo} !w-28`} />
+                  <select value={avisoUnid} onChange={(e) => setAvisoUnid(e.target.value as 'min' | 'h')} aria-label="Unidade do aviso" className={`${campo} !w-auto`}>
+                    <option value="min">minutos</option>
+                    <option value="h">horas</option>
+                  </select>
+                  <button type="button" onClick={adicionarAvisoCustom} className="px-3 py-2 text-xs font-semibold text-action border border-action/40 rounded-lg hover:bg-action/5">Adicionar</button>
+                </div>
+                <p className="text-[11px] text-gray-600">
+                  {avisosPadrao ? 'Nenhum tempo escolhido: usa os avisos padrão de cada pessoa (ícone de sino da agenda).' : `Aviso ${avisosMin.map(rotuloAviso).join(', ')} antes do início.`}
+                </p>
+              </div>
+            )}
+            {!avisar && <p className="text-[11px] text-gray-600">Este evento não vai gerar avisos.</p>}
+          </div>
+        </Linha>
 
         {!evento && (
           <Linha icone={<Repeat size={16} />}>

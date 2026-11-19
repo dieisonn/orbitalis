@@ -5,11 +5,11 @@ import Link from 'next/link'
 import { Bell, BellRing, X, Loader2 } from 'lucide-react'
 import { hhmm, type EventoAgenda } from '@/lib/agenda'
 
-// Avisos de eventos próximos: a pessoa escolhe até 3 antecedências (10/20/30/40/50 min; padrão 30).
+// Avisos de eventos próximos: a pessoa escolhe até 3 antecedências (5 a 60 min; padrão 30). Cada evento pode desligar os avisos ou ter antecedências próprias.
 // Enquanto o Orbitalis estiver aberto, a página consulta a agenda a cada 30 s e avisa na tela
 // (e pelo navegador, se a pessoa permitir). Não há aviso com o sistema fechado.
 
-export const OPCOES_AVISO = [10, 20, 30, 40, 50] as const
+export const OPCOES_AVISO = [5, 10, 15, 20, 30, 40, 50, 60] as const
 const PADRAO = [30]
 const EVENTO_MUDOU = 'orbitalis:avisos-agenda'
 const CHAVE_FEITOS = 'orbitalis_avisos_feitos'
@@ -142,9 +142,9 @@ export function AvisosAgendaNotificador() {
 
     async function verificar() {
       const prefs = minutosRef.current
-      if (!prefs.length) return
       const agora = Date.now()
-      const maior = Math.max(...prefs)
+      // eventos com antecedência própria podem pedir até 24 h; a janela cobre isso
+      const maior = Math.max(1440, ...prefs)
       try {
         const q = `/agenda?inicio=${encodeURIComponent(new Date(agora).toISOString())}&fim=${encodeURIComponent(new Date(agora + (maior + 2) * 60_000).toISOString())}`
         const r = await fetch(proxy(q), { cache: 'no-store' })
@@ -156,10 +156,13 @@ export function AvisosAgendaNotificador() {
           if (e.diaInteiro) continue
           const st = e.ordemServico?.status
           if (st === 'concluida' || st === 'cancelada') continue
+          if (e.avisar === false) continue                    // evento sem avisos
+          const lista = e.avisosMinutos?.length ? [...e.avisosMinutos].sort((a, b) => a - b) : prefs
+          if (!lista.length) continue
           const falta = (new Date(e.inicio).getTime() - agora) / 60_000
           if (falta <= 0) continue
           // avisos "vencidos" = antecedência >= tempo que falta; avisa pelo mais próximo e dá os demais por feitos
-          const vencidos = prefs.filter((m) => m >= falta)
+          const vencidos = lista.filter((m) => m >= falta)
           if (!vencidos.length) continue
           const chaveMenor = `${e.id}|${e.inicio}|${vencidos[0]}`
           if (feitos[chaveMenor]) continue
