@@ -185,6 +185,16 @@ tbody tr { transition: background-color .12s; }
 :root.is-dark .bg-emerald-100 { background-color: rgba(16,185,129,.18) !important; }
 :root.is-dark .bg-violet-100  { background-color: rgba(139,92,246,.18) !important; }
 
+/* Variantes com opacidade (bg-red-50/60 etc.) não eram cobertas: ficavam rosa/âmbar claro e o texto claro perdia contraste */
+:root.is-dark .bg-red-50\/60   { background-color: rgba(220,38,38,.14) !important; }
+:root.is-dark .bg-amber-50\/60 { background-color: rgba(217,119,6,.14) !important; }
+:root.is-dark .bg-red-50\/50, :root.is-dark .bg-red-50\/40   { background-color: rgba(220,38,38,.12) !important; }
+:root.is-dark .bg-amber-50\/50, :root.is-dark .bg-amber-50\/40 { background-color: rgba(217,119,6,.12) !important; }
+:root.is-dark .bg-red-100\/70   { background-color: rgba(220,38,38,.18) !important; }
+:root.is-dark .bg-amber-100\/70 { background-color: rgba(217,119,6,.18) !important; }
+:root.is-dark .bg-gray-100\/70  { background-color: #111827 !important; }
+:root.is-dark .border-amber-200 { border-color: rgba(245,158,11,.35) !important; }
+
 :root.is-dark .hover\:bg-red-50:hover   { background-color: rgba(220,38,38,.12) !important; }
 :root.is-dark .hover\:bg-green-50:hover { background-color: rgba(22,163,74,.12) !important; }
 
