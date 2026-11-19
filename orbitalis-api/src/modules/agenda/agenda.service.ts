@@ -191,6 +191,8 @@ export class AgendaService implements OnApplicationBootstrap {
       diaInteiro: e.diaInteiro,
       corHex: e.cor ?? e.tipoServico?.corHex ?? COR_PADRAO,
       personalizado: e.personalizado,
+      avisar: e.avisar,
+      avisosMinutos: e.avisosMinutos,
       tipoServico: e.tipoServico,
       // principal primeiro, depois os adicionais (ex.: VT + MC)
       tiposServico: [...(e.tipoServico ? [e.tipoServico] : []), ...extras],
@@ -435,6 +437,8 @@ export class AgendaService implements OnApplicationBootstrap {
         clienteId: dto.clienteId ?? null,
         tipoServicoId: dto.tipoServicoId ?? null,
         tiposExtrasIds: extras.map((t) => t.id),
+        avisar: dto.avisar ?? true,
+        avisosMinutos: dto.avisar === false ? [] : (dto.avisosMinutos ?? []),
         serieId: serieId ?? null,
       },
       include: INCLUDE_EVENTO,
@@ -490,6 +494,11 @@ export class AgendaService implements OnApplicationBootstrap {
       ...(dto.local !== undefined ? { local: dto.local || null } : {}),
     };
     const mexeuNosTextos = Object.keys(textos).length > 0;
+    // Avisos do evento (valem também para evento de O.S.). avisar=false limpa as antecedências próprias.
+    const avisos: { avisar?: boolean; avisosMinutos?: number[] } = {
+      ...(dto.avisar !== undefined ? { avisar: dto.avisar } : {}),
+      ...(dto.avisar === false ? { avisosMinutos: [] } : dto.avisosMinutos !== undefined ? { avisosMinutos: dto.avisosMinutos } : {}),
+    };
 
     if (!os) {
       // Evento avulso: tudo é editável
@@ -512,6 +521,7 @@ export class AgendaService implements OnApplicationBootstrap {
           ...(dto.clienteId !== undefined ? { clienteId: dto.clienteId } : {}),
           ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId } : {}),
           ...(extras ? { tiposExtrasIds: extras.map((t) => t.id) } : {}),
+          ...avisos,
         },
         include: INCLUDE_EVENTO,
       });
@@ -533,6 +543,7 @@ export class AgendaService implements OnApplicationBootstrap {
             ...(dto.clienteId !== undefined ? { clienteId: dto.clienteId } : {}),
             ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId } : {}),
             ...(extras ? { tiposExtrasIds: extras.map((t) => t.id) } : {}),
+            ...avisos,
           },
         });
       }
@@ -576,10 +587,10 @@ export class AgendaService implements OnApplicationBootstrap {
       osData.tecnico = dto.tecnicoId ? { connect: { id: dto.tecnicoId } } : { disconnect: true };
     }
 
-    if (mexeuNosTextos || dto.cor !== undefined) {
+    if (mexeuNosTextos || dto.cor !== undefined || Object.keys(avisos).length) {
       await this.prisma.eventoAgenda.update({
         where: { id },
-        data: { ...textos, ...(mexeuNosTextos ? { personalizado: true } : {}), ...(dto.cor !== undefined ? { cor: dto.cor } : {}) },
+        data: { ...textos, ...(mexeuNosTextos ? { personalizado: true } : {}), ...(dto.cor !== undefined ? { cor: dto.cor } : {}), ...avisos },
       });
     }
     if (Object.keys(osData).length) {

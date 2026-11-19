@@ -666,6 +666,9 @@ model EventoAgenda {
   tiposExtrasIds String[] @default([]) @map("tipos_extras_ids") @db.Uuid
   tecnicoId      String?  @map("tecnico_id") @db.Uuid
   clienteId      String?  @map("cliente_id") @db.Uuid
+  // Avisos deste evento: avisar=false desliga; lista vazia = usar os avisos padrão de quem é avisado
+  avisar         Boolean  @default(true)
+  avisosMinutos  Int[]    @default([]) @map("avisos_minutos")
   // Eventos criados juntos por uma repetição compartilham a série (editar/excluir "este, seguintes ou todos")
   serieId        String?  @map("serie_id") @db.Uuid
   criadoEm       DateTime @default(now()) @map("criado_em")

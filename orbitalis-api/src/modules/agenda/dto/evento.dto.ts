@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsOptional, IsString, IsUUID, Matches, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsDateString, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateEventoDto {
@@ -35,6 +35,14 @@ export class CreateEventoDto {
   // Tipos adicionais (além do principal), no máximo 3
   @IsOptional() @IsArray() @ArrayMaxSize(3) @IsUUID('all', { each: true })
   tiposExtrasIds?: string[];
+
+  // Avisos do evento: false = sem avisos; true com lista vazia = avisos padrão da pessoa
+  @IsOptional() @IsBoolean()
+  avisar?: boolean;
+
+  // Antecedências próprias em minutos (1 min a 24 h), no máximo 5
+  @IsOptional() @IsArray() @ArrayMaxSize(5) @ArrayUnique() @IsInt({ each: true }) @Min(1, { each: true }) @Max(1440, { each: true })
+  avisosMinutos?: number[];
 }
 
 export class UpdateEventoDto {
@@ -71,6 +79,14 @@ export class UpdateEventoDto {
   // Tipos adicionais (além do principal), no máximo 3
   @IsOptional() @IsArray() @ArrayMaxSize(3) @IsUUID('all', { each: true })
   tiposExtrasIds?: string[];
+
+  // Avisos do evento: false = sem avisos; true com lista vazia = avisos padrão da pessoa
+  @IsOptional() @IsBoolean()
+  avisar?: boolean;
+
+  // Antecedências próprias em minutos (1 min a 24 h), no máximo 5
+  @IsOptional() @IsArray() @ArrayMaxSize(5) @ArrayUnique() @IsInt({ each: true }) @Min(1, { each: true }) @Max(1440, { each: true })
+  avisosMinutos?: number[];
 }
 
 export class OcorrenciaDto {
