@@ -13,14 +13,16 @@ async function proxy(request: NextRequest, method: string) {
     return NextResponse.json({ message: 'Rota inválida' }, { status: 400 })
   }
 
-  const hasBody = ['POST', 'PATCH', 'PUT'].includes(method)
+  // Content-Type JSON só com corpo: a API recusa "application/json" vazio (ex.: PATCH .../cancelar sem corpo)
+  const texto = ['POST', 'PATCH', 'PUT'].includes(method) ? await request.text() : ''
+  const hasBody = texto.trim().length > 0
   const res = await fetch(`${BACKEND}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     },
-    body: hasBody ? await request.text() : undefined,
+    body: hasBody ? texto : undefined,
     cache: 'no-store',
   })
 
