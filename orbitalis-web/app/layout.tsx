@@ -8,6 +8,7 @@ import '@fontsource/ibm-plex-sans-condensed/latin-600.css'
 import './globals.css'
 import { TruncateTitles } from '@/components/ui/truncate-titles'
 import { AvisoCookies } from '@/components/ui/aviso-cookies'
+import { SPLASH_IOS } from '@/lib/splash-ios'
 import { Acessibilidade } from '@/components/ui/acessibilidade'
 
 // Tela do celular abre no tamanho certo e não dá zoom (nem o zoom automático do iOS ao tocar em campos)
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
     capable: true,
     title: 'Orbitalis',
     statusBarStyle: 'black-translucent',
+    startupImage: SPLASH_IOS,
   },
   other: {
     'mobile-web-app-capable': 'yes',
