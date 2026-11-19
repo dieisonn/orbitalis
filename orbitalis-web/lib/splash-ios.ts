@@ -63,5 +63,29 @@ export const SPLASH_IOS = [
   {
     "url": "/splash/splash-1620x2160.png",
     "media": "(device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+  },
+  {
+    "url": "/splash/splash-1206x2622.png",
+    "media": "(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+  },
+  {
+    "url": "/splash/splash-1320x2868.png",
+    "media": "(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+  },
+  {
+    "url": "/splash/splash-1260x2736.png",
+    "media": "(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+  },
+  {
+    "url": "/splash/splash-2064x2752.png",
+    "media": "(device-width: 1032px) and (device-height: 1376px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+  },
+  {
+    "url": "/splash/splash-1488x2266.png",
+    "media": "(device-width: 744px) and (device-height: 1133px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+  },
+  {
+    "url": "/splash/splash-1668x2420.png",
+    "media": "(device-width: 834px) and (device-height: 1210px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
   }
 ]
