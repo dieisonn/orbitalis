@@ -6,6 +6,7 @@ import { logout } from '@/lib/auth'
 import { CalendarDays, ClipboardList, KeyRound, LogOut } from 'lucide-react'
 import { OfflineBanner } from '@/components/ui/offline-banner'
 import { Logo } from '@/components/ui/logo'
+import { AtualizadorPortal } from '@/components/ui/atualizador-portal'
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -19,6 +20,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       </header>
 
       <OfflineBanner />
+      <AtualizadorPortal />
 
       {/* Conteúdo principal */}
       <main id="conteudo" className="px-4 py-4 pb-20 max-w-xl mx-auto">{children}</main>

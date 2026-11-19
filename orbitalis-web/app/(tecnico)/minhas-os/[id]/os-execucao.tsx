@@ -118,39 +118,9 @@ function Miniaturas({ fotos, onRemover }: { fotos: FotoOs[]; onRemover?: (id: st
   )
 }
 
-/** Ditado por voz (reconhecimento do próprio navegador); só aparece onde houver suporte. */
-function BotaoDitado({ onTexto }: { onTexto: (texto: string) => void }) {
-  const [suportado, setSuportado] = useState(false)
-  const [ouvindo, setOuvindo] = useState(false)
-  const ref = useRef<{ stop: () => void } | null>(null)
-  useEffect(() => {
-    const w = window as unknown as Record<string, unknown>
-    setSuportado(!!(w.SpeechRecognition || w.webkitSpeechRecognition))
-  }, [])
-  if (!suportado) return null
-  function alternar() {
-    if (ouvindo) { ref.current?.stop(); return }
-    const w = window as unknown as Record<string, new () => any> // eslint-disable-line @typescript-eslint/no-explicit-any
-    const R = w.SpeechRecognition || w.webkitSpeechRecognition
-    const r = new R()
-    r.lang = 'pt-BR'; r.interimResults = false; r.continuous = true
-    r.onresult = (e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-      let t = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) t += e.results[i][0].transcript
-      if (t.trim()) onTexto(t.trim())
-    }
-    r.onend = () => setOuvindo(false)
-    r.onerror = () => setOuvindo(false)
-    ref.current = r
-    r.start()
-    setOuvindo(true)
-  }
-  return (
-    <button type="button" onClick={alternar}
-      className={['inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border', ouvindo ? 'bg-red-500 border-red-500 text-white animate-pulse' : 'border-gray-200 text-gray-600'].join(' ')}>
-      <Mic size={12} /> {ouvindo ? 'Ouvindo… toque para parar' : 'Ditar'}
-    </button>
-  )
+/** Dica de ditado: o reconhecimento de voz do navegador trava o app instalado no iPhone; o teclado do celular dita com segurança. */
+function DicaDitado() {
+  return <span className="inline-flex items-center gap-1 text-[11px] text-gray-400"><Mic size={11} /> Para ditar, use o microfone do teclado</span>
 }
 
 export function OsExecucao({ os }: { os: OsParaExecucao }) {
@@ -778,7 +748,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Observações técnicas</p>
-                  <BotaoDitado onTexto={(t) => setObs((prev) => ({ ...prev, [item.id]: `${prev[item.id] ? prev[item.id] + ' ' : ''}${t}` }))} />
+                  <DicaDitado />
                 </div>
                 <textarea
                   rows={2}

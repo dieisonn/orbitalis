@@ -1,9 +1,10 @@
 'use client'
 
+import { AjudantesSelect } from '@/components/ui/ajudantes-select'
 import { EnderecoInput } from '@/components/ui/endereco-input'
 import { ClienteRapidoModal } from '@/components/ui/cliente-rapido-modal'
 import { useEffect, useState } from 'react'
-import { X, MapPin, Loader2, User, Clock, Building2, Repeat, AlignLeft, Palette, Wrench, Bell } from 'lucide-react'
+import { X, MapPin, Loader2, User, Clock, Building2, Repeat, AlignLeft, Palette, Wrench, Bell, Users } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, relogio, instante, hoje,
   duracaoLegivel, COR_PADRAO,
@@ -95,6 +96,8 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const [local, setLocal] = useState(origem?.local ?? '')
   const [descricao, setDescricao] = useState(origem?.descricao ?? '')
   const [tecnicoId, setTecnicoId] = useState(origem?.tecnico?.id ?? '')
+  const [ajudantes, setAjudantes] = useState<string[]>([])
+  const [ajudantesIniciais, setAjudantesIniciais] = useState<string[] | null>(null)
   // cor própria do evento; null = padrão (a do tipo de serviço)
   const [corPropria, setCorPropria] = useState<string | null>(
     origem && origem.corHex.toLowerCase() !== (origem.tipoServico?.corHex ?? COR_PADRAO).toLowerCase() ? origem.corHex : null,
@@ -197,6 +200,21 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
   const corpoAvisos = { avisar, avisosMinutos: avisar ? avisosMin : [] }
   const avisosPadrao = avisar && avisosMin.length === 0
   // "Criar também a O.S." gera o evento sozinha: aplica os avisos escolhidos a esse evento depois
+  // Evento de O.S.: carrega os ajudantes atuais da O.S.
+  const osDoEventoId = evento?.ordemServico?.id
+  useEffect(() => {
+    if (!osDoEventoId) return
+    let vivo = true
+    chamar('GET', `/ordens-servico/${osDoEventoId}`)
+      .then((os) => {
+        if (!vivo) return
+        const ids: string[] = (os?.auxiliares ?? []).map((a: { tecnicoId: string }) => a.tecnicoId)
+        setAjudantes(ids); setAjudantesIniciais(ids)
+      })
+      .catch(() => { if (vivo) setAjudantesIniciais(null) })
+    return () => { vivo = false }
+  }, [osDoEventoId])
+
   async function avisosNoEventoDaOs(osId: string, y0: number, m0: number, d0: number) {
     if (avisosPadrao) return
     try {
@@ -235,6 +253,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
         const osNova = await chamar('POST', '/ordens-servico', {
           clienteId,
           tecnicoId: tecnicoId || undefined,
+          ...(ajudantes.length ? { auxiliaresIds: ajudantes.filter((a) => a !== tecnicoId) } : {}),
           origem: 'manual_admin',
           tipo: tipoOs,
           tipoServicoId: tipoIds[0] || undefined,
@@ -264,6 +283,13 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
           cor: corPropria,
           ...corpoAvisos,
         })
+        if (ehOs && ajudantesIniciais !== null && osDoEventoId) {
+          const novos = ajudantes.filter((a) => a !== tecnicoId)
+          const antes = ajudantesIniciais
+          if (novos.length !== antes.length || novos.some((a) => !antes.includes(a))) {
+            await chamar('PATCH', `/ordens-servico/${osDoEventoId}/auxiliares`, { tecnicoIds: novos })
+          }
+        }
       } else {
         if (regra && termino === 'ate' && !ate) { setSalvando(false); return setErro('Informe até quando repetir') }
         if (ocorrencias.length > MAX_REPETICOES) { setSalvando(false); return setErro(`No máximo ${MAX_REPETICOES} repetições por vez`) }
@@ -294,6 +320,7 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
             const osNova = await chamar('POST', '/ordens-servico', {
               clienteId,
               tecnicoId: tecnicoId || undefined,
+              ...(ajudantes.length ? { auxiliaresIds: ajudantes.filter((a) => a !== tecnicoId) } : {}),
               origem: 'manual_admin',
               tipo: tipoOs,
               tipoServicoId: tipoIds[0] || undefined,
@@ -561,6 +588,12 @@ function Formulario({ evento, modelo = null, inicioSugerido, fimSugerido, tipos,
             {tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>)}
           </select>
         </Linha>
+
+        {((ehOs && ajudantesIniciais !== null) || (!ehOs && criarOs && repete === 'nao' && !diaInteiro)) && (
+          <Linha icone={<Users size={16} />}>
+            <AjudantesSelect tecnicos={tecnicos} responsavelId={tecnicoId} value={ajudantes} onChange={setAjudantes} />
+          </Linha>
+        )}
 
         <Linha icone={<AlignLeft size={16} />}>
           <textarea aria-label="Descrição" value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} className={campo}
