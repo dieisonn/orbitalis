@@ -32,8 +32,13 @@ export function AvisosPush() {
       const { chave } = await (await fetch('/api/push')).json()
       const reg = await navigator.serviceWorker.ready
       const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: paraUint8(chave) })
-      const r = await fetch('/api/push', { method: 'POST', body: JSON.stringify(sub.toJSON()) })
-      if (!r.ok) throw new Error('Não foi possível registrar este aparelho')
+      const j = sub.toJSON()
+      // só endpoint e chaves: a API recusa campos extras (como expirationTime)
+      const r = await fetch('/api/push', { method: 'POST', body: JSON.stringify({ endpoint: j.endpoint, keys: { p256dh: j.keys?.p256dh, auth: j.keys?.auth } }) })
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}))
+        throw new Error(`Não foi possível registrar este aparelho${d?.message ? ` (${Array.isArray(d.message) ? d.message[0] : d.message})` : ''}`)
+      }
       setEstado('ativo')
       await fetch('/api/push', { method: 'PUT' }) // aviso de teste
     } catch (e) {
