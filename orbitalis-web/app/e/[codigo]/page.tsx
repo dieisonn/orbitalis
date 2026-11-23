@@ -42,10 +42,10 @@ export default async function QrLandingPage({ params }: Props) {
     return (
       <main id="conteudo" className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl p-8 shadow-sm border border-border text-center max-w-sm w-full">
-          <QrCode size={40} className="mx-auto text-gray-300 mb-4" />
+          <QrCode size={40} className="mx-auto text-gray-500 mb-4" />
           <h1 className="text-lg font-bold text-gray-800 mb-1">Equipamento não encontrado</h1>
           <p className="text-sm text-gray-400">O código QR escaneado não corresponde a nenhum equipamento ativo.</p>
-          <p className="font-mono text-xs text-gray-300 mt-2">{codigo}</p>
+          <p className="font-mono text-xs text-gray-500 mt-2">{codigo}</p>
         </div>
       </main>
     )
@@ -117,7 +117,7 @@ export default async function QrLandingPage({ params }: Props) {
         </div>
 
         <div className="px-6 pb-6">
-          <p className="text-center text-[10px] font-mono text-gray-300">{equipamento.codigoQr}</p>
+          <p className="text-center text-[10px] font-mono text-gray-500">{equipamento.codigoQr}</p>
         </div>
       </div>
     </main>

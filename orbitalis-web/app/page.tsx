@@ -153,7 +153,7 @@ export default function LandingPage() {
       <main id="conteudo">
 
       {/* ── HERO ──────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-primary py-24 md:py-32">
+      <section className="relative overflow-hidden bg-primary py-14 md:py-32">
         <div className="relative max-w-6xl mx-auto px-5 grid md:grid-cols-2 gap-16 items-center">
           <div>
             <div className="inline-flex items-center gap-2 bg-white/10 text-white/80 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
@@ -204,7 +204,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── FEATURES ──────────────────────────────────────────── */}
-      <section id="features" className="py-24 max-w-6xl mx-auto px-5">
+      <section id="features" className="py-16 md:py-24 max-w-6xl mx-auto px-5">
         <div className="text-center mb-14">
           <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Funcionalidades</p>
           <h2 className="text-3xl md:text-4xl font-semibold text-gray-900">Tudo que sua operação precisa</h2>
@@ -227,7 +227,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── COMO FUNCIONA ─────────────────────────────────────── */}
-      <section id="como-funciona" className="py-24 bg-gray-50">
+      <section id="como-funciona" className="py-16 md:py-24 bg-gray-50">
         <div className="max-w-6xl mx-auto px-5">
           <div className="text-center mb-14">
             <p className="text-xs font-bold text-primary uppercase tracking-widest mb-3">Como funciona</p>

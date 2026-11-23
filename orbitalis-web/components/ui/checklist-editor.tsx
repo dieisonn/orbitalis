@@ -316,7 +316,7 @@ export function ChecklistEditor({
                         <span className="text-[10px] text-gray-400">{item.opcoes.length} opção(ões)</span>
                       )}
                       {item.obrigatorio && (
-                        <span className="text-[9px] font-bold text-destructive uppercase bg-destructive/10 px-1.5 py-0.5 rounded">
+                        <span className="text-[11px] font-bold text-destructive uppercase bg-destructive/10 px-1.5 py-0.5 rounded">
                           obrig.
                         </span>
                       )}

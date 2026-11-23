@@ -107,7 +107,7 @@ function Miniaturas({ fotos, onRemover }: { fotos: FotoOs[]; onRemover?: (id: st
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`/api/os-foto/${f.id}`} alt={ROTULO[f.momento] ?? 'Foto'} loading="lazy" className="w-20 h-20 object-cover rounded-lg border border-gray-200" />
           </a>
-          <span className="absolute bottom-0 inset-x-0 text-[9px] font-semibold text-white bg-black/55 text-center rounded-b-lg py-px">{ROTULO[f.momento] ?? 'Foto'}</span>
+          <span className="absolute bottom-0 inset-x-0 text-[11px] font-semibold text-white bg-black/55 text-center rounded-b-lg py-px">{ROTULO[f.momento] ?? 'Foto'}</span>
           {onRemover && (
             <button type="button" onClick={() => onRemover(f.id)} aria-label="Remover foto"
               className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white border border-gray-300 text-gray-500 flex items-center justify-center shadow-sm"><X size={11} /></button>
@@ -826,7 +826,7 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
             <p className="text-xs font-bold uppercase tracking-wide text-gray-400 flex items-center gap-1.5">
               <PenLine size={12} />
               Assinatura do cliente
-              <span className="font-normal normal-case text-gray-300">(opcional)</span>
+              <span className="font-normal normal-case text-gray-500">(opcional)</span>
             </p>
             <button
               type="button"

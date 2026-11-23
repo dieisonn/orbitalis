@@ -133,7 +133,7 @@ export default async function ConfiabilidadePage() {
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block" />Dentro do limite</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" />Atenção</span>
         <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block" />Crítico</span>
-        <span className="text-gray-300">·</span>
+        <span className="text-gray-500">·</span>
         <span className="flex items-center gap-1"><Clock size={11} />MTTR: tempo médio de reparo</span>
         <span className="flex items-center gap-1"><RefreshCw size={11} />MTBF: intervalo médio entre falhas</span>
         <span className="flex items-center gap-1"><AlertTriangle size={11} />Retrabalho: corretiva ≤30d após preventiva</span>
@@ -258,12 +258,12 @@ export default async function ConfiabilidadePage() {
                           <p className="text-xs text-gray-400 truncate">{m.ambiente ?? '—'}</p>
                         </td>
                         <td className="px-3 py-2.5 text-center text-xs text-gray-400">0</td>
-                        <td className="px-3 py-2.5 text-center text-xs text-gray-300">—</td>
-                        <td className="px-3 py-2.5 text-center text-xs text-gray-300">—</td>
-                        <td className="px-3 py-2.5 text-center text-xs text-gray-300">—</td>
-                        <td className="hidden lg:table-cell px-3 py-2.5 text-center text-xs text-gray-300">—</td>
-                        {custoPorH !== null && <td className="px-3 py-2.5 text-center text-xs text-gray-300">—</td>}
-                        <td className="hidden md:table-cell px-4 py-2.5 text-xs text-gray-300">—</td>
+                        <td className="px-3 py-2.5 text-center text-xs text-gray-500">—</td>
+                        <td className="px-3 py-2.5 text-center text-xs text-gray-500">—</td>
+                        <td className="px-3 py-2.5 text-center text-xs text-gray-500">—</td>
+                        <td className="hidden lg:table-cell px-3 py-2.5 text-center text-xs text-gray-500">—</td>
+                        {custoPorH !== null && <td className="px-3 py-2.5 text-center text-xs text-gray-500">—</td>}
+                        <td className="hidden md:table-cell px-4 py-2.5 text-xs text-gray-500">—</td>
                       </tr>
                     ))}
                   </>

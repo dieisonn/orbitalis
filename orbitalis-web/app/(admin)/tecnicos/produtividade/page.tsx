@@ -114,7 +114,7 @@ export default async function ProdutividadePage({ searchParams }: Props) {
                   <p className="text-xs text-gray-400 mb-0.5 flex items-center gap-1">
                     <AlertTriangle size={10} /> Atrasadas
                   </p>
-                  <p className={`text-2xl font-bold ${t.atrasadas > 0 ? 'text-red-600' : 'text-gray-300'}`}>
+                  <p className={`text-2xl font-bold ${t.atrasadas > 0 ? 'text-red-600' : 'text-gray-500'}`}>
                     {t.atrasadas}
                   </p>
                 </div>

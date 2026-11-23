@@ -60,7 +60,7 @@ export default async function RelatorioAgendaPage({ searchParams }: Props) {
   const hrefCsv = `/agenda/relatorio/csv${queryDoRelatorio(atual)}`
 
   const Cel = ({ n, destaque }: { n: number | undefined; destaque?: boolean }) => (
-    <td className={`px-3 py-2 text-right tabular-nums ${n ? (destaque ? 'text-red-700 font-semibold' : 'text-gray-900') : 'text-gray-300'}`}>{n || '–'}</td>
+    <td className={`px-3 py-2 text-right tabular-nums ${n ? (destaque ? 'text-red-700 font-semibold' : 'text-gray-900') : 'text-gray-500'}`}>{n || '–'}</td>
   )
 
   return (

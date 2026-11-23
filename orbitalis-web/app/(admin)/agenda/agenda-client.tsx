@@ -471,7 +471,7 @@ function MesCelular({ dias, diaIni, cursor, porDia, marcas, diaSel, onSel, onAbr
                 {evs.length > 0 && (
                   <span className="flex items-center gap-0.5">
                     {evs.slice(0, 3).map((e) => <span key={e.id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: e.corHex }} />)}
-                    {evs.length > 3 && <span className="text-[9px] leading-none text-gray-500 font-semibold">+{evs.length - 3}</span>}
+                    {evs.length > 3 && <span className="text-[11px] leading-none text-gray-500 font-semibold">+{evs.length - 3}</span>}
                   </span>
                 )}
               </button>

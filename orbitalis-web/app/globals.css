@@ -319,3 +319,39 @@ tbody tr { transition: background-color .12s; }
 :root.is-dark .border-gray-400,
 :root.is-dark .border-gray-500,
 :root.is-dark .hover\:border-gray-400:hover { border-color: #3a4560 !important; }
+
+/* ═══ Revisão de design (diretrizes da Apple: acessibilidade, toque, movimento) ═══ */
+
+/* Movimento: quem pede "reduzir movimento" no aparelho não vê transições nem animações decorativas
+   (o giro de carregamento continua, mas mais lento, porque informa que algo está em andamento). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  *:not(.animate-spin), *:not(.animate-spin)::before, *:not(.animate-spin)::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .animate-spin { animation-duration: 2s !important; }
+}
+
+/* "Aumentar contraste": bordas e textos secundários mais firmes */
+@media (prefers-contrast: more) {
+  :root:not(.is-dark) {
+    --color-border: #9aa29b;
+    --nav-border: #8b938c;
+    --color-gray-400: #4a524b;
+    --color-gray-500: #3c443d;
+  }
+  :root.is-dark { --color-border: #3b4963; --nav-border: #3b4963; }
+}
+
+/* Celular: campos com 16 px evitam o zoom automático do iOS ao tocar no campo */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select, textarea { font-size: 16px; }
+}
+
+/* Telas de toque: botões só com ícone ganham área de toque de 44 px sem mudar o layout */
+@media (pointer: coarse) {
+  button:has(> svg:only-child), a:has(> svg:only-child) { position: relative; }
+  button:has(> svg:only-child)::after, a:has(> svg:only-child)::after { content: ""; position: absolute; inset: -9px; }
+}

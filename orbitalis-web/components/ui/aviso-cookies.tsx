@@ -26,7 +26,7 @@ export function AvisoCookies() {
     <div
       role="region"
       aria-label="Aviso de cookies"
-      className="print:hidden fixed z-[60] bottom-3 left-3 right-3 sm:right-auto sm:max-w-sm bg-white text-gray-700 border border-border rounded-lg shadow-lg p-4 text-sm"
+      className="print:hidden fixed z-[60] bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 sm:right-auto sm:max-w-sm bg-white text-gray-700 border border-border rounded-lg shadow-lg p-4 text-sm"
     >
       <p>
         Usamos apenas cookies essenciais, para manter você conectado e lembrar suas preferências. Não usamos rastreamento nem publicidade.{' '}
@@ -35,7 +35,7 @@ export function AvisoCookies() {
       <button
         type="button"
         onClick={fechar}
-        className="mt-3 px-4 py-1.5 bg-action text-white text-sm font-semibold rounded-md hover:bg-action/90"
+        className="mt-3 px-5 py-3 bg-action text-white text-sm font-semibold rounded-md hover:bg-action/90"
       >
         Entendi
       </button>
