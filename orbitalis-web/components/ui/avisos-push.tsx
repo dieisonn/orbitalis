@@ -51,8 +51,12 @@ export function AvisosPush() {
     } finally { setOcupado(false) }
   }
 
-  if (estado === 'carregando' || estado === 'indisponivel') return null
-  if (estado === 'bloqueado') return <p className="text-[11px] text-gray-400 mb-2 flex items-center gap-1"><BellOff size={12} /> Avisos bloqueados no navegador. Libere nas configurações do site para receber novas O.S.</p>
+  if (estado === 'carregando') return null
+  if (estado === 'indisponivel') {
+    const ios = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent)
+    return <p className="text-[11px] text-gray-400 mb-2 flex items-center gap-1"><BellOff size={12} /> {ios ? 'No iPhone, os avisos só funcionam no app instalado: toque em Compartilhar › Adicionar à Tela de Início e abra por lá.' : 'Este navegador não suporta avisos. Use o Chrome ou instale o app.'}</p>
+  }
+  if (estado === 'bloqueado') return <p className="text-[11px] text-gray-400 mb-2 flex items-center gap-1"><BellOff size={12} /> Avisos bloqueados. Libere as notificações nas configurações do site (cadeado ao lado do endereço). Em janela anônima eles não funcionam.</p>
   return (
     <div className="mb-3">
       {estado === 'inativo' ? (
@@ -60,7 +64,11 @@ export function AvisosPush() {
           {ocupado ? <Loader2 size={15} className="animate-spin" /> : <Bell size={15} />} Ativar avisos de novas O.S.
         </button>
       ) : (
-        <button onClick={desativar} disabled={ocupado} className="text-[11px] text-gray-400 flex items-center gap-1"><Bell size={12} /> Avisos ativos neste aparelho · desativar</button>
+        <div className="flex items-center gap-3 text-[11px] text-gray-400">
+          <span className="flex items-center gap-1"><Bell size={12} /> Avisos ativos neste aparelho</span>
+          <button onClick={() => { void fetch('/api/push', { method: 'PUT' }); setMsg('Teste enviado: o aviso deve chegar em instantes.') }} className="underline">testar</button>
+          <button onClick={desativar} disabled={ocupado} className="underline">desativar</button>
+        </div>
       )}
       {msg && <p className="text-xs text-destructive mt-1">{msg}</p>}
     </div>
