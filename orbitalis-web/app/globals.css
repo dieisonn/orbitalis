@@ -296,3 +296,26 @@ tbody tr { transition: background-color .12s; }
 .logo-escuro { display: none; }
 :root.is-dark .logo-claro { display: none; }
 :root.is-dark .logo-escuro { display: inline-block; }
+
+/* ── Tema escuro: variantes com transparência e hover que escapavam dos overrides acima ── */
+:root.is-dark .bg-white\/95,
+:root.is-dark .bg-white\/90,
+:root.is-dark .bg-white\/80 { background-color: rgba(22,27,40,.92) !important; }
+:root.is-dark .bg-white\/70 { background-color: rgba(22,27,40,.8) !important; }
+:root.is-dark .hover\:bg-white\/90:hover,
+:root.is-dark .hover\:bg-white\/70:hover,
+:root.is-dark .hover\:bg-white\/60:hover { background-color: #1d2434 !important; }
+:root.is-dark .focus\:bg-white:focus { background-color: #161b28 !important; }
+:root.is-dark .bg-gray-200 { background-color: #1f2937 !important; }
+:root.is-dark .bg-gray-300 { background-color: #374151 !important; }
+:root.is-dark .hover\:bg-gray-200:hover { background-color: #263244 !important; }
+:root.is-dark .hover\:text-gray-900:hover,
+:root.is-dark .focus\:text-gray-900:focus { color: #f5f6fb !important; }
+:root.is-dark .hover\:text-gray-800:hover { color: #eaecf4 !important; }
+:root.is-dark .hover\:text-gray-700:hover { color: #d8dde8 !important; }
+:root.is-dark .hover\:text-gray-600:hover { color: #c0c9d8 !important; }
+:root.is-dark .hover\:text-gray-500:hover,
+:root.is-dark .hover\:text-gray-400:hover { color: #a0aec0 !important; }
+:root.is-dark .border-gray-400,
+:root.is-dark .border-gray-500,
+:root.is-dark .hover\:border-gray-400:hover { border-color: #3a4560 !important; }
