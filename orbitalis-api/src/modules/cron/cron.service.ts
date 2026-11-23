@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { NotificacoesService } from '../notificacoes/notificacoes.service';
 import { AlertasService } from '../alertas/alertas.service';
 import { AgendaService } from '../agenda/agenda.service';
+import { PushService } from '../push/push.service';
 import { gerarOsDoPlano, INCLUDE_GERACAO } from './geracao-preventiva';
 import { inicioDoDiaBrasilia } from '../../common/prazo-plano';
 import { idsSubstituidos } from '../contratos/situacao-contrato';
@@ -18,7 +19,12 @@ export class CronService {
     private readonly notificacoes: NotificacoesService,
     private readonly alertas: AlertasService,
     private readonly agenda: AgendaService,
+    private readonly push: PushService,
   ) {}
+
+  // Lembretes já enviados (usuário|evento|início|antecedência); evita repetir dentro da janela de tolerância
+  private readonly lembretesEnviados = new Map<string, number>();
+
 
   // Executa diariamente às 00:00:01 (§US05)
   @Cron('1 0 0 * * *')
@@ -195,5 +201,67 @@ export class CronService {
       enviadas++;
     }
     if (enviadas > 0) this.logger.log(`Alertas de contrato vencendo enviados: ${enviadas}`);
+  }
+
+  /**
+   * A cada minuto: avisa no celular/navegador (Web Push) quem tem evento começando, mesmo com o app fechado.
+   * Usa as antecedências do próprio evento ou, se não tiver, as de quem é avisado (padrão 30 min).
+   */
+  @Cron('0 * * * * *')
+  async lembretesDeEventos() {
+    try {
+      const agora = Date.now();
+      for (const [k, t] of this.lembretesEnviados) if (t < agora - 3 * 3600_000) this.lembretesEnviados.delete(k);
+
+      const eventos = await this.prisma.eventoAgenda.findMany({
+        where: {
+          diaInteiro: false,
+          avisar: true,
+          inicio: { gt: new Date(agora), lte: new Date(agora + (24 * 60 + 2) * 60_000) },
+          OR: [{ tecnicoId: { not: null } }, { ordemServico: { auxiliares: { some: {} } } }],
+        },
+        select: {
+          id: true, titulo: true, inicio: true, avisosMinutos: true, tecnicoId: true, ordemServicoId: true,
+          ordemServico: { select: { status: true, auxiliares: { select: { tecnicoId: true } } } },
+          cliente: { select: { razaoSocial: true, nomeFantasia: true } },
+        },
+        take: 2000,
+      });
+      if (!eventos.length) return;
+
+      const alvos = (e: (typeof eventos)[number]) =>
+        [...new Set([e.tecnicoId, ...(e.ordemServico?.auxiliares.map((a) => a.tecnicoId) ?? [])].filter((x): x is string => !!x))];
+      const usuarioIds = [...new Set(eventos.flatMap(alvos))];
+      const usuarios = await this.prisma.usuario.findMany({ where: { id: { in: usuarioIds } }, select: { id: true, avisosAgenda: true } });
+      const padrao = new Map(usuarios.map((u) => [u.id, u.avisosAgenda?.length ? u.avisosAgenda : [30]]));
+
+      let enviados = 0;
+      for (const e of eventos) {
+        const st = e.ordemServico?.status;
+        if (st === 'concluida' || st === 'cancelada') continue;
+        const falta = (e.inicio.getTime() - agora) / 60_000;
+        for (const uid of alvos(e)) {
+          const lista = e.avisosMinutos.length ? e.avisosMinutos : (padrao.get(uid) ?? [30]);
+          // antecedência "da vez": a menor que já foi alcançada, dentro de 2 min de tolerância (o ciclo é de 1 min)
+          const m = [...lista].sort((a, b) => a - b).find((x) => falta <= x && falta > x - 2);
+          if (m === undefined) continue;
+          const chave = `${uid}|${e.id}|${e.inicio.toISOString()}|${m}`;
+          if (this.lembretesEnviados.has(chave)) continue;
+          this.lembretesEnviados.set(chave, agora);
+          const hora = e.inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+          const cliente = e.cliente?.nomeFantasia || e.cliente?.razaoSocial;
+          void this.push.notificar([uid], {
+            titulo: e.titulo,
+            corpo: `Começa às ${hora} — em ${Math.max(1, Math.ceil(falta))} min${cliente ? ` · ${cliente}` : ''}`,
+            url: e.ordemServicoId ? `/minhas-os/${e.ordemServicoId}` : '/minha-agenda',
+            tag: `evento-${e.id}`,
+          });
+          enviados++;
+        }
+      }
+      if (enviados) this.logger.log(`Lembretes de eventos enviados: ${enviados}`);
+    } catch (err) {
+      this.logger.warn(`Lembretes de eventos falharam: ${err instanceof Error ? err.message : err}`);
+    }
   }
 }
