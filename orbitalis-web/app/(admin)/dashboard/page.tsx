@@ -14,7 +14,9 @@ type TaxaConclusao = { concluidas: number; total: number; percentual: number }
 type Tecnico = {
   tecnicoId: string; nome: string; email: string
   total: number; concluiuUltimoMes: number; atrasadas: number; aIniciar: number
+  eficiencia?: number | null; previstoMin?: number; realizadoMin?: number; osAvaliadas?: number
 }
+const horasMin = (min: number) => { const h = Math.floor(min / 60), m = Math.round(min % 60); return h ? `${h}h${m ? String(m).padStart(2, '0') : ''}` : `${m}min` }
 type PlanoVencendo = { id: string; dataFim: string | null; ativo: boolean; cliente: string }
 type PlanosVencendo = { vermelho: PlanoVencendo[]; amarelo: PlanoVencendo[]; verde: PlanoVencendo[] }
 type TopEquip = { id: string; nome: string; tipoEquipamento: string; cliente: string; totalCorretivas: number }
@@ -208,7 +210,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         <div className="bg-white rounded-lg border border-border p-5">
           <div className="flex items-center gap-2 mb-4">
             <User size={14} className="text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700">Carga por técnico</h2>
+            <h2 className="text-sm font-semibold text-gray-700">Carga e eficiência por técnico</h2>
           </div>
           {porTecnico.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">Nenhum técnico com O.S. ativa.</p>
@@ -240,6 +242,13 @@ export default async function DashboardPage({ searchParams }: Props) {
                     {t.atrasadas > 0 && (
                       <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
                         {t.atrasadas} atrasadas
+                      </span>
+                    )}
+                    {t.eficiencia != null && (
+                      <span
+                        title={`Tempo previsto na agenda ÷ tempo realizado (entrada → saída) nas O.S. concluídas este mês. Previsto ${horasMin(t.previstoMin ?? 0)} · realizado ${horasMin(t.realizadoMin ?? 0)} em ${t.osAvaliadas ?? 0} O.S.`}
+                        className={`text-[10px] px-1.5 py-0.5 rounded ${t.eficiencia >= 100 ? 'text-emerald-700 bg-emerald-50' : t.eficiencia >= 80 ? 'text-amber-700 bg-amber-50' : 'text-red-600 bg-red-50'}`}>
+                        eficiência {t.eficiencia}% · {horasMin(t.previstoMin ?? 0)} prev. / {horasMin(t.realizadoMin ?? 0)} real ({t.osAvaliadas ?? 0} O.S.)
                       </span>
                     )}
                   </div>

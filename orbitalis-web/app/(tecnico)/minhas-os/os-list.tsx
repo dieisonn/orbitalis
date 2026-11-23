@@ -118,7 +118,7 @@ function Grupo({ titulo, tom, lista }: { titulo: string; tom?: 'ruim'; lista: Or
   )
 }
 
-export function OsList({ ordens, resumo }: { ordens: OrdemServicoLista[]; resumo?: React.ReactNode }) {
+export function OsList({ ordens }: { ordens: OrdemServicoLista[] }) {
   const pendentes = ordens.filter((os) => !FINAIS.includes(os.status))
   const hoje = pendentes.filter(isHoje)
   const concluidas = ordens.filter((os) => FINAIS.includes(os.status)).reverse()
@@ -172,8 +172,6 @@ export function OsList({ ordens, resumo }: { ordens: OrdemServicoLista[]; resumo
           {hoje.length > 0 ? `${hoje.length} para hoje · ` : ''}{pendentes.length} pendente{pendentes.length === 1 ? '' : 's'}
         </p>
       </div>
-
-      {resumo}
 
       <AvisosPush />
 
