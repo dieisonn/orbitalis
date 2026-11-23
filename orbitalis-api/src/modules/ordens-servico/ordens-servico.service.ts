@@ -483,6 +483,54 @@ export class OrdensServicoService {
   }
 
   // GET /ordens-servico/tecnico/:tecnicoId — fila do técnico (§US08)
+  /** Painel simples do técnico: O.S. em aberto, atrasadas, concluídas no mês e eficiência (tempo previsto ÷ tempo realizado). */
+  async resumoDoTecnico(tecnicoId: string) {
+    const meus = { OR: [{ tecnicoId }, { auxiliares: { some: { tecnicoId } } }] };
+    const br = new Date(Date.now() - 3 * 3600_000);
+    const inicioMes = new Date(Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), 1, 3, 0, 0));
+    const fimMes = new Date(Date.UTC(br.getUTCFullYear(), br.getUTCMonth() + 1, 1, 3, 0, 0));
+    const abertas = { status: { in: ['aberta', 'agendada', 'em_andamento'] as OsStatus[] } };
+
+    const [emAberto, atrasadas, concluidas] = await Promise.all([
+      this.prisma.ordemServico.count({ where: { AND: [meus, abertas] } }),
+      this.prisma.ordemServico.count({ where: { AND: [meus, abertas, { dataAgendamento: { lt: inicioHojeBR() } }] } }),
+      this.prisma.ordemServico.findMany({
+        where: { AND: [meus, { status: 'concluida', dataConclusao: { gte: inicioMes, lt: fimMes } }] },
+        select: {
+          dataInicio: true, dataConclusao: true,
+          tipoServico: { select: { duracaoMinutos: true } },
+          dias: { select: { horaInicio: true, horaFim: true } },
+          eventos: { select: { inicio: true, fim: true, diaInteiro: true } },
+        },
+      }),
+    ]);
+
+    const minutos = (hhmm: string | null) => { if (!hhmm) return null; const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+    let previsto = 0, realizado = 0, avaliadas = 0;
+    for (const o of concluidas) {
+      // tempo realizado: entrada → saída registradas pelo técnico; em O.S. de vários dias, soma das entradas/saídas de cada dia
+      let real: number | null = null;
+      if (o.dias.length >= 2) {
+        const partes = o.dias.map((d) => { const a = minutos(d.horaInicio), b = minutos(d.horaFim); return a !== null && b !== null && b > a ? b - a : null; });
+        if (partes.every((x) => x !== null)) real = (partes as number[]).reduce((a, b) => a + b, 0);
+      } else if (o.dataInicio && o.dataConclusao) {
+        const m = (o.dataConclusao.getTime() - o.dataInicio.getTime()) / 60_000;
+        if (m >= 1 && m <= 16 * 60) real = m;
+      }
+      if (real === null) continue;
+      // tempo previsto: duração dos eventos da O.S. na agenda; sem evento, a duração padrão do tipo de serviço
+      const doEvento = o.eventos.filter((e) => !e.diaInteiro).reduce((t, e) => t + (e.fim.getTime() - e.inicio.getTime()) / 60_000, 0);
+      const prev = doEvento > 0 ? doEvento : (o.tipoServico?.duracaoMinutos ?? 0);
+      if (prev <= 0) continue;
+      previsto += prev; realizado += real; avaliadas++;
+    }
+    return {
+      emAberto, atrasadas, concluidasMes: concluidas.length,
+      eficiencia: realizado > 0 ? Math.round((previsto / realizado) * 100) : null,
+      previstoMin: Math.round(previsto), realizadoMin: Math.round(realizado), avaliadas,
+    };
+  }
+
   async findByTecnico(tecnicoId: string) {
     const lista = await this.prisma.ordemServico.findMany({
       where: {
