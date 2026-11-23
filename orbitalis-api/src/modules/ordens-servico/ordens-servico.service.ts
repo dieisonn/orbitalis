@@ -349,6 +349,7 @@ export class OrdensServicoService {
       {} as Record<string, number>,
     );
 
+    const eficiencias = await this.eficienciaPorTecnico().catch(() => new Map<string, { previsto: number; realizado: number; avaliadas: number }>());
     const porTecnico = tecnicos
       .map((t) => {
         const ativas    = t.ordensComoTecnico.filter((o) =>
@@ -368,6 +369,10 @@ export class OrdensServicoService {
           tecnicoId: t.id,
           nome: t.nome ?? t.email,
           email: t.email,
+          eficiencia: (() => { const e = eficiencias.get(t.id); return e && e.realizado > 0 ? Math.round((e.previsto / e.realizado) * 100) : null; })(),
+          previstoMin: Math.round(eficiencias.get(t.id)?.previsto ?? 0),
+          realizadoMin: Math.round(eficiencias.get(t.id)?.realizado ?? 0),
+          osAvaliadas: eficiencias.get(t.id)?.avaliadas ?? 0,
           total: ativas.length,
           concluiuUltimoMes: concluídasUltimoMes,
           atrasadas: atrasadasTec,
@@ -483,30 +488,23 @@ export class OrdensServicoService {
   }
 
   // GET /ordens-servico/tecnico/:tecnicoId — fila do técnico (§US08)
-  /** Painel simples do técnico: O.S. em aberto, atrasadas, concluídas no mês e eficiência (tempo previsto ÷ tempo realizado). */
-  async resumoDoTecnico(tecnicoId: string) {
-    const meus = { OR: [{ tecnicoId }, { auxiliares: { some: { tecnicoId } } }] };
+  /** Eficiência do mês por técnico responsável: tempo previsto (agenda) ÷ tempo realizado (entrada → saída). */
+  private async eficienciaPorTecnico() {
     const br = new Date(Date.now() - 3 * 3600_000);
     const inicioMes = new Date(Date.UTC(br.getUTCFullYear(), br.getUTCMonth(), 1, 3, 0, 0));
     const fimMes = new Date(Date.UTC(br.getUTCFullYear(), br.getUTCMonth() + 1, 1, 3, 0, 0));
-    const abertas = { status: { in: ['aberta', 'agendada', 'em_andamento'] as OsStatus[] } };
-
-    const [emAberto, atrasadas, concluidas] = await Promise.all([
-      this.prisma.ordemServico.count({ where: { AND: [meus, abertas] } }),
-      this.prisma.ordemServico.count({ where: { AND: [meus, abertas, { dataAgendamento: { lt: inicioHojeBR() } }] } }),
-      this.prisma.ordemServico.findMany({
-        where: { AND: [meus, { status: 'concluida', dataConclusao: { gte: inicioMes, lt: fimMes } }] },
-        select: {
-          dataInicio: true, dataConclusao: true,
-          tipoServico: { select: { duracaoMinutos: true } },
-          dias: { select: { horaInicio: true, horaFim: true } },
-          eventos: { select: { inicio: true, fim: true, diaInteiro: true } },
-        },
-      }),
-    ]);
+    const concluidas = await this.prisma.ordemServico.findMany({
+      where: { status: 'concluida', tecnicoId: { not: null }, dataConclusao: { gte: inicioMes, lt: fimMes } },
+      select: {
+        tecnicoId: true, dataInicio: true, dataConclusao: true,
+        tipoServico: { select: { duracaoMinutos: true } },
+        dias: { select: { horaInicio: true, horaFim: true } },
+        eventos: { select: { inicio: true, fim: true, diaInteiro: true } },
+      },
+    });
 
     const minutos = (hhmm: string | null) => { if (!hhmm) return null; const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
-    let previsto = 0, realizado = 0, avaliadas = 0;
+    const acc = new Map<string, { previsto: number; realizado: number; avaliadas: number }>();
     for (const o of concluidas) {
       // tempo realizado: entrada → saída registradas pelo técnico; em O.S. de vários dias, soma das entradas/saídas de cada dia
       let real: number | null = null;
@@ -522,13 +520,11 @@ export class OrdensServicoService {
       const doEvento = o.eventos.filter((e) => !e.diaInteiro).reduce((t, e) => t + (e.fim.getTime() - e.inicio.getTime()) / 60_000, 0);
       const prev = doEvento > 0 ? doEvento : (o.tipoServico?.duracaoMinutos ?? 0);
       if (prev <= 0) continue;
-      previsto += prev; realizado += real; avaliadas++;
+      const a = acc.get(o.tecnicoId!) ?? { previsto: 0, realizado: 0, avaliadas: 0 };
+      a.previsto += prev; a.realizado += real; a.avaliadas++;
+      acc.set(o.tecnicoId!, a);
     }
-    return {
-      emAberto, atrasadas, concluidasMes: concluidas.length,
-      eficiencia: realizado > 0 ? Math.round((previsto / realizado) * 100) : null,
-      previstoMin: Math.round(previsto), realizadoMin: Math.round(realizado), avaliadas,
-    };
+    return acc;
   }
 
   async findByTecnico(tecnicoId: string) {

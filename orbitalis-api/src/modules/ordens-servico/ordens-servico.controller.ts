@@ -88,13 +88,6 @@ export class OrdensServicoController {
     return this.ordensServicoService.historico(ano ? Number(ano) : undefined);
   }
 
-  // GET /api/v1/ordens-servico/meu-resumo — painel do técnico (antes de ':id')
-  @Get('meu-resumo')
-  @Roles(UsuarioTipo.tecnico)
-  meuResumo(@CurrentUser() user: AuthUser) {
-    return this.ordensServicoService.resumoDoTecnico(user.id);
-  }
-
   // GET /api/v1/ordens-servico/tecnico/:tecnicoId — Técnico
   @Get('tecnico/:tecnicoId')
   @Roles(UsuarioTipo.tecnico)
