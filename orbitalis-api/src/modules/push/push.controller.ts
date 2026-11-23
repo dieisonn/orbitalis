@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { PushService } from './push.service';
-import { AssinarPushDto, DesassinarPushDto } from './push.dto';
+import { AssinarPushDto, DesassinarPushDto, MarcarLidosDto } from './push.dto';
 
 @Controller('push')
 @UseGuards(JwtAuthGuard)
@@ -22,6 +22,16 @@ export class PushController {
   @Post('desassinar')
   desassinar(@Body() body: DesassinarPushDto, @CurrentUser() user: AuthUser) {
     return this.push.desassinar(user.id, body.endpoint);
+  }
+
+  @Get('avisos')
+  avisos(@CurrentUser() user: AuthUser) {
+    return this.push.listarAvisos(user.id);
+  }
+
+  @Post('avisos/lidos')
+  lidos(@Body() body: MarcarLidosDto, @CurrentUser() user: AuthUser) {
+    return this.push.marcarLidos(user.id, body.ids);
   }
 
   // Teste: manda um aviso para os aparelhos do próprio usuário

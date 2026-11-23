@@ -8,7 +8,7 @@ const TENANT_MODELS = new Set([
   'orcamento', 'planoManutencao', 'ordemServico', 'tipoServico',
   'configuracaoEmpresa', 'alertaConfig', 'alertaOcorrencia', 'modeloChecklist',
   'convite', 'eventoAgenda', 'feriadoEmpresa', 'logAuditoria', 'ordemServicoDia',
-  'ordemServicoAuxiliar', 'ordemServicoFoto', 'pushAssinatura',
+  'ordemServicoAuxiliar', 'ordemServicoFoto', 'pushAssinatura', 'avisoUsuario',
 ]);
 
 // Operações em lote que aceitam where livre

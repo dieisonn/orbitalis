@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsDefined, IsString, MaxLength, MinLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsDefined, IsOptional, IsString, IsUUID, MaxLength, MinLength, ValidateNested } from 'class-validator';
 
 export class ChavesPushDto {
   @IsString() @MinLength(10) @MaxLength(200)
@@ -22,4 +22,9 @@ export class AssinarPushDto {
 export class DesassinarPushDto {
   @IsString() @MaxLength(600)
   endpoint: string;
+}
+
+export class MarcarLidosDto {
+  @IsOptional() @IsArray() @ArrayMaxSize(100) @IsUUID('all', { each: true })
+  ids?: string[];
 }

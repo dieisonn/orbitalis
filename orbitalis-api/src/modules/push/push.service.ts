@@ -65,11 +65,43 @@ export class PushService {
     return { ok: true };
   }
 
+  /** Histórico exibido na central de avisos (guarda os 100 mais recentes de cada pessoa). Usa SQL direto para valer também nos jobs, sem empresa no contexto. */
+  private async guardarNaCentral(ids: string[], aviso: AvisoPush) {
+    try {
+      await this.prisma.$executeRaw`
+        INSERT INTO avisos_usuario (id, empresa_id, usuario_id, titulo, corpo, url)
+        SELECT gen_random_uuid(), u.empresa_id, u.id, ${aviso.titulo.slice(0, 200)}, ${aviso.corpo}, ${(aviso.url ?? '/minhas-os').slice(0, 300)}
+        FROM usuarios u WHERE u.id = ANY(${ids}::uuid[])`;
+      await this.prisma.$executeRaw`
+        DELETE FROM avisos_usuario a WHERE a.usuario_id = ANY(${ids}::uuid[])
+          AND a.id NOT IN (SELECT b.id FROM avisos_usuario b WHERE b.usuario_id = a.usuario_id ORDER BY b.criado_em DESC LIMIT 100)`;
+    } catch (e: any) {
+      this.log.warn(`Aviso não guardado na central: ${e?.message}`);
+    }
+  }
+
+  async listarAvisos(usuarioId: string) {
+    const [itens, naoLidos] = await Promise.all([
+      this.prisma.avisoUsuario.findMany({ where: { usuarioId }, orderBy: { criadoEm: 'desc' }, take: 50 }),
+      this.prisma.avisoUsuario.count({ where: { usuarioId, lidoEm: null } }),
+    ]);
+    return { itens, naoLidos };
+  }
+
+  async marcarLidos(usuarioId: string, ids?: string[]) {
+    await this.prisma.avisoUsuario.updateMany({
+      where: { usuarioId, lidoEm: null, ...(ids?.length ? { id: { in: ids } } : {}) },
+      data: { lidoEm: new Date() },
+    });
+    return { ok: true };
+  }
+
   /** Nunca lança: aviso é complemento, não pode derrubar a operação principal. */
   async notificar(usuarioIds: (string | null | undefined)[], aviso: AvisoPush) {
     try {
       const ids = [...new Set(usuarioIds.filter((x): x is string => !!x))];
       if (ids.length === 0) return;
+      await this.guardarNaCentral(ids, aviso)
       await this.carregarChaves();
       const subs = await this.prisma.pushAssinatura.findMany({ where: { usuarioId: { in: ids } } });
       const carga = JSON.stringify({ titulo: aviso.titulo, corpo: aviso.corpo, url: aviso.url ?? '/minhas-os', tag: aviso.tag });
