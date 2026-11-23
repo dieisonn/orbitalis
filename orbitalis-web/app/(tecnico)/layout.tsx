@@ -6,6 +6,7 @@ import { logout } from '@/lib/auth'
 import { CalendarDays, ClipboardList, KeyRound, LogOut } from 'lucide-react'
 import { OfflineBanner } from '@/components/ui/offline-banner'
 import { Logo } from '@/components/ui/logo'
+import { SinoAvisos } from '@/components/ui/sino-avisos'
 import { AtualizadorPortal } from '@/components/ui/atualizador-portal'
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +18,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       <header className="sticky top-0 z-40 bg-[var(--nav-bg)] border-b border-[var(--nav-border)] px-4 py-2.5 flex items-center gap-3">
         <Logo className="h-7 w-auto" />
         <span className="text-sm text-gray-600">Portal do Técnico</span>
+        <SinoAvisos />
       </header>
 
       <OfflineBanner />

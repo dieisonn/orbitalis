@@ -13,7 +13,7 @@ const ADMIN_ONLY = [
   '/relatorios', '/servicos', '/tecnicos', '/configuracoes', '/agenda', '/auditoria',
 ]
 const CLIENT_ONLY = ['/meus-ambientes', '/abrir-chamado', '/historico', '/meu-painel', '/meus-orcamentos']
-const TECNICO_ONLY = ['/minhas-os', '/minha-agenda']
+const TECNICO_ONLY = ['/minhas-os', '/minha-agenda', '/avisos']
 
 export function proxy(request: NextRequest) {
   const token = request.cookies.get('orbitalis_token')?.value

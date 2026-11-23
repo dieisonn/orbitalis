@@ -5,7 +5,7 @@ import { ModoLeitura } from './modo-leitura'
 import { ChevronLeft, ChevronRight, Plus, Loader2, Navigation, Flag } from 'lucide-react'
 import {
   type EventoAgenda, type Dia, DIAS_SEMANA, MESES, hoje, somarDias, chaveDia, chaveDoInstante, mesmoDia,
-  diaDaSemana, diffDias, instante, relogio, hhmm, diaPorExtenso, DIA_MS,
+  diaDaSemana, diffDias, instante, relogio, hhmm, diaPorExtenso, DIA_MS, STATUS_OS_LABEL,
 } from '@/lib/agenda'
 import { textoSobre } from '@/lib/cor'
 import { ROTULO_FERIADO, type Feriado, type TipoFeriado } from '@/lib/feriados'
@@ -90,6 +90,12 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
   const abrirMenu: AoMenu = (e, x, y) => { if (somenteLeitura) return; setPop(null); setMenu({ e, x, y }) }
   const arrastando = useRef<EventoAgenda | null>(null)
   const [alvo, setAlvo] = useState<string | null>(null)
+  // celular: dia escolhido no mês (a lista de eventos dele aparece abaixo do calendário)
+  const [diaSel, setDiaSel] = useState<Dia>(() => lerDia(dataInicial) ?? hoje())
+  useEffect(() => {
+    if (visao !== 'mes') return
+    setDiaSel((d) => (d.m === cursor.m && d.y === cursor.y ? d : (hoje().m === cursor.m && hoje().y === cursor.y ? hoje() : { y: cursor.y, m: cursor.m, d: 1 })))
+  }, [cursor, visao])
 
   const { inicio: diaIni, dias } = useMemo(() => intervalo(visao, cursor), [visao, cursor])
 
@@ -286,8 +292,19 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
 
       {erro && <p className="mb-3 text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">{erro}</p>}
 
+      {visao === 'mes' && (
+        <div className="sm:hidden">
+          <MesCelular dias={dias} diaIni={diaIni} cursor={cursor} porDia={porDia} marcas={marcas} diaSel={diaSel} onSel={setDiaSel}
+            onAbrir={abrir} onNovo={somenteLeitura ? undefined : (d) => setNovo({ inicio: instante(d.y, d.m, d.d, 8, 0) })} />
+        </div>
+      )}
+      {visao === 'semana' && (
+        <div className="sm:hidden">
+          <SemanaCelular dias={Array.from({ length: dias }, (_, i) => somarDias(diaIni, i))} porDia={porDia} marcas={marcas} onAbrir={abrir} />
+        </div>
+      )}
       {visao === 'mes' ? (
-        <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="hidden sm:block bg-white rounded-xl border border-border overflow-hidden">
           <div className="grid grid-cols-7 border-b border-border bg-surface">
             {DIAS_SEMANA.map((d) => (
               <div key={d} className="px-2 py-2 text-xs font-semibold text-gray-500 text-center uppercase tracking-wide">{d}</div>
@@ -325,8 +342,10 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
           </div>
         </div>
       ) : (
-        <GradeHoras dias={Array.from({ length: dias }, (_, i) => somarDias(diaIni, i))} porDia={porDia} marcas={marcas}
-          onAbrir={abrir} onMenu={abrirMenu} onNovo={(inicio, fim) => setNovo({ inicio, fim })} onHorario={salvarHorario} />
+        <div className={visao === 'semana' ? 'hidden sm:block' : ''}>
+          <GradeHoras dias={Array.from({ length: dias }, (_, i) => somarDias(diaIni, i))} porDia={porDia} marcas={marcas}
+            onAbrir={abrir} onMenu={abrirMenu} onNovo={(inicio, fim) => setNovo({ inicio, fim })} onHorario={salvarHorario} />
+        </div>
       )}
 
       <p className="hidden md:block mt-2 text-xs text-gray-500">
@@ -393,6 +412,114 @@ function Chip({ e, onAbrir, onMenu, onArrastar }: { e: EventoAgenda; onAbrir: Ao
       {!e.diaInteiro && <span className="font-semibold mr-1">{hhmm(e.inicio)}</span>}
       {e.titulo}
     </button>
+  )
+}
+
+// ─── Celular: mês com pontinhos + lista do dia, semana em lista ──────────────
+
+function CartaoEvento({ e, onAbrir }: { e: EventoAgenda; onAbrir: AoAbrir }) {
+  const st = e.ordemServico?.status
+  return (
+    <button onClick={(ev) => onAbrir(e, ancoraDe(ev.currentTarget))} style={estiloStatus(e)}
+      className="w-full text-left flex gap-3 bg-white border border-border rounded-xl overflow-hidden active:bg-surface">
+      <span className="w-1.5 shrink-0" style={{ backgroundColor: e.corHex }} />
+      <span className="flex-1 min-w-0 py-2.5 pr-3">
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-semibold text-gray-900 truncate">{e.titulo}</span>
+          <span className="text-xs font-semibold text-gray-600 shrink-0">{e.diaInteiro ? 'Dia inteiro' : `${hhmm(e.inicio)}–${hhmm(e.fim)}`}</span>
+        </span>
+        {e.cliente?.nome && <span className="block text-xs text-gray-600 truncate mt-0.5">{e.cliente.nome}</span>}
+        {(e.local || e.cliente?.endereco) && <span className="block text-[11px] text-gray-400 truncate">{e.local || e.cliente?.endereco}</span>}
+        {(e.ordemServico || e.tipoServico) && (
+          <span className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-gray-500">
+            {e.ordemServico && <span className="font-mono">{e.ordemServico.numero}</span>}
+            {st && <span className="px-1.5 py-0.5 rounded bg-surface border border-border">{STATUS_OS_LABEL[st] ?? st}</span>}
+            {e.tipoServico && <span style={{ color: e.tipoServico.corHex }} className="font-semibold">{e.tipoServico.nome}</span>}
+          </span>
+        )}
+      </span>
+    </button>
+  )
+}
+
+function MesCelular({ dias, diaIni, cursor, porDia, marcas, diaSel, onSel, onAbrir, onNovo }: {
+  dias: number; diaIni: Dia; cursor: Dia; porDia: Record<string, EventoAgenda[]>; marcas: Record<string, Marca>
+  diaSel: Dia; onSel: (d: Dia) => void; onAbrir: AoAbrir; onNovo?: (d: Dia) => void
+}) {
+  const hojeDia = hoje()
+  const lista = porDia[chaveDia(diaSel)] ?? []
+  const marca = marcas[chaveDia(diaSel)]
+  return (
+    <div>
+      <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="grid grid-cols-7 border-b border-border bg-surface">
+          {DIAS_SEMANA.map((d) => <div key={d} className="py-1.5 text-[11px] font-semibold text-gray-500 text-center uppercase">{d.slice(0, 3)}</div>)}
+        </div>
+        <div className="grid grid-cols-7">
+          {Array.from({ length: dias }, (_, i) => {
+            const dia = somarDias(diaIni, i)
+            const k = chaveDia(dia)
+            const evs = porDia[k] ?? []
+            const fora = dia.m !== cursor.m
+            const sel = mesmoDia(dia, diaSel)
+            const ehHoje = mesmoDia(dia, hojeDia)
+            const m = marcas[k]
+            return (
+              <button key={k} onClick={() => onSel(dia)} aria-label={`${diaPorExtenso(dia)}${evs.length ? `, ${evs.length} evento(s)` : ''}`}
+                className={`h-[3.75rem] border-b border-r border-border flex flex-col items-center pt-1.5 gap-1 ${fora ? 'bg-surface/50' : ''} ${m && m.tipo !== 'facultativo' ? 'bg-gray-100' : ''} ${sel ? 'ring-2 ring-inset ring-primary' : ''}`}>
+                <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full ${ehHoje ? 'bg-primary text-white font-bold' : fora ? 'text-gray-400' : 'text-gray-700'}`}>{dia.d}</span>
+                {evs.length > 0 && (
+                  <span className="flex items-center gap-0.5">
+                    {evs.slice(0, 3).map((e) => <span key={e.id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: e.corHex }} />)}
+                    {evs.length > 3 && <span className="text-[9px] leading-none text-gray-500 font-semibold">+{evs.length - 3}</span>}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h3 className="text-sm font-bold text-gray-900 capitalize">{diaPorExtenso(diaSel)}</h3>
+          <span className="text-xs text-gray-500">{lista.length ? `${lista.length} evento${lista.length > 1 ? 's' : ''}` : 'Sem eventos'}</span>
+        </div>
+        {marca && <p className="text-xs text-gray-600 mb-2">{marca.nome}</p>}
+        <div className="space-y-2">
+          {lista.map((e) => <CartaoEvento key={e.id} e={e} onAbrir={onAbrir} />)}
+        </div>
+        {onNovo && (
+          <button onClick={() => onNovo(diaSel)} className="mt-3 w-full inline-flex items-center justify-center gap-1.5 py-2.5 border border-dashed border-border rounded-xl text-sm font-semibold text-gray-600">
+            <Plus size={14} /> Novo evento neste dia
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SemanaCelular({ dias, porDia, marcas, onAbrir }: { dias: Dia[]; porDia: Record<string, EventoAgenda[]>; marcas: Record<string, Marca>; onAbrir: AoAbrir }) {
+  const hojeDia = hoje()
+  return (
+    <div className="space-y-4">
+      {dias.map((dia) => {
+        const k = chaveDia(dia)
+        const lista = porDia[k] ?? []
+        const ehHoje = mesmoDia(dia, hojeDia)
+        return (
+          <section key={k}>
+            <h3 className={`text-sm font-bold mb-1.5 capitalize ${ehHoje ? 'text-primary' : 'text-gray-900'}`}>
+              {ehHoje && 'Hoje — '}{diaPorExtenso(dia)}
+              {marcas[k] && <span className="ml-2 text-xs font-medium text-gray-500 normal-case">{marcas[k].nome}</span>}
+            </h3>
+            {lista.length === 0 ? <p className="text-xs text-gray-400 pl-1">Sem eventos</p> : (
+              <div className="space-y-2">{lista.map((e) => <CartaoEvento key={e.id} e={e} onAbrir={onAbrir} />)}</div>
+            )}
+          </section>
+        )
+      })}
+    </div>
   )
 }
 
