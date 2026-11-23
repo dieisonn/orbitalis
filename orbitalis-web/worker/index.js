@@ -5,7 +5,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(d.titulo || 'Orbitalis', {
     body: d.corpo || '',
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: '/icons/badge-96.png',
     tag: d.tag || undefined,
     renotify: !!d.tag,
     data: { url: d.url || '/minhas-os' },
