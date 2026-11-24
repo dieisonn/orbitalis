@@ -11,6 +11,7 @@ export type TipoServico = {
   ativo: boolean
   sistema: boolean
   entraNoRelatorio: boolean
+  ehVisita: boolean
 }
 
 export default async function ServicosPage() {

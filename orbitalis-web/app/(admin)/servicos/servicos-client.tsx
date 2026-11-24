@@ -13,9 +13,10 @@ type FormData = {
   minutos: string
   valorPadrao: string
   entraNoRelatorio: boolean
+  ehVisita: boolean
 }
 
-const EMPTY: FormData = { sigla: '', nome: '', corHex: '#0B8043', horas: '1', minutos: '0', valorPadrao: '', entraNoRelatorio: true }
+const EMPTY: FormData = { sigla: '', nome: '', corHex: '#0B8043', horas: '1', minutos: '0', valorPadrao: '', entraNoRelatorio: true, ehVisita: false }
 
 function duracaoLegivel(min: number): string {
   const h = Math.floor(min / 60), m = min % 60
@@ -60,6 +61,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
       minutos:         String(ts.duracaoMinutos % 60),
       valorPadrao:     ts.valorPadrao != null ? String(ts.valorPadrao) : '',
       entraNoRelatorio: ts.entraNoRelatorio !== false,
+      ehVisita: ts.ehVisita === true,
     })
     setEditando(ts)
     setError(null)
@@ -84,6 +86,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
           duracaoMinutos:  (parseInt(form.horas || '0', 10) * 60) + parseInt(form.minutos || '0', 10),
           valorPadrao:     form.valorPadrao ? parseFloat(form.valorPadrao) : null,
           entraNoRelatorio: form.entraNoRelatorio,
+          ehVisita: form.ehVisita,
         }
         if (modal === 'novo') {
           await apiCall('POST', '/tipos-servico', body)
@@ -94,6 +97,7 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
             duracaoMinutos:  body.duracaoMinutos,
             valorPadrao:     body.valorPadrao,
             entraNoRelatorio: body.entraNoRelatorio,
+            ehVisita: body.ehVisita,
           })
         }
         await recarregar()
@@ -251,6 +255,20 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
                   e eventos; se a O.S. já tiver horário de término, ele prevalece.
                 </p>
               </div>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox" checked={form.ehVisita}
+                  onChange={(e) => setForm({ ...form, ehVisita: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 rounded border-border accent-[var(--color-action)]"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-700">É uma visita (avaliação antes do serviço)</span>
+                  <span className="block text-xs text-gray-500">
+                    Marque para visitas técnicas/avaliações. Elas entram no funil de visitas: quantas viraram orçamento e serviço fechado.
+                  </span>
+                </span>
+              </label>
 
               <label className="flex items-start gap-3 cursor-pointer">
                 <input

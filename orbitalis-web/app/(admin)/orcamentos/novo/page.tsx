@@ -4,15 +4,17 @@ import type { ModeloResumo } from '@/lib/checklist'
 
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 type Ambiente = { id: string; nome: string; clienteId: string }
+type VisitaRecente = { id: string; clienteId: string; numero: number | null; sigla: string; dataConclusao: string | null }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string; ativo: boolean }
 
 export default async function NovoOrcamentoPage() {
   // A API devolve listas paginadas ({ data }); pede tudo de uma vez
-  const [clientesRes, ambientesRes, tiposServico, modelosRes] = await Promise.all([
+  const [clientesRes, ambientesRes, tiposServico, modelosRes, visitas] = await Promise.all([
     api.get<{ data: Cliente[] }>('/clientes?perPage=1000').catch(() => ({ data: [] as Cliente[] })),
     api.get<{ data: Ambiente[] }>('/ambientes?perPage=1000').catch(() => ({ data: [] as Ambiente[] })),
     api.get<TipoServico[]>('/tipos-servico').catch(() => [] as TipoServico[]),
     api.get<{ data: ModeloResumo[] }>('/modelos-checklist?perPage=500').catch(() => ({ data: [] as ModeloResumo[] })),
+    api.get<VisitaRecente[]>('/orcamentos/visitas-recentes').catch(() => [] as VisitaRecente[]),
   ])
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -25,6 +27,7 @@ export default async function NovoOrcamentoPage() {
         ambientes={ambientesRes.data}
         tiposServico={tiposServico.filter((t) => t.ativo)}
         modelos={modelosRes.data}
+        visitas={visitas}
       />
     </div>
   )

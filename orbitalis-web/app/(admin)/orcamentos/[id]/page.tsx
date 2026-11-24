@@ -19,6 +19,7 @@ type Orcamento = {
   tipoServico: { id: string; sigla: string; nome: string; corHex: string } | null
   modeloChecklist: { id: string; nome: string } | null
   ordemServico: { id: string; numero: number | null; status: string } | null
+  visitaOrigem?: { id: string; numero: number | null; dataConclusao: string | null; tipoServico: { sigla: string } | null } | null
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -89,6 +90,16 @@ export default async function OrcamentoPage({ params }: Props) {
             <p className="text-xs text-blue-600 truncate mt-0.5">{linkPublico}</p>
           </div>
         </div>
+      )}
+
+      {orc.visitaOrigem && (
+        <p className="text-sm text-gray-600">
+          Originado pela visita{' '}
+          <Link href={`/ordens-servico/${orc.visitaOrigem.id}`} className="font-semibold text-primary hover:underline">
+            {orc.visitaOrigem.tipoServico?.sigla ?? 'OS'}-{String(orc.visitaOrigem.numero ?? 0).padStart(4, '0')}
+          </Link>
+          {orc.visitaOrigem.dataConclusao ? ` (${fmt(orc.visitaOrigem.dataConclusao)})` : ''}
+        </p>
       )}
 
       {orc.status === 'aprovado' && (

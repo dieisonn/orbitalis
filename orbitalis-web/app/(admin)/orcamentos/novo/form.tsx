@@ -18,10 +18,11 @@ function fmtBRL(v: number) {
 }
 
 export function NovoOrcamentoForm({
-  clientes, ambientes, tiposServico, modelos,
+  clientes, ambientes, tiposServico, modelos, visitas = [],
 }: {
   clientes: Cliente[]
   ambientes: Ambiente[]
+  visitas?: { id: string; clienteId: string; numero: number | null; sigla: string; dataConclusao: string | null }[]
   tiposServico: TipoServico[]
   modelos: ModeloResumo[]
 }) {
@@ -30,6 +31,7 @@ export function NovoOrcamentoForm({
   const [clienteId, setClienteId] = useState('')
   const [validadeDias, setValidadeDias] = useState('30')
   const [ambienteId, setAmbienteId] = useState('')
+  const [visitaOrigemId, setVisitaOrigemId] = useState('')
   const [tipoOs, setTipoOs] = useState<TipoOs>('corretiva')
   const [tipoServicoId, setTipoServicoId] = useState('')
   const [modeloChecklistId, setModeloChecklistId] = useState('')
@@ -38,6 +40,7 @@ export function NovoOrcamentoForm({
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
 
+  const visitasDoCliente = visitas.filter((v) => v.clienteId === clienteId)
   const ambientesDoCliente = ambientes.filter((a) => a.clienteId === clienteId)
 
   function addItem() { setItens((p) => [...p, { ...EMPTY_ITEM }]) }
@@ -67,6 +70,7 @@ export function NovoOrcamentoForm({
         body: JSON.stringify({
           titulo, clienteId,
           ambienteId: ambienteId || undefined,
+          visitaOrigemId: visitaOrigemId || undefined,
           tipoOs,
           tipoServicoId: tipoServicoId || undefined,
           modeloChecklistId: modeloChecklistId || undefined,
@@ -135,6 +139,24 @@ export function NovoOrcamentoForm({
             Quando o cliente aprovar, uma O.S. é criada automaticamente com estes dados (você faz a triagem depois).
           </p>
         </div>
+        {visitasDoCliente.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Visita de origem (opcional)</label>
+            <select
+              value={visitaOrigemId} onChange={(e) => setVisitaOrigemId(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">Sem visita (orçamento direto)</option>
+              {visitasDoCliente.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.sigla}-{String(v.numero ?? 0).padStart(4, '0')}{v.dataConclusao ? ` · ${new Date(v.dataConclusao).toLocaleDateString('pt-BR')}` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-400 mt-1">Liga este orçamento à visita que o originou, para medir quantas visitas viram serviço fechado.</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Ambiente</label>
