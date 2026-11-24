@@ -286,7 +286,7 @@ export class OrcamentosService {
   private async validarVisitaOrigem(visitaId: string | null | undefined, clienteId: string) {
     if (!visitaId) return;
     const os = await this.prisma.ordemServico.findFirst({
-      where: { id: visitaId, clienteId, tipoServico: { ehVisita: true } },
+      where: { id: visitaId, ambiente: { clienteId }, tipoServico: { ehVisita: true } },
       select: { id: true },
     });
     if (!os) throw new BadRequestException('Visita de origem inválida: escolha uma visita deste cliente');
@@ -299,11 +299,11 @@ export class OrcamentosService {
       where: { tipoServico: { ehVisita: true }, status: 'concluida', dataConclusao: { gte: desde } },
       orderBy: { dataConclusao: 'desc' },
       take: 500,
-      select: { id: true, numero: true, clienteId: true, dataConclusao: true, tipoServico: { select: { sigla: true } } },
+      select: { id: true, numero: true, dataConclusao: true, ambiente: { select: { clienteId: true } }, tipoServico: { select: { sigla: true } } },
     });
     return visitas.map((v) => ({
       id: v.id,
-      clienteId: v.clienteId,
+      clienteId: v.ambiente.clienteId,
       numero: v.numero,
       sigla: v.tipoServico?.sigla ?? 'OS',
       dataConclusao: v.dataConclusao,
@@ -324,7 +324,7 @@ export class OrcamentosService {
       select: {
         id: true, numero: true, dataConclusao: true,
         tipoServico: { select: { sigla: true } },
-        cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+        ambiente: { select: { cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } } } },
         tecnico: { select: { nome: true, email: true } },
       },
     });
@@ -350,7 +350,7 @@ export class OrcamentosService {
         numero: v.numero,
         sigla: v.tipoServico?.sigla ?? 'OS',
         dataConclusao: v.dataConclusao,
-        cliente: v.cliente,
+        cliente: v.ambiente.cliente,
         tecnico: v.tecnico ? (v.tecnico.nome ?? v.tecnico.email) : null,
         resultado,
         valor: aprovado ? valorDe(aprovado) : aberto.length ? Math.max(...aberto.map(valorDe)) : 0,
