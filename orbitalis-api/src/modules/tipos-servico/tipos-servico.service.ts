@@ -27,6 +27,7 @@ export class TiposServicoService {
     duracaoMinutos?: number;
     valorPadrao?: number | null;
     entraNoRelatorio?: boolean;
+    ehVisita?: boolean;
   }) {
     const sigla = dto.sigla.toUpperCase().trim();
     const existe = await this.prisma.tipoServico.findFirst({ where: { sigla } });
@@ -40,6 +41,7 @@ export class TiposServicoService {
         duracaoMinutos:  validarDuracao(dto.duracaoMinutos) ?? 60,
         valorPadrao:     dto.valorPadrao ?? null,
         entraNoRelatorio: dto.entraNoRelatorio ?? true,
+        ehVisita: dto.ehVisita ?? false,
       },
     });
   }
@@ -53,6 +55,7 @@ export class TiposServicoService {
       valorPadrao?: number | null;
       ativo?: boolean;
       entraNoRelatorio?: boolean;
+    ehVisita?: boolean;
     },
   ) {
     const ts = await this.prisma.tipoServico.findUnique({ where: { id } });
@@ -67,6 +70,7 @@ export class TiposServicoService {
         ...(dto.valorPadrao !== undefined ? { valorPadrao: dto.valorPadrao } : {}),
         ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
         ...(dto.entraNoRelatorio !== undefined ? { entraNoRelatorio: !!dto.entraNoRelatorio } : {}),
+        ...(dto.ehVisita !== undefined ? { ehVisita: !!dto.ehVisita } : {}),
       },
     });
   }

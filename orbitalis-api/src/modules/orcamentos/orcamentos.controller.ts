@@ -25,6 +25,17 @@ export class OrcamentosController {
     return this.svc.listar(clienteId, status);
   }
 
+  // Funil de conversão das visitas (antes de ':id')
+  @Get('funil')
+  funil(@Query('de') de?: string, @Query('ate') ate?: string) {
+    return this.svc.funil(de, ate);
+  }
+
+  @Get('visitas-recentes')
+  visitasRecentes() {
+    return this.svc.visitasRecentes();
+  }
+
   @Get('meus')
   @Roles(UsuarioTipo.admin, UsuarioTipo.cliente)
   listarMeus(@CurrentUser() user: AuthUser) {

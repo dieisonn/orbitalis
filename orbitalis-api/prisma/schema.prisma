@@ -440,6 +440,8 @@ model TipoServico {
   nome            String   @db.VarChar(100)
   corHex          String   @map("cor_hex") @db.VarChar(7)
   duracaoMinutos  Int      @default(60) @map("duracao_minutos")
+  // Visita (avaliação antes do serviço): entra no funil visitas → orçamentos → serviços fechados
+  ehVisita        Boolean  @default(false) @map("eh_visita")
   valorPadrao     Decimal? @map("valor_padrao") @db.Decimal(10, 2)
   ativo           Boolean  @default(true)
   sistema         Boolean  @default(false)
@@ -591,6 +593,8 @@ model Orcamento {
   modeloChecklistId String? @map("modelo_checklist_id") @db.Uuid
   // O.S. gerada a partir deste orçamento (preenchida na aprovação)
   ordemServicoId    String? @unique @map("ordem_servico_id") @db.Uuid
+  // Visita (O.S.) que originou este orçamento — base do funil de conversão (sem relation Prisma: só referência)
+  visitaOrigemId    String? @map("visita_origem_id") @db.Uuid
 
   ambiente        Ambiente?        @relation(fields: [ambienteId], references: [id], onDelete: SetNull)
   tipoServico     TipoServico?     @relation(fields: [tipoServicoId], references: [id], onDelete: SetNull)
@@ -612,6 +616,7 @@ model Orcamento {
   @@index([status])
   // Numeração sequencial por empresa (contadores_empresa); o default é só um respaldo
   @@unique([empresaId, numero])
+  @@index([visitaOrigemId])
   @@map("orcamentos")
 }
 

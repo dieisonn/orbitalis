@@ -24,10 +24,10 @@ const INCLUDE_FULL = {
 // O link público mostra a proposta; ids e vínculos internos ficam de fora
 function paraPublico<T extends Record<string, any>>(orc: T) {
   const {
-    empresaId, criadoPorId, clienteId, ambienteId, tipoServicoId, modeloChecklistId, ordemServicoId, ...visivel
+    empresaId, criadoPorId, clienteId, ambienteId, tipoServicoId, modeloChecklistId, ordemServicoId, visitaOrigemId, ...visivel
   } = orc;
   void empresaId; void criadoPorId; void clienteId; void ambienteId;
-  void tipoServicoId; void modeloChecklistId; void ordemServicoId;
+  void tipoServicoId; void modeloChecklistId; void ordemServicoId; void visitaOrigemId;
   return visivel;
 }
 
@@ -61,7 +61,13 @@ export class OrcamentosService {
       include: INCLUDE_FULL,
     });
     if (!orc) throw new NotFoundException('Orçamento não encontrado');
-    return orc;
+    const visitaOrigem = orc.visitaOrigemId
+      ? await this.prisma.ordemServico.findUnique({
+          where: { id: orc.visitaOrigemId },
+          select: { id: true, numero: true, dataConclusao: true, tipoServico: { select: { sigla: true } } },
+        })
+      : null;
+    return { ...orc, visitaOrigem };
   }
 
   async buscarPorToken(token: string) {
@@ -75,6 +81,7 @@ export class OrcamentosService {
 
   async criar(dto: CreateOrcamentoDto, criadoPorId: string) {
     await this.validarAmbienteDoCliente(dto.ambienteId, dto.clienteId);
+    await this.validarVisitaOrigem(dto.visitaOrigemId, dto.clienteId);
     return this.prisma.orcamento.create({
       data: {
         titulo: dto.titulo,
@@ -86,6 +93,7 @@ export class OrcamentosService {
         tipoOs: dto.tipoOs ?? 'corretiva',
         tipoServicoId: dto.tipoServicoId ?? null,
         modeloChecklistId: dto.modeloChecklistId ?? null,
+        visitaOrigemId: dto.visitaOrigemId ?? null,
         itens: {
           create: dto.itens.map((item) => ({
             descricao: item.descricao,
@@ -107,11 +115,13 @@ export class OrcamentosService {
       throw new BadRequestException('Apenas orçamentos em rascunho podem ser editados');
 
     await this.validarAmbienteDoCliente(dto.ambienteId, orc.clienteId);
+    await this.validarVisitaOrigem(dto.visitaOrigemId, orc.clienteId);
 
     return this.prisma.orcamento.update({
       where: { id },
       data: {
         ...(dto.ambienteId !== undefined ? { ambienteId: dto.ambienteId } : {}),
+        ...(dto.visitaOrigemId !== undefined ? { visitaOrigemId: dto.visitaOrigemId } : {}),
         ...(dto.tipoOs ? { tipoOs: dto.tipoOs } : {}),
         ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId } : {}),
         ...(dto.modeloChecklistId !== undefined ? { modeloChecklistId: dto.modeloChecklistId } : {}),
@@ -270,6 +280,105 @@ export class OrcamentosService {
     });
     await this.agenda.sincronizarOs(osCriada.id);
     return osCriada;
+  }
+
+  /** A visita de origem precisa ser uma O.S. do mesmo cliente, de um tipo de serviço marcado como visita. */
+  private async validarVisitaOrigem(visitaId: string | null | undefined, clienteId: string) {
+    if (!visitaId) return;
+    const os = await this.prisma.ordemServico.findFirst({
+      where: { id: visitaId, clienteId, tipoServico: { ehVisita: true } },
+      select: { id: true },
+    });
+    if (!os) throw new BadRequestException('Visita de origem inválida: escolha uma visita deste cliente');
+  }
+
+  /** Visitas concluídas dos últimos 180 dias, para escolher a origem ao criar um orçamento. */
+  async visitasRecentes() {
+    const desde = new Date(Date.now() - 180 * 86400_000);
+    const visitas = await this.prisma.ordemServico.findMany({
+      where: { tipoServico: { ehVisita: true }, status: 'concluida', dataConclusao: { gte: desde } },
+      orderBy: { dataConclusao: 'desc' },
+      take: 500,
+      select: { id: true, numero: true, clienteId: true, dataConclusao: true, tipoServico: { select: { sigla: true } } },
+    });
+    return visitas.map((v) => ({
+      id: v.id,
+      clienteId: v.clienteId,
+      numero: v.numero,
+      sigla: v.tipoServico?.sigla ?? 'OS',
+      dataConclusao: v.dataConclusao,
+    }));
+  }
+
+  /**
+   * Funil de conversão: das visitas concluídas no período, quantas geraram orçamento e quantas viraram serviço fechado
+   * (orçamento aprovado). Vale para qualquer empresa: "visita" é o tipo de serviço marcado como tal na configuração.
+   */
+  async funil(de?: string, ate?: string) {
+    const fim = ate ? new Date(`${ate}T23:59:59.999-03:00`) : new Date();
+    const ini = de ? new Date(`${de}T00:00:00-03:00`) : new Date(fim.getTime() - 90 * 86400_000);
+    const visitas = await this.prisma.ordemServico.findMany({
+      where: { tipoServico: { ehVisita: true }, status: 'concluida', dataConclusao: { gte: ini, lte: fim } },
+      orderBy: { dataConclusao: 'desc' },
+      take: 1000,
+      select: {
+        id: true, numero: true, dataConclusao: true,
+        tipoServico: { select: { sigla: true } },
+        cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
+        tecnico: { select: { nome: true, email: true } },
+      },
+    });
+    const orcs = visitas.length
+      ? await this.prisma.orcamento.findMany({
+          where: { visitaOrigemId: { in: visitas.map((v) => v.id) } },
+          select: {
+            id: true, numero: true, status: true, titulo: true, visitaOrigemId: true,
+            itens: { select: { quantidade: true, precoUnitario: true } },
+            ordemServico: { select: { id: true, numero: true, tipoServico: { select: { sigla: true } } } },
+          },
+        })
+      : [];
+    const valorDe = (o: (typeof orcs)[number]) => o.itens.reduce((t, i) => t + Number(i.quantidade) * Number(i.precoUnitario), 0);
+
+    const linhas = visitas.map((v) => {
+      const doVisita = orcs.filter((o) => o.visitaOrigemId === v.id);
+      const aprovado = doVisita.find((o) => o.status === 'aprovado');
+      const aberto = doVisita.filter((o) => o.status === 'enviado' || o.status === 'rascunho');
+      const resultado = aprovado ? 'fechada' : aberto.length ? 'em_aberto' : doVisita.length ? 'perdida' : 'sem_orcamento';
+      return {
+        id: v.id,
+        numero: v.numero,
+        sigla: v.tipoServico?.sigla ?? 'OS',
+        dataConclusao: v.dataConclusao,
+        cliente: v.cliente,
+        tecnico: v.tecnico ? (v.tecnico.nome ?? v.tecnico.email) : null,
+        resultado,
+        valor: aprovado ? valorDe(aprovado) : aberto.length ? Math.max(...aberto.map(valorDe)) : 0,
+        orcamentos: doVisita.map((o) => ({
+          id: o.id, numero: o.numero, status: o.status, titulo: o.titulo, valor: valorDe(o),
+          ordemServico: o.ordemServico
+            ? { id: o.ordemServico.id, numero: o.ordemServico.numero, sigla: o.ordemServico.tipoServico?.sigla ?? 'OS' }
+            : null,
+        })),
+      };
+    });
+    const conta = (r: string) => linhas.filter((l) => l.resultado === r).length;
+    const total = linhas.length;
+    return {
+      periodo: { de: ini.toISOString(), ate: fim.toISOString() },
+      totais: {
+        visitas: total,
+        comOrcamento: total - conta('sem_orcamento'),
+        fechadas: conta('fechada'),
+        emAberto: conta('em_aberto'),
+        perdidas: conta('perdida'),
+        semOrcamento: conta('sem_orcamento'),
+        taxaConversao: total ? Math.round((conta('fechada') / total) * 100) : null,
+        valorFechado: linhas.filter((l) => l.resultado === 'fechada').reduce((t, l) => t + l.valor, 0),
+        valorEmAberto: linhas.filter((l) => l.resultado === 'em_aberto').reduce((t, l) => t + l.valor, 0),
+      },
+      visitas: linhas,
+    };
   }
 
   private async validarAmbienteDoCliente(ambienteId: string | null | undefined, clienteId: string) {

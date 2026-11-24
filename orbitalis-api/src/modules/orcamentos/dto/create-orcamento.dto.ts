@@ -46,6 +46,10 @@ export class CreateOrcamentoDto {
   @IsOptional() @IsUUID()
   modeloChecklistId?: string | null;
 
+  // Visita (O.S. do mesmo cliente) que originou o orçamento — alimenta o funil de conversão
+  @IsOptional() @IsUUID()
+  visitaOrigemId?: string | null;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrcamentoItemDto)
