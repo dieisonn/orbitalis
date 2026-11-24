@@ -1,6 +1,8 @@
 import { api } from '@/lib/api'
 import { rotuloFrequencia } from '@/lib/frequencia'
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { numeroOs } from '@/lib/os-numero'
 import { CalendarClock, CheckCircle, XCircle, Clock, ClipboardList, Pencil, FileText, Building2, Cpu } from 'lucide-react'
 import { gerarOsPlano } from '../actions'
 
@@ -8,6 +10,8 @@ type Props = { params: Promise<{ id: string }> }
 
 type OsResumo = {
   id: string
+  numero?: number | null
+  tipoServico?: { sigla: string } | null
   status: string
   origem: string
   dataAgendamento: string
@@ -375,7 +379,7 @@ export default async function DetalhePlanoPage({ params }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface border-b border-border">
-                  {['Data Agendamento', 'Ambiente', 'Status', 'Conclusão', ''].map((h) => (
+                  {['O.S.', 'Data Agendamento', 'Ambiente', 'Status', 'Conclusão', ''].map((h) => (
                     <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide last:text-right">
                       {h || <span className="sr-only">Ações</span>}
                     </th>
@@ -390,6 +394,9 @@ export default async function DetalhePlanoPage({ params }: Props) {
                   )?.equipamento.ambiente
                   return (
                     <tr key={o.id} className="hover:bg-surface transition-colors">
+                      <td className="px-5 py-3 font-mono text-xs font-semibold text-gray-800 whitespace-nowrap">
+                        <Link href={`/ordens-servico/${o.id}`} className="hover:underline">{numeroOs(o)}</Link>
+                      </td>
                       <td className="px-5 py-3 text-gray-700">
                         {new Date(o.dataAgendamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                       </td>
@@ -403,9 +410,9 @@ export default async function DetalhePlanoPage({ params }: Props) {
                         {o.dataConclusao ? new Date(o.dataConclusao).toLocaleDateString('pt-BR') : '—'}
                       </td>
                       <td className="px-5 py-3 text-right">
-                        <a href={`/ordens-servico?id=${o.id}`} className="text-xs font-semibold text-primary hover:underline">
+                        <Link href={`/ordens-servico/${o.id}`} className="text-xs font-semibold text-primary hover:underline">
                           Ver O.S.
-                        </a>
+                        </Link>
                       </td>
                     </tr>
                   )
