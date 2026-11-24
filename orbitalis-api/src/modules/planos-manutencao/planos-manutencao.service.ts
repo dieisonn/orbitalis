@@ -127,6 +127,8 @@ export class PlanosManutencaoService {
       take: 200,
       select: {
         id: true,
+        numero: true,
+        tipoServico: { select: { sigla: true } },
         status: true,
         origem: true,
         dataAgendamento: true,
