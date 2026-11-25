@@ -85,13 +85,13 @@ function parseSnapshot(snapshot: unknown): ChecklistItem[] {
   }
 }
 
-function BotaoFoto({ rotulo, ocupado, onArquivo, destaque }: { rotulo: string; ocupado?: boolean; onArquivo: (f: File) => void; destaque?: boolean }) {
+function BotaoFoto({ rotulo, ocupado, onArquivo, destaque, galeria }: { rotulo: string; ocupado?: boolean; onArquivo: (f: File) => void; destaque?: boolean; galeria?: boolean }) {
   return (
     <label className={['inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border cursor-pointer active:scale-95 transition',
       destaque ? 'border-red-300 bg-red-50 text-red-700' : 'border-gray-200 text-gray-600 hover:border-primary hover:text-primary', ocupado ? 'opacity-60 pointer-events-none' : ''].join(' ')}>
       {ocupado ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />} {rotulo}
-      <input type="file" accept="image/*" capture="environment" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onArquivo(f) }} />
+      <input type="file" accept="image/*" {...(galeria ? { multiple: true } : { capture: 'environment' as const })} className="hidden"
+        onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ''; fs.forEach((f) => onArquivo(f)) }} />
     </label>
   )
 }
@@ -338,9 +338,9 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
     }
   }
 
-  async function enviarFoto(file: File, ctx: { itemId: string; checklistItemId?: string; momento: string }) {
+  async function enviarFoto(file: File, ctx: { itemId?: string; checklistItemId?: string; momento: string }) {
     if (!navigator.onLine) { setError('Sem internet: as fotos só podem ser enviadas com conexão. Tente de novo quando voltar o sinal.'); return }
-    const chave = `${ctx.itemId}:${ctx.checklistItemId ?? ctx.momento}`
+    const chave = `${ctx.itemId ?? 'os'}:${ctx.checklistItemId ?? ctx.momento}`
     setEnviandoFoto((l) => [...l, chave])
     setError(null)
     try {
@@ -818,6 +818,25 @@ export function OsExecucao({ os }: { os: OsParaExecucao }) {
           </p>
         </div>
       )}
+
+      {/* Fotos da O.S. (gerais, sem equipamento: visitas, corretivas, local, etc.) */}
+      {(() => {
+        const fotosOs = fotos.filter((f) => !f.itemId)
+        if (!isWorking && fotosOs.length === 0) return null
+        return (
+          <div className="bg-white rounded-2xl border border-border p-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400 flex items-center gap-1.5"><Camera size={12} /> Fotos da O.S.</p>
+            {isWorking && (
+              <div className="flex flex-wrap gap-2">
+                <BotaoFoto rotulo="Tirar foto" ocupado={enviandoFoto.some((c) => c.startsWith('os:'))} onArquivo={(f) => enviarFoto(f, { momento: 'outra' })} />
+                <BotaoFoto galeria rotulo="Da galeria" ocupado={enviandoFoto.some((c) => c.startsWith('os:'))} onArquivo={(f) => enviarFoto(f, { momento: 'outra' })} />
+              </div>
+            )}
+            <Miniaturas fotos={fotosOs} onRemover={isReadOnly ? undefined : removerFoto} />
+            {isWorking && fotosOs.length === 0 && <p className="text-[11px] text-gray-400">Registre o local, o problema ou o serviço feito. Aparecem no PDF da O.S.</p>}
+          </div>
+        )
+      })()}
 
       {/* Assinatura */}
       {isWorking && (

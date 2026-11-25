@@ -99,8 +99,8 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
 
   const { inicio: diaIni, dias } = useMemo(() => intervalo(visao, cursor), [visao, cursor])
 
-  const carregar = useCallback(async () => {
-    setCarregando(true); setErro(null)
+  const carregar = useCallback(async (silencioso = false) => {
+    if (!silencioso) { setCarregando(true); setErro(null) }
     const de = instante(diaIni.y, diaIni.m, diaIni.d)
     const fim = somarDias(diaIni, dias)
     const ate = instante(fim.y, fim.m, fim.d)
@@ -109,15 +109,34 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
       const res = await fetch(`/api/agenda-proxy?path=${encodeURIComponent(q)}`, { cache: 'no-store' })
       const data = await res.json()
       if (!res.ok) throw new Error(Array.isArray(data?.message) ? data.message[0] : (data?.message ?? `Erro ${res.status}`))
-      setEventos(data)
+      // atualização silenciosa: só troca a lista se algo mudou (evita piscar a tela)
+      setEventos((atual) => (JSON.stringify(atual) === JSON.stringify(data) ? atual : data))
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível carregar a agenda')
+      if (!silencioso) setErro(e instanceof Error ? e.message : 'Não foi possível carregar a agenda')
     } finally {
-      setCarregando(false)
+      if (!silencioso) setCarregando(false)
     }
   }, [diaIni, dias, tecnicoFiltro])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // Outras pessoas criam/alteram eventos: atualiza sozinho a cada 20 s, ao voltar para a aba e ao reconectar
+  useEffect(() => {
+    const atualizar = () => {
+      if (document.visibilityState !== 'visible' || !navigator.onLine || arrastando.current) return
+      carregar(true)
+    }
+    const t = window.setInterval(atualizar, 20_000)
+    document.addEventListener('visibilitychange', atualizar)
+    window.addEventListener('focus', atualizar)
+    window.addEventListener('online', atualizar)
+    return () => {
+      window.clearInterval(t)
+      document.removeEventListener('visibilitychange', atualizar)
+      window.removeEventListener('focus', atualizar)
+      window.removeEventListener('online', atualizar)
+    }
+  }, [carregar])
 
   const porDia = useMemo(() => {
     const mapa: Record<string, EventoAgenda[]> = {}
@@ -354,7 +373,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
       </p>
 
       {feriadosAberto && (
-        <FeriadosModal anoInicial={cursor.y} tipos={tipos} cidade={cidade} uf={uf} onFechar={() => setFeriadosAberto(false)} onMudou={carregar}
+        <FeriadosModal anoInicial={cursor.y} tipos={tipos} cidade={cidade} uf={uf} onFechar={() => setFeriadosAberto(false)} onMudou={() => carregar()}
           onFeriadosMudaram={() => { setFeriados({}); setVersaoFeriados((v) => v + 1) }} />
       )}
       {pop && (
@@ -364,7 +383,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
           onFechar={() => setPop(null)}
           onEditar={() => { setPop(null); setModal({ evento: pop.e }) }}
           onDuplicar={() => { setPop(null); setModal({ evento: null, modelo: pop.e }) }}
-          onMudou={carregar}
+          onMudou={() => carregar()}
           somenteLeitura={somenteLeitura}
         />
       )}
@@ -373,7 +392,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
           evento={menu.e} x={menu.x} y={menu.y}
           onFechar={() => setMenu(null)}
           onDuplicar={() => setModal({ evento: null, modelo: menu.e })}
-          onMudou={carregar}
+          onMudou={() => carregar()}
         />
       )}
       {escopoPend && (
@@ -389,7 +408,7 @@ export function AgendaClient({ tipos, clientes: clientesDaPagina, tecnicos, cida
           fimSugerido={modal.fim}
           tipos={tipos} clientes={clientes} tecnicos={tecnicos} cidade={cidade} uf={uf}
           onFechar={() => setModal(null)}
-          onMudou={carregar}
+          onMudou={() => carregar()}
           onClienteCriado={(c) => setClientesNovos((l) => [...l, c])}
         />
       )}
