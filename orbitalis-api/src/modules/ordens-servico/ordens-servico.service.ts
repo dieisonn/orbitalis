@@ -135,11 +135,10 @@ export class OrdensServicoService {
     let equipamentosParaItens = ambiente.equipamentos;
     const escolhidos = Array.from(new Set([...(dto.equipamentosIds ?? []), ...(dto.equipamentoId ? [dto.equipamentoId] : [])]));
     if (escolhidos.length) {
-      equipamentosParaItens = escolhidos.map((eid) => {
-        const eq = ambiente.equipamentos.find((e) => e.id === eid);
-        if (!eq) throw new NotFoundException('Equipamento não encontrado neste ambiente');
-        return eq;
-      });
+      // Os equipamentos podem ser de qualquer ambiente do mesmo cliente (uma visita que atende várias salas)
+      const doCliente = await this.prisma.equipamento.findMany({ where: { id: { in: escolhidos }, deletedAt: null, ambiente: { clienteId: ambiente.clienteId } } });
+      if (doCliente.length !== escolhidos.length) throw new NotFoundException('Equipamento não encontrado neste cliente');
+      equipamentosParaItens = escolhidos.map((eid) => doCliente.find((e) => e.id === eid)!);
     }
 
     // Checklist próprio do caso: escolhido pelo admin ou sugerido por tipo + tipo de serviço
@@ -1319,7 +1318,7 @@ export class OrdensServicoService {
       const alvo = dto.ambienteId ?? (await this.ambientePadrao(dto.clienteId!));
       if (alvo !== os.ambienteId) novoAmbienteId = alvo;
     }
-    let novoAmbiente: { equipamentos: { id: string }[] } | null = null;
+    let novoAmbiente: { clienteId: string; equipamentos: { id: string }[] } | null = null;
     let snapshotAtual: any = null;
     if (novoAmbienteId) {
       novoAmbiente = await this.prisma.ambiente.findFirst({
@@ -1360,8 +1359,11 @@ export class OrdensServicoService {
     const updated = await this.prisma.$transaction(async (tx) => {
       if (novoAmbienteId && novoAmbiente) {
         await tx.ordemServicoItem.deleteMany({ where: { ordemServicoId: id } });
-        const doNovo = dto.equipamentosIds ? novoAmbiente.equipamentos.filter((e) => dto.equipamentosIds!.includes(e.id)) : novoAmbiente.equipamentos;
-        if (dto.equipamentosIds && doNovo.length !== new Set(dto.equipamentosIds).size) throw new BadRequestException('Há equipamento que não pertence ao ambiente escolhido');
+        const idsEscolhidos = dto.equipamentosIds ? Array.from(new Set(dto.equipamentosIds)) : null;
+        const doNovo = idsEscolhidos
+          ? await tx.equipamento.findMany({ where: { id: { in: idsEscolhidos }, deletedAt: null, ambiente: { clienteId: novoAmbiente.clienteId } }, select: { id: true } })
+          : novoAmbiente.equipamentos;
+        if (idsEscolhidos && doNovo.length !== idsEscolhidos.length) throw new BadRequestException('Há equipamento que não pertence a este cliente');
         if (doNovo.length > 0) {
           const snapshot = snapshotAtual ?? (await resolverChecklistItens(this.prisma, {
             tipo: (dto.tipo as any) ?? os.tipo,
@@ -1376,8 +1378,9 @@ export class OrdensServicoService {
       }
       if (dto.equipamentosIds && !novoAmbienteId) {
         const desejados = new Set(dto.equipamentosIds);
-        const doAmbiente = await tx.equipamento.findMany({ where: { ambienteId: os.ambienteId, deletedAt: null }, select: { id: true, nome: true } });
-        if (dto.equipamentosIds.some((e) => !doAmbiente.some((x) => x.id === e))) throw new BadRequestException('Há equipamento que não pertence ao ambiente desta O.S.');
+        const amb = await tx.ambiente.findUnique({ where: { id: os.ambienteId }, select: { clienteId: true } });
+        const doCliente = await tx.equipamento.findMany({ where: { deletedAt: null, ambiente: { clienteId: amb?.clienteId ?? '' } }, select: { id: true } });
+        if (dto.equipamentosIds.some((e) => !doCliente.some((x) => x.id === e))) throw new BadRequestException('Há equipamento que não pertence ao cliente desta O.S.');
         const atuais = await tx.ordemServicoItem.findMany({ where: { ordemServicoId: id }, include: { equipamento: { select: { nome: true } } } });
         const remover = atuais.filter((i) => !desejados.has(i.equipamentoId));
         const emUso = remover.filter((i) => i.statusItem !== 'pendente' || i.observacoesTecnicas);
