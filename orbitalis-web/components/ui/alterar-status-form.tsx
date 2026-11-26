@@ -14,7 +14,7 @@ const LABELS: Record<OsStatus, string> = {
   cancelada:    'Cancelada',
 }
 
-const ALL: OsStatus[] = ['aberta', 'agendada', 'em_andamento', 'concluida', 'cancelada']
+const ALL: OsStatus[] = ['aberta', 'em_andamento', 'concluida', 'cancelada']
 
 // data/hora atual de Brasília no formato do campo datetime-local
 function dataDiferente(local: string) {

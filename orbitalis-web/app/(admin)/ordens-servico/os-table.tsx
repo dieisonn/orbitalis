@@ -44,7 +44,6 @@ const ORIGEM_LABEL: Record<string, string> = {
 const STATUS_OPTIONS = [
   { value: 'concluida',    label: 'Concluída' },
   { value: 'cancelada',    label: 'Cancelada' },
-  { value: 'agendada',     label: 'Agendada' },
   { value: 'em_andamento', label: 'Em andamento' },
   { value: 'aberta',       label: 'Aberta' },
 ]
@@ -97,7 +96,7 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
     startTransition(async () => {
       const res = await atribuirTecnicoLote(ids, bulkTecnico, bulkData || undefined)
       if (!res.ok) { setErro(res.error ?? 'Erro desconhecido'); return }
-      setMsg(`${res.atribuidas} O.S. atribuída${res.atribuidas !== 1 ? 's' : ''}${res.agendadas ? ` (${res.agendadas} passou a agendada)` : ''}.`)
+      setMsg(`${res.atribuidas} O.S. atribuída${res.atribuidas !== 1 ? 's' : ''}.`)
       setSelected(new Set()); setBulkTecnico(''); setBulkData('')
       router.refresh()
     })

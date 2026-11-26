@@ -183,10 +183,9 @@ export default async function ClienteDetalhePage({ params }: Props) {
 
       {/* Status das O.S. */}
       <div className="bg-white border border-border rounded-lg overflow-hidden mb-4">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-border">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border">
           {[
             { key: 'aberta', label: 'Abertas', dot: 'bg-sky-500' },
-            { key: 'agendada', label: 'Agendadas', dot: 'bg-gray-400' },
             { key: 'em_andamento', label: 'Em andamento', dot: 'bg-amber-500' },
             { key: 'concluida', label: 'Concluídas', dot: 'bg-emerald-500' },
             { key: 'cancelada', label: 'Canceladas', dot: 'bg-red-400' },

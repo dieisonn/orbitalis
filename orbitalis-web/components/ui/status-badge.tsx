@@ -2,7 +2,8 @@ export type OsStatus = 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'c
 
 const CONFIG: Record<OsStatus, { dot: string; text: string; bg: string; label: string }> = {
   aberta:       { dot: 'bg-sky-600',     text: 'text-sky-800',     bg: 'bg-sky-50',     label: 'Aberta' },
-  agendada:     { dot: 'bg-gray-500',    text: 'text-gray-700',    bg: 'bg-gray-100',   label: 'Agendada' },
+  // legado: "agendada" foi unificada em "aberta"
+  agendada:     { dot: 'bg-sky-600',     text: 'text-sky-800',     bg: 'bg-sky-50',     label: 'Aberta' },
   em_andamento: { dot: 'bg-amber-500',   text: 'text-amber-800',   bg: 'bg-amber-50',   label: 'Em andamento' },
   concluida:    { dot: 'bg-emerald-600', text: 'text-emerald-800', bg: 'bg-emerald-50', label: 'Concluída' },
   cancelada:    { dot: 'bg-red-600',     text: 'text-red-800',     bg: 'bg-red-50',     label: 'Cancelada' },

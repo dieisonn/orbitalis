@@ -25,7 +25,6 @@ type Props = {
 const STATUS_OPTIONS = [
   { value: '',            label: 'Todos os status' },
   { value: 'aberta',      label: 'Abertas' },
-  { value: 'agendada',    label: 'Agendadas' },
   { value: 'em_andamento',label: 'Em Andamento' },
   { value: 'concluida',   label: 'Concluídas' },
   { value: 'cancelada',   label: 'Canceladas' },

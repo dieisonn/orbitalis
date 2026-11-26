@@ -47,7 +47,7 @@ type Historico = { equipamento: Equipamento; itens: Item[]; isReincidente: boole
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   aberta:       { label: 'Aberta',       cls: 'bg-blue-100   text-blue-700'   },
-  agendada:     { label: 'Agendada',     cls: 'bg-yellow-100 text-yellow-700' },
+  agendada:     { label: 'Aberta',        cls: 'bg-sky-50 text-sky-800' },
   em_andamento: { label: 'Em andamento', cls: 'bg-orange-100 text-orange-700' },
   concluida:    { label: 'Concluída',    cls: 'bg-green-100  text-green-700'  },
   cancelada:    { label: 'Cancelada',    cls: 'bg-red-100    text-red-700'    },

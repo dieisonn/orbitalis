@@ -11,7 +11,7 @@ export type ResumoOS = {
 }
 
 const STATUS: Record<string, string> = {
-  aberta: 'Aberta', agendada: 'Agendada', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada',
+  aberta: 'Aberta', agendada: 'Aberta', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada',
 }
 
 const rotulo = (n: number | null, id: string) => n != null ? `OS-${String(n).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`

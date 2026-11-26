@@ -81,7 +81,7 @@ type OrdemServico = {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  aberta: 'Aberta', agendada: 'Agendada', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada',
+  aberta: 'Aberta', agendada: 'Aberta', em_andamento: 'Em andamento', concluida: 'Concluída', cancelada: 'Cancelada',
 }
 
 const fmtDataHora = (d: string) =>
@@ -199,7 +199,7 @@ export default async function OsDetailPage({ params }: Props) {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {(os.status === 'em_andamento' || os.status === 'agendada') && (
+            {(os.status === 'em_andamento' || (os.status === 'aberta' && os.tecnico)) && (
               <ConcluirOsBtn osId={os.id} osNum={osNum} />
             )}
             <a

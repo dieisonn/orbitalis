@@ -21,7 +21,7 @@ const STATUS_LABELS: Record<OsStatus, string> = {
   concluida:    'Concluída',
   cancelada:    'Cancelada',
 }
-const ALL_STATUS: OsStatus[] = ['aberta', 'agendada', 'em_andamento', 'concluida', 'cancelada']
+const ALL_STATUS: OsStatus[] = ['aberta', 'em_andamento', 'concluida', 'cancelada']
 
 function fmt(v: number | null) {
   if (v == null) return '—'

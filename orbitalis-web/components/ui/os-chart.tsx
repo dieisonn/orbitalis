@@ -16,7 +16,6 @@ type Ponto = {
 
 const LABEL: Record<string, string> = {
   aberta: 'Abertas',
-  agendada: 'Agendadas',
   em_andamento: 'Em Andamento',
   concluida: 'Concluídas',
   cancelada: 'Canceladas',
@@ -24,7 +23,6 @@ const LABEL: Record<string, string> = {
 
 const COR: Record<string, string> = {
   aberta: '#4f6fb5',
-  agendada: '#c9a98f',
   em_andamento: '#d9a441',
   concluida: '#3d9970',
   cancelada: '#b3564f',

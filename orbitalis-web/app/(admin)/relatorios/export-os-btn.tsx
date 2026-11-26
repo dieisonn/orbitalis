@@ -9,7 +9,6 @@ type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
 const STATUS_OPTS = [
   { value: '', label: 'Todos os status' },
   { value: 'aberta', label: 'Aberta' },
-  { value: 'agendada', label: 'Agendada' },
   { value: 'em_andamento', label: 'Em Andamento' },
   { value: 'concluida', label: 'Concluída' },
   { value: 'cancelada', label: 'Cancelada' },

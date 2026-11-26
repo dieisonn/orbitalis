@@ -99,7 +99,7 @@ export const wazeUrl = (local: string) => {
 }
 
 export const STATUS_OS_LABEL: Record<string, string> = {
-  aberta: 'Aberta', agendada: 'Agendada', em_andamento: 'Em andamento',
+  aberta: 'Aberta', agendada: 'Aberta', em_andamento: 'Em andamento',
   concluida: 'Concluída', cancelada: 'Cancelada',
 }
 
