@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Bell, BellRing, X, Loader2 } from 'lucide-react'
 import { hhmm, type EventoAgenda } from '@/lib/agenda'
+import { AvisosPush } from '@/components/ui/avisos-push'
 
 // Avisos de eventos próximos: a pessoa escolhe até 3 antecedências (5 a 60 min; padrão 30). Cada evento pode desligar os avisos ou ter antecedências próprias.
 // Enquanto o Orbitalis estiver aberto, a página consulta a agenda a cada 30 s e avisa na tela
@@ -71,6 +72,14 @@ export function AvisosAgendaNotificador() {
   const [perm, setPerm] = useState<string>('granted')
   const [bannerOculto, setBannerOculto] = useState(true)
   const tituloOriginal = useRef<string>('')
+  const pushAtivo = useRef(false)
+
+  // com push ativo neste aparelho o aviso do sistema vem do servidor: não duplica
+  useEffect(() => {
+    const ler = () => { navigator.serviceWorker?.ready.then((r) => r.pushManager.getSubscription()).then((sub) => { pushAtivo.current = !!sub && Notification.permission === 'granted' }).catch(() => {}) }
+    ler(); const t = setInterval(ler, 30_000)
+    return () => clearInterval(t)
+  }, [])
 
   // libera o áudio no primeiro clique/tecla e lê a permissão de notificações do navegador
   useEffect(() => {
@@ -115,7 +124,7 @@ export function AvisosAgendaNotificador() {
       for (const n of novos) {
         setTimeout(() => fechar(n.id), 90_000)   // some sozinho depois de 90 s
         try {
-          if ('Notification' in window && Notification.permission === 'granted') {
+          if (!pushAtivo.current && 'Notification' in window && Notification.permission === 'granted') {
             const nt = new Notification(n.titulo, {
               body: `${n.quando}${n.detalhe ? `\n${n.detalhe}` : ''}`, tag: n.id, icon: '/icons/icon-192.png',
               silent: false,
@@ -328,13 +337,12 @@ function AvisosModal({ onFechar }: { onFechar: () => void }) {
             className="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary/5">Testar aviso</button>
         </div>
         <div className="mt-4 text-xs text-gray-700 bg-surface rounded-lg p-3">
-          {perm === 'granted' && <p>Notificações do navegador ativas. Os avisos também aparecem na tela.</p>}
+          <p className="font-semibold text-gray-900 mb-1">Avisos no computador, em qualquer lugar</p>
+          <p className="mb-2">Ative neste computador para receber o aviso do evento mesmo em outros sites ou com o Orbitalis fechado (o navegador precisa estar aberto).</p>
+          <AvisosPush />
           {perm === 'default' && (
-            <p>Os avisos aparecem na tela com o Orbitalis aberto. <button onClick={pedirPermissao} className="font-semibold text-primary hover:underline">Ativar também notificações do navegador</button></p>
+            <p>Sem isso, os avisos aparecem só com o Orbitalis aberto. <button onClick={pedirPermissao} className="font-semibold text-primary hover:underline">Ativar só as notificações do navegador</button></p>
           )}
-          {perm === 'denied' && <p>As notificações do navegador estão bloqueadas neste navegador; os avisos aparecem só na tela.</p>}
-          {perm === 'indisponivel' && <p>Este navegador não oferece notificações do sistema; os avisos aparecem na tela.</p>}
-          <p className="mt-1">Os avisos funcionam enquanto o Orbitalis estiver aberto em alguma aba.</p>
         </div>
         {msg && <p role={msg.tipo === 'erro' ? 'alert' : 'status'} className={`mt-3 text-sm ${msg.tipo === 'erro' ? 'text-red-700' : 'text-green-800'}`}>{msg.texto}</p>}
         <div className="mt-4 flex justify-end gap-2">
