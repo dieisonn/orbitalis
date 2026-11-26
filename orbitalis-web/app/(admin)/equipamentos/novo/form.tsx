@@ -41,10 +41,11 @@ export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambiente
   const [planosSel, setPlanosSel] = useState<string[]>([])
   useEffect(() => {
     let vivo = true
-    if (!ambienteId) { setPlanos([]); setPlanosSel([]); return }
-    planosElegiveis(ambienteId).then((p) => { if (vivo) { setPlanos(p); setPlanosSel(p.map((x) => x.id)) } })
+    const alvo = ambienteId || clienteId
+    if (!alvo) { setPlanos([]); setPlanosSel([]); return }
+    planosElegiveis(alvo).then((p) => { if (vivo) { setPlanos(p); setPlanosSel(p.map((x) => x.id)) } })
     return () => { vivo = false }
-  }, [ambienteId])
+  }, [ambienteId, clienteId])
   const formRef = useRef<HTMLFormElement>(null)
   const nomeRef = useRef<HTMLInputElement>(null)
 
@@ -66,11 +67,16 @@ export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambiente
     const fd = new FormData(e.currentTarget)
     const valorRaw = fd.get('valorAquisicao') as string
 
+    if (!fd.get('ambienteId') && !clienteId) {
+      setError('Selecione o cliente (ou um ambiente) para cadastrar o equipamento.')
+      return
+    }
     setError(null)
     startTransition(async () => {
       try {
         await criarEquipamento({
-          ambienteId:         fd.get('ambienteId') as string,
+          ambienteId:         (fd.get('ambienteId') as string) || undefined,
+          clienteId:          clienteId || undefined,
           nome:               fd.get('nome') as string,
           marca:              fd.get('marca') as string,
           modelo:             fd.get('modelo') as string,
@@ -107,16 +113,15 @@ export function NovoEquipamentoForm({ ambientes, ambienteIdInicial }: { ambiente
       {/* Ambiente */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Ambiente <span className="text-destructive">*</span>
+          Ambiente <span className="text-gray-400 font-normal">(opcional)</span>
         </label>
         <select
           name="ambienteId"
-          required
           value={ambienteId}
           onChange={(e) => setAmbienteId(e.target.value)}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
         >
-          <option value="">Selecione o ambiente…</option>
+          <option value="">Sem local definido (cadastrar depois)</option>
           {ambientesFiltrados.map((a) => (
             <option key={a.id} value={a.id}>
               {a.nome}

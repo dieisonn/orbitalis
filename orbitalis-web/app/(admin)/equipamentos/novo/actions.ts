@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation'
 import { api } from '@/lib/api'
 
 type CreateEquipamentoData = {
-  ambienteId: string
+  ambienteId?: string
+  clienteId?: string
   nome: string
   marca: string
   modelo?: string
@@ -21,7 +22,8 @@ type CreateEquipamentoData = {
 // continuar = true: fica no formulário para cadastrar o próximo equipamento do mesmo ambiente
 export async function criarEquipamento(data: CreateEquipamentoData, continuar = false) {
   await api.post('/equipamentos', {
-    ambienteId:          data.ambienteId,
+    ambienteId:          data.ambienteId || undefined,
+    clienteId:           data.ambienteId ? undefined : data.clienteId,
     nome:                data.nome,
     marca:               data.marca,
     modelo:              data.modelo         || undefined,
