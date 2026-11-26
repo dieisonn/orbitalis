@@ -128,8 +128,8 @@ export class OrdensServicoService {
 
     if (dto.auxiliaresIds?.length && !dto.tecnicoId) throw new BadRequestException('Escolha o técnico responsável antes de adicionar ajudantes');
 
-    // Com técnico definido já nasce agendada (não precisa passar pela triagem)
-    const statusInicial: OsStatus = dto.tecnicoId ? 'agendada' : 'aberta';
+    // Status único de pendência: "aberta" (com ou sem técnico definido)
+    const statusInicial: OsStatus = 'aberta';
 
     let equipamentosParaItens = ambiente.equipamentos;
     if (dto.equipamentoId) {
@@ -190,8 +190,8 @@ export class OrdensServicoService {
 
     if (result && dto.auxiliaresIds?.length) await this.definirAuxiliares(result.id, dto.auxiliaresIds);
 
-    // Avisa o técnico quando a O.S. já nasce agendada
-    if (result && statusInicial === 'agendada' && dto.tecnicoId) {
+    // Avisa o técnico quando a O.S. já nasce com técnico definido
+    if (result && dto.tecnicoId) {
       this.prisma.usuario
         .findFirst({ where: { id: dto.tecnicoId, tipo: 'tecnico' }, select: { email: true, nome: true } })
         .then((tec) => {
@@ -362,7 +362,7 @@ export class OrdensServicoService {
           (o) => ['aberta', 'agendada', 'em_andamento'].includes(o.status) && o.dataAgendamento < inicioHojeBR(),
         ).length;
         const aIniciar = ativas.filter(
-          (o) => o.status === 'agendada' && o.dataAgendamento >= agora,
+          (o) => o.status === 'aberta' && o.dataAgendamento >= agora,
         ).length;
 
         return {
@@ -914,7 +914,7 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id/triar — Admin despacha a O.S. para o técnico (§US07)
-  // Transição válida: aberta → agendada
+  // Define técnico e data de uma O.S. aberta (o status continua "aberta")
   async triar(id: string, dto: TriarOsDto, user?: { id: string; role: string }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
@@ -933,7 +933,6 @@ export class OrdensServicoService {
     const updated = await this.prisma.ordemServico.update({
       where: { id },
       data: {
-        status: 'agendada',
         tecnicoId: dto.tecnicoId,
         dataAgendamento: new Date(dto.dataAgendamento),
       },
@@ -944,7 +943,7 @@ export class OrdensServicoService {
       },
     });
 
-    await this.registrarHistorico(id, os.status, 'agendada', user);
+    await this.registrarHistorico(id, os.status, 'aberta', user, { observacao: 'Triagem: técnico e data definidos' });
     await this.agenda.sincronizarOs(id);
 
     const osNumero = updated.numero != null ? `OS-${String(updated.numero).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`;
@@ -1018,6 +1017,7 @@ export class OrdensServicoService {
 
   // PATCH /ordens-servico/:id/status — Admin altera status manualmente
   async alterarStatus(id: string, status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string }) {
+    if ((status as string) === 'agendada') status = 'aberta'; // status unificado
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
 
@@ -1047,6 +1047,7 @@ export class OrdensServicoService {
 
   // PATCH /ordens-servico/bulk-status — Altera status de múltiplas O.S. de uma vez
   async bulkAlterarStatus(ids: string[], status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string }) {
+    if ((status as string) === 'agendada') status = 'aberta'; // status unificado
     const informada = this.lerDataOcorrencia(extra?.dataOcorrencia);
     const agora = informada ?? new Date();
     const antes = await this.prisma.ordemServico.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } });
@@ -1073,7 +1074,7 @@ export class OrdensServicoService {
 
   /**
    * Triagem em bloco: define o técnico responsável de várias O.S. de uma vez.
-   * O.S. "aberta" passa a "agendada"; as demais (inclusive concluídas, para lançamento retroativo) mantêm o status.
+   * O status não muda (inclusive concluídas, para lançamento retroativo).
    * Com `dataAgendamento`, todas passam para essa data; sem ela cada uma mantém a sua.
    */
   async atribuirTecnicoLote(dto: AtribuirTecnicoLoteDto, user?: { id: string; role: string }) {
@@ -1088,12 +1089,11 @@ export class OrdensServicoService {
 
     await this.prisma.$transaction(async (tx) => {
       await tx.ordemServico.updateMany({ where: { id: { in: idsOk } }, data: { tecnicoId: dto.tecnicoId, ...(data ? { dataAgendamento: data } : {}) } });
-      if (abertas.length) await tx.ordemServico.updateMany({ where: { id: { in: abertas } }, data: { status: 'agendada' } });
       // o novo responsável não fica também como auxiliar da mesma O.S.
       await tx.ordemServicoAuxiliar.deleteMany({ where: { ordemServicoId: { in: idsOk }, tecnicoId: dto.tecnicoId } });
     });
     for (const o of oss) {
-      if (o.status === 'aberta') await this.registrarHistorico(o.id, 'aberta', 'agendada', user, { observacao: 'Triagem em bloco' });
+      if (o.status === 'aberta') await this.registrarHistorico(o.id, 'aberta', 'aberta', user, { observacao: 'Triagem em bloco' });
       await this.agenda.sincronizarOs(o.id);
     }
     const mudaram = oss.filter((o) => o.tecnicoId !== dto.tecnicoId).length;
@@ -1321,9 +1321,6 @@ export class OrdensServicoService {
         ...(dto.dataAgendamento ? { dataAgendamento: new Date(dto.dataAgendamento) } : {}),
         ...(dto.observacoesGerais !== undefined ? { observacoesGerais: dto.observacoesGerais || null } : {}),
         ...(dto.tecnicoId !== undefined ? { tecnicoId: dto.tecnicoId || null } : {}),
-        // Status acompanha o técnico: com técnico a O.S. sai da triagem (agendada); sem técnico volta a aguardar triagem
-        ...(dto.tecnicoId !== undefined && os.status === 'aberta' && dto.tecnicoId ? { status: 'agendada' as const } : {}),
-        ...(dto.tecnicoId !== undefined && os.status === 'agendada' && !dto.tecnicoId ? { status: 'aberta' as const } : {}),
         ...(dto.tipo ? { tipo: dto.tipo as any } : {}),
         ...(dto.tipoServicoId !== undefined ? { tipoServicoId: dto.tipoServicoId || null } : {}),
         ...(dto.tipoServicoId !== undefined || dto.tiposServicoExtras !== undefined
@@ -1422,8 +1419,9 @@ export class OrdensServicoService {
       const counts = byMes[mes] ?? {};
       result.push({
         mes,
-        aberta:       counts['aberta']       ?? 0,
-        agendada:     counts['agendada']     ?? 0,
+        // "agendada" foi unificada em "aberta" (registros antigos somam aqui)
+        aberta:       (counts['aberta'] ?? 0) + (counts['agendada'] ?? 0),
+        agendada:     0,
         em_andamento: counts['em_andamento'] ?? 0,
         concluida:    counts['concluida']    ?? 0,
         cancelada:    counts['cancelada']    ?? 0,

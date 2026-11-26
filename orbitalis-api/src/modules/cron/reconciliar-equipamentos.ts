@@ -171,7 +171,7 @@ export async function incluirEquipamentoNosPlanos(
             planoId: plano.id,
             tecnicoId: plano.tecnicoId,
             tipoServicoId: plano.tipoServicoId,
-            status: 'agendada',
+            status: 'aberta',
             tipo: 'preventiva',
             origem: 'preventiva_automatica',
             dataAgendamento: modelo.dataAgendamento,

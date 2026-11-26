@@ -224,7 +224,7 @@ export async function gerarOsDoPlano(
             planoId: plano.id,
             tecnicoId: plano.tecnicoId,
             tipoServicoId: plano.tipoServicoId,
-            status: 'agendada',
+            status: 'aberta',
             tipo: 'preventiva',
             origem: 'preventiva_automatica',
             dataAgendamento: dataGeracao,
