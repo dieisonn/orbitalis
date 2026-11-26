@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import Sidebar from '@/components/layout/sidebar'
 import { SearchPalette } from '@/components/ui/search-palette'
 import { AvisosAgendaNotificador } from '@/components/layout/avisos-agenda'
+import { DicasApp } from '@/components/ui/dicas-app'
 
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null }
 type UserInfo = { nome: string | null; email: string; acesso?: string[] | null }
@@ -20,6 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         {children}
       </main>
       <SearchPalette />
+      <DicasApp />
       <AvisosAgendaNotificador />
     </div>
   )

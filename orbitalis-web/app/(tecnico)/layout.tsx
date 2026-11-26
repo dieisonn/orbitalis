@@ -8,6 +8,7 @@ import { OfflineBanner } from '@/components/ui/offline-banner'
 import { Logo } from '@/components/ui/logo'
 import { SinoAvisos } from '@/components/ui/sino-avisos'
 import { AtualizadorPortal } from '@/components/ui/atualizador-portal'
+import { DicasApp } from '@/components/ui/dicas-app'
 
 export default function TecnicoLayout({ children }: { children: React.ReactNode }) {
   const path = usePathname()
@@ -22,6 +23,7 @@ export default function TecnicoLayout({ children }: { children: React.ReactNode 
       </header>
 
       <OfflineBanner />
+      <DicasApp />
       <AtualizadorPortal />
 
       {/* Conteúdo principal */}

@@ -1,5 +1,6 @@
 'use client'
 import { Logo } from '@/components/ui/logo'
+import { DicasApp } from '@/components/ui/dicas-app'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -105,6 +106,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
           )
         })}
       </nav>
+      <DicasApp notificacoes={false} />
     </div>
   )
 }
