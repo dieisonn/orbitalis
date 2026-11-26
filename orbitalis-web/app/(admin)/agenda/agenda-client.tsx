@@ -547,12 +547,11 @@ function SemanaCelular({ dias, porDia, marcas, onAbrir }: { dias: Dia[]; porDia:
 type Posicionado = {
   e: EventoAgenda; topo: number; altura: number
   nivel: number            // quantos eventos "por baixo" (começaram antes e ainda rodam): vira recuo à esquerda, como no Google
-  idx: number; de: number  // coluna `idx` de `de` colunas do grupo de eventos que se sobrepõem
-  span?: number            // quantas colunas o bloco ocupa (estende-se para a direita quando há espaço livre)
+  idx: number; de: number  // lado a lado com quem começa junto: posição `idx` de `de`
   grupo?: EventoAgenda[]   // vários eventos no mesmo horário viram um bloco só
 }
 
-const MAX_COLUNAS = 4
+const MAX_COLUNAS = 3
 
 function posicionar(lista: EventoAgenda[], dia: Dia): Posicionado[] {
   const base = instante(dia.y, dia.m, dia.d)
@@ -589,17 +588,22 @@ function posicionar(lista: EventoAgenda[], dia: Dia): Posicionado[] {
       cluster = []
       return
     }
-    // Colunas lado a lado, sem sobrepor: o cluster tem `cols.length` colunas; cada evento ocupa a sua
-    // e se estende para a direita enquanto as colunas seguintes estiverem livres no horário dele.
-    const total = cols.length
+    // Estilo Google: quem começa DEPOIS e sobrepõe fica por cima, recuado; quem começa junto divide a largura
+    const JUNTOS = 15 // min
+    const niveis = new Map<EventoAgenda, number>()
+    for (const { it } of alocados) {
+      const abaixo = alocados.filter((o) => o.it !== it && o.it.ini < it.fim && o.it.fim > it.ini && o.it.ini <= it.ini - JUNTOS)
+      niveis.set(it.e, Math.min(3, abaixo.reduce((m, o) => Math.max(m, (niveis.get(o.it.e) ?? 0) + 1), 0)))
+    }
     for (const { it, c } of alocados) {
-      let span = 1
-      while (c + span < total && !alocados.some((o) => o.c === c + span && o.it.ini < it.fim && o.it.fim > it.ini)) span++
+      const irmaos = alocados.filter((o) => o.it === it || (o.it.ini < it.fim && o.it.fim > it.ini && Math.abs(o.it.ini - it.ini) < JUNTOS))
+      irmaos.sort((x, y) => x.c - y.c)
       out.push({
         e: it.e,
         topo: ((it.ini - HORA_INI * 60) / 60) * PX_HORA,
         altura: Math.max(((it.fim - it.ini) / 60) * PX_HORA, 18),
-        nivel: 0, idx: c, de: total, span,
+        nivel: niveis.get(it.e) ?? 0,
+        idx: Math.max(0, irmaos.findIndex((o) => o.c === c && o.it === it)), de: irmaos.length,
       })
     }
     cluster = []
@@ -623,8 +627,8 @@ type Controle = {
 const hm = (min: number) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 
 // Bloco de um evento na grade: clique abre, arrastar move, bordas de cima/baixo ajustam a duração
-function BlocoEvento({ e, d, topo, altura, nivel, idx, de, span = 1, esmaecido, onAbrir, onMenu, iniciar, suprimirClique }: {
-  e: EventoAgenda; d: Dia; topo: number; altura: number; nivel: number; idx: number; de: number; span?: number; esmaecido: boolean
+function BlocoEvento({ e, d, topo, altura, nivel, idx, de, esmaecido, onAbrir, onMenu, iniciar, suprimirClique }: {
+  e: EventoAgenda; d: Dia; topo: number; altura: number; nivel: number; idx: number; de: number; esmaecido: boolean
   onAbrir: AoAbrir; onMenu: AoMenu
   iniciar: (ev: React.PointerEvent, kind: Acao, col: HTMLElement, base: { dia: Dia; ini?: number; fim?: number; evento?: EventoAgenda }) => void
   suprimirClique: React.RefObject<boolean>
@@ -646,8 +650,8 @@ function BlocoEvento({ e, d, topo, altura, nivel, idx, de, span = 1, esmaecido, 
       onPointerDown={arrastavel ? (ev) => { ev.stopPropagation(); iniciar(ev, 'mover', colEl(ev), base) } : undefined}
       style={{
         top: topo, height: altura, zIndex: 1 + nivel,
-        left: `calc((100% - 2px) * ${idx / de})`,
-        width: `calc((100% - 2px) * ${span / de} - 1px)`,
+        left: `calc(${nivel * 10}px + (100% - ${nivel * 10}px - 2px) * ${idx / de})`,
+        width: `calc((100% - ${nivel * 10}px - 2px) / ${de})`,
         ...(nivel > 0 ? { boxShadow: '0 2px 6px rgb(19 24 21 / 0.3)' } : {}),
         backgroundColor: e.corHex, color: textoSobre(e.corHex), ...estiloStatus(e),
         ...(esmaecido ? { opacity: 0.35 } : {}),
@@ -873,7 +877,7 @@ function GradeHoras({ dias, porDia, marcas, onAbrir, onMenu, onNovo, onHorario }
                   <div className="absolute inset-x-0 border-t-2 border-red-500 pointer-events-none z-10"
                     style={{ top: ((agora.hh * 60 + agora.mm - HORA_INI * 60) / 60) * PX_HORA }} />
                 )}
-                {pos.map(({ e, topo, altura, nivel, idx, de, span, grupo }) => grupo ? (
+                {pos.map(({ e, topo, altura, nivel, idx, de, grupo }) => grupo ? (
                   <button key={`g-${e.id}`}
                     onClick={(ev) => { ev.stopPropagation(); setLista(grupo) }}
                     style={{ top: topo, height: altura, left: 0, width: '100%' }}
@@ -882,7 +886,7 @@ function GradeHoras({ dias, porDia, marcas, onAbrir, onMenu, onNovo, onHorario }
                     <span className="block text-[11px] font-normal opacity-90">clique para ver a lista</span>
                   </button>
                 ) : (
-                  <BlocoEvento key={e.id} e={e} d={d} topo={topo} altura={altura} nivel={nivel} idx={idx} de={de} span={span}
+                  <BlocoEvento key={e.id} e={e} d={d} topo={topo} altura={altura} nivel={nivel} idx={idx} de={de}
                     esmaecido={prev?.evId === e.id} onAbrir={onAbrir} onMenu={onMenu} iniciar={iniciar} suprimirClique={suprimirClique} />
                 ))}
               </div>
