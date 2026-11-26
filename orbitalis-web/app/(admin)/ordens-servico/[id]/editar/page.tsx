@@ -6,7 +6,7 @@ import type { ModeloResumo } from '@/lib/checklist'
 type Props = { params: Promise<{ id: string }> }
 type Tecnico = { id: string; email: string; nome: string | null }
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null }
-type Ambiente = { id: string; nome: string; localizacaoInterna: string; clienteId: string }
+type Ambiente = { id: string; nome: string; localizacaoInterna: string; clienteId: string; equipamentos?: { id: string; nome: string; tipoEquipamento?: string }[] }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string; ativo: boolean }
 type OsEdicao = {
   id: string; numero: number | null; status: string; dataAgendamento: string | null
@@ -17,7 +17,7 @@ type OsEdicao = {
   auxiliares?: { tecnicoId: string }[]
   tipoServico?: { id: string } | null
   ambiente?: { id?: string; clienteId?: string; cliente?: { id: string } | null } | null
-  itens?: { statusItem: string; observacoesTecnicas: string | null; checklistSnapshot?: unknown }[]
+  itens?: { equipamentoId?: string; statusItem: string; observacoesTecnicas: string | null; checklistSnapshot?: unknown }[]
 }
 
 export default async function EditarOsPage({ params }: Props) {
@@ -98,6 +98,8 @@ export default async function EditarOsPage({ params }: Props) {
             ambientes={ambientesRes.data}
             tiposServico={(Array.isArray(tiposRes) ? tiposRes : []).filter((t) => t.ativo || t.id === (os.tipoServico?.id ?? os.tipoServicoId))}
             localTravado={localTravado}
+            equipamentosAtuaisIds={(os.itens ?? []).map((i) => i.equipamentoId).filter((x): x is string => !!x)}
+            equipamentosEmUsoIds={(os.itens ?? []).filter((i) => i.statusItem !== 'pendente' || i.observacoesTecnicas).map((i) => i.equipamentoId).filter((x): x is string => !!x)}
           />
         </div>
       </div>

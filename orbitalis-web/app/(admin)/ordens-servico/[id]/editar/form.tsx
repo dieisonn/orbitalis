@@ -12,10 +12,11 @@ import { TIPO_OS_LABEL, type ModeloResumo } from '@/lib/checklist'
 import { Wrench, ShieldCheck } from 'lucide-react'
 import { ClienteSelect } from '@/components/ui/cliente-select'
 import { textoSobre } from '@/lib/cor'
+import { SeletorEquipamentos, type EquipamentoOpcao } from '@/components/ui/seletor-equipamentos'
 
 type Tecnico = { id: string; email: string; nome: string | null }
 type Cliente = { id: string; razaoSocial: string; nomeFantasia: string | null; endereco?: string; enderecosExtras?: EnderecoCliente[] }
-type Ambiente = { id: string; nome: string; localizacaoInterna: string; clienteId: string }
+type Ambiente = { id: string; nome: string; localizacaoInterna: string; clienteId: string; equipamentos?: EquipamentoOpcao[] }
 type TipoServico = { id: string; sigla: string; nome: string; corHex: string }
 
 export function EditarOsForm({
@@ -29,6 +30,8 @@ export function EditarOsForm({
   modelos,
   temEquipamentos,
   checklistAtualItens,
+  equipamentosAtuaisIds,
+  equipamentosEmUsoIds,
 }: {
   osId: string
   initialValues: {
@@ -54,6 +57,8 @@ export function EditarOsForm({
   modelos: ModeloResumo[]
   temEquipamentos: boolean
   checklistAtualItens: number
+  equipamentosAtuaisIds: string[]
+  equipamentosEmUsoIds: string[]
 }) {
   const router = useRouter()
   const [clienteId, setClienteId] = useState(initialValues.clienteId)
@@ -64,6 +69,20 @@ export function EditarOsForm({
   )
   const tipoServicoId = tiposIds[0] ?? ''
   const ambientesDoCliente = ambientes.filter((a) => a.clienteId === clienteId)
+
+  // Equipamentos da O.S.: começa com os atuais; ao trocar de ambiente passa a valer o do novo (todos marcados)
+  const ambienteAtual = ambientes.find((a) => a.id === ambienteId)
+  const equipsAmbiente = ambienteAtual?.equipamentos ?? []
+  const [selEquips, setSelEquips] = useState<string[]>(equipamentosAtuaisIds)
+  const ambienteMudou = ambienteId !== initialValues.ambienteId
+  const mudouSelecao = ambienteMudou
+    ? selEquips.length !== equipsAmbiente.length
+    : selEquips.length !== equipamentosAtuaisIds.length || selEquips.some((x) => !equipamentosAtuaisIds.includes(x))
+  const trocarAmbiente = (id: string) => {
+    setAmbienteId(id)
+    const novo = ambientes.find((a) => a.id === id)
+    setSelEquips(id === initialValues.ambienteId ? equipamentosAtuaisIds : (novo?.equipamentos ?? []).map((e) => e.id))
+  }
 
   const [tecnicoId, setTecnicoId] = useState(initialValues.tecnicoId ?? '')
   const [ajudantes, setAjudantes] = useState<string[]>(initialValues.auxiliaresIds)
@@ -92,6 +111,7 @@ export function EditarOsForm({
       const res = await editarOs(osId, {
         dataAgendamento, observacoesGerais, tecnicoId, auxiliaresIds: ajudantes.filter((a) => a !== tecnicoId), tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, dias, horaInicio, horaFim,
         ...(localMudou ? { clienteId, ambienteId } : {}),
+        ...(equipsAmbiente.length > 0 && mudouSelecao ? { equipamentosIds: selEquips } : {}),
         ...(checklistId === NENHUM_CHECKLIST ? { semChecklist: true } : checklistId ? { modeloChecklistId: checklistId } : {}),
       })
       if (!res.ok) { setError(res.error); return }
@@ -107,13 +127,13 @@ export function EditarOsForm({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente" disabled={localTravado}
-          onChange={(id) => { setClienteId(id); setAmbienteId(''); setEnderecoId('') }} />
+          onChange={(id) => { setClienteId(id); setAmbienteId(''); setSelEquips([]); setEnderecoId('') }} />
         <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">
           Ambiente / Local <span className="ml-1 text-xs font-normal text-gray-500">(opcional)</span>
         </label>
         <select
           value={ambienteId}
-          onChange={(e) => setAmbienteId(e.target.value)}
+          onChange={(e) => trocarAmbiente(e.target.value)}
           disabled={localTravado || !clienteId}
           aria-label="Ambiente"
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white disabled:opacity-60"
@@ -129,6 +149,21 @@ export function EditarOsForm({
           </p>
         )}
       </div>
+
+      {equipsAmbiente.length > 0 && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Equipamentos desta O.S. <span className="ml-1 text-xs font-normal text-gray-500">(marque um, vários ou todos)</span>
+          </label>
+          <SeletorEquipamentos
+            equipamentos={equipsAmbiente}
+            selecionados={selEquips}
+            onChange={setSelEquips}
+            travados={ambienteMudou ? [] : equipamentosEmUsoIds}
+          />
+          <p className="text-xs text-gray-500 mt-1">Equipamento já executado pelo técnico não pode ser retirado. Os novos entram com o checklist atual da O.S.</p>
+        </div>
+      )}
 
       {(() => { const c = clientes.find((x) => x.id === clienteId); return <SeletorEnderecoOs extras={c?.enderecosExtras ?? []} principal={c?.endereco} value={enderecoId} onChange={setEnderecoId} /> })()}
 

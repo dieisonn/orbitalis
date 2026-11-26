@@ -3,6 +3,7 @@ import { SeletorEnderecoOs, type EnderecoCliente } from '@/components/ui/seletor
 
 import { useTransition, useState } from 'react'
 import { criarOs } from './actions'
+import { SeletorEquipamentos } from '@/components/ui/seletor-equipamentos'
 import { AjudantesSelect } from '@/components/ui/ajudantes-select'
 import { ChecklistSelect, NENHUM_CHECKLIST } from '@/components/ui/checklist-select'
 import { TIPO_OS_LABEL, type ModeloResumo, type TipoOs } from '@/lib/checklist'
@@ -42,7 +43,7 @@ export function NovaOsForm({
   const [error, setError]           = useState<string | null>(null)
   const [clienteId, setClienteId]   = useState('')
   const [ambienteId, setAmbienteId] = useState('')
-  const [equipamentoId, setEquipamentoId] = useState('')
+  const [excluidos, setExcluidos] = useState<string[]>([]) // equipamentos do ambiente que ficam de fora (vazio = todos)
   // tipos de serviço marcados: o primeiro é o principal
   const [enderecoId, setEnderecoId] = useState('')
   const [tiposIds, setTiposIds] = useState<string[]>([])
@@ -70,11 +71,14 @@ export function NovaOsForm({
     : []
 
   const ambienteSelecionado = ambientes.find((a) => a.id === ambienteId)
+  const equipsAmbiente = ambienteSelecionado?.equipamentos ?? []
+  const equipsSelecionados = equipsAmbiente.filter((e) => !excluidos.includes(e.id)).map((e) => e.id)
   const tipoSelecionado     = tiposServico.find((t) => t.id === tipoServicoId)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!clienteId) return
+    if (equipsAmbiente.length > 0 && equipsSelecionados.length === 0) { setError('Escolha ao menos um equipamento (ou outro ambiente).'); return }
     const fd = new FormData(e.currentTarget)
     const dataAgendamento   = fd.get('dataAgendamento')   as string
     const horaInicio        = fd.get('horaInicio')        as string
@@ -99,7 +103,7 @@ export function NovaOsForm({
           tipoServicoId,
           tiposServicoExtras: tiposIds.slice(1),
           enderecoId,
-          equipamentoId,
+          equipamentosIds: excluidos.length ? equipsSelecionados : undefined,
           horaInicio,
           horaFim,
           dias,
@@ -164,7 +168,7 @@ export function NovaOsForm({
         </div>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
           onCriar={(busca) => setCadastrando(busca)}
-          onChange={(id) => { setClienteId(id); setAmbienteId(''); setEquipamentoId(''); setEnderecoId('') }} />
+          onChange={(id) => { setClienteId(id); setAmbienteId(''); setExcluidos([]); setEnderecoId('') }} />
         {cadastrando !== null && (
           <ClienteRapidoModal nomeInicial={cadastrando} comAmbiente onFechar={() => setCadastrando(null)}
             onCriado={({ cliente, ambiente }) => {
@@ -173,7 +177,7 @@ export function NovaOsForm({
                 setAmbienteId(ambiente.id)
               }
               setClientesExtras((l) => [...l, { id: cliente.id, razaoSocial: cliente.razaoSocial, nomeFantasia: null }])
-              setClienteId(cliente.id); setEquipamentoId(''); setCadastrando(null)
+              setClienteId(cliente.id); setExcluidos([]); setCadastrando(null)
             }} />
         )}
       </div>
@@ -187,7 +191,7 @@ export function NovaOsForm({
         </label>
         <select
           value={ambienteId}
-          onChange={(e) => { setAmbienteId(e.target.value); setEquipamentoId('') }}
+          onChange={(e) => { setAmbienteId(e.target.value); setExcluidos([]) }}
           disabled={!clienteId}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white disabled:opacity-50"
         >
@@ -216,7 +220,7 @@ export function NovaOsForm({
             onCriado={(a) => {
               const c = clientes.find((x) => x.id === clienteId) ?? null
               setAmbientes((l) => [...l, { ...a, cliente: c, equipamentos: [] }])
-              setAmbienteId(a.id); setEquipamentoId(''); setCadastrandoAmb(false)
+              setAmbienteId(a.id); setExcluidos([]); setCadastrandoAmb(false)
             }} />
         )}
       </div>
@@ -225,21 +229,14 @@ export function NovaOsForm({
       {ambienteSelecionado && ambienteSelecionado.equipamentos.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Equipamento
-            <span className="ml-1 text-xs font-normal text-gray-400">(opcional)</span>
+            Equipamentos desta O.S.
+            <span className="ml-1 text-xs font-normal text-gray-500">(marque um, vários ou todos)</span>
           </label>
-          <select
-            value={equipamentoId}
-            onChange={(e) => setEquipamentoId(e.target.value)}
-            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white"
-          >
-            <option value="">Todos os equipamentos do ambiente</option>
-            {ambienteSelecionado.equipamentos.map((eq) => (
-              <option key={eq.id} value={eq.id}>
-                {eq.nome} — {eq.tipoEquipamento}
-              </option>
-            ))}
-          </select>
+          <SeletorEquipamentos
+            equipamentos={equipsAmbiente}
+            selecionados={equipsSelecionados}
+            onChange={(ids) => setExcluidos(equipsAmbiente.filter((e) => !ids.includes(e.id)).map((e) => e.id))}
+          />
         </div>
       )}
 

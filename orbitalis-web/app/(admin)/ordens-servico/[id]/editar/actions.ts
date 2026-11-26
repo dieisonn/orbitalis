@@ -21,6 +21,7 @@ export async function editarOs(
     horaFim: string
     clienteId?: string       // só enviado quando cliente/ambiente mudaram
     ambienteId?: string
+    equipamentosIds?: string[]   // só enviado quando a escolha de equipamentos mudou
   },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
@@ -39,6 +40,7 @@ export async function editarOs(
       horaInicio: data.horaInicio || null,
       horaFim: data.horaFim || null,
       ...(data.ambienteId ? { ambienteId: data.ambienteId } : data.clienteId ? { clienteId: data.clienteId } : {}),
+      ...(data.equipamentosIds ? { equipamentosIds: data.equipamentosIds } : {}),
     })
     revalidatePath('/ordens-servico')
     revalidatePath(`/ordens-servico/${osId}`)
