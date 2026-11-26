@@ -29,6 +29,7 @@ import {
   UsersRound,
   History,
   Filter,
+  Gauge,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
@@ -72,6 +73,7 @@ const NAV_GROUPS: { label: string | null; items: { href: string; label: string; 
     items: [
       { href: '/financeiro',                  label: 'Financeiro',     icon: TrendingUp },
       { href: '/funil-visitas',               label: 'Funil de visitas', icon: Filter },
+      { href: '/capacidade',                  label: 'Capacidade de horas', icon: Gauge },
       { href: '/equipamentos/confiabilidade', label: 'Confiabilidade', icon: ShieldCheck },
       { href: '/relatorios',                  label: 'Relatórios',     icon: FileSpreadsheet },
     ],
