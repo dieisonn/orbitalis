@@ -44,7 +44,7 @@ export function NovaOsForm({
   const [clienteId, setClienteId]   = useState('')
   const [ambienteId, setAmbienteId] = useState('')
   // Equipamentos: null = padrão (todos os do ambiente escolhido); lista = escolha manual (pode incluir outros ambientes do cliente)
-  const [selEq, setSelEq] = useState<string[] | null>(null)
+  const [selEq, setSelEq] = useState<string[]>([])
   // tipos de serviço marcados: o primeiro é o principal
   const [enderecoId, setEnderecoId] = useState('')
   const [tiposIds, setTiposIds] = useState<string[]>([])
@@ -71,16 +71,14 @@ export function NovaOsForm({
     ? ambientes.filter((a) => a.clienteId === clienteId)
     : []
 
-  const ambienteSelecionado = ambientes.find((a) => a.id === ambienteId)
-  const equipsAmbiente = ambienteSelecionado?.equipamentos ?? []
   const equipsCliente = ambientesFiltrados.flatMap((a) => a.equipamentos.map((e) => ({ ...e, grupo: a.nome })))
-  const equipsSelecionados = selEq ?? equipsAmbiente.map((e) => e.id)
+  // O ambiente da O.S. vem dos equipamentos marcados (o do primeiro); sem equipamento, vale o ambiente recém-cadastrado ou o padrão do cliente
+  const ambienteEfetivo = ambientesFiltrados.find((a) => a.equipamentos.some((e) => selEq.includes(e.id)))?.id ?? ambienteId
   const tipoSelecionado     = tiposServico.find((t) => t.id === tipoServicoId)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!clienteId) return
-    if (selEq !== null && selEq.length === 0) { setError('Escolha ao menos um equipamento (ou volte a marcar os do ambiente).'); return }
     const fd = new FormData(e.currentTarget)
     const dataAgendamento   = fd.get('dataAgendamento')   as string
     const horaInicio        = fd.get('horaInicio')        as string
@@ -94,7 +92,7 @@ export function NovaOsForm({
       try {
         await criarOs({
           clienteId,
-          ambienteId,
+          ambienteId: ambienteEfetivo,
           tecnicoId,
           auxiliaresIds: tecnicoId ? ajudantes.filter((a) => a !== tecnicoId) : [],
           dataAgendamento,
@@ -105,7 +103,7 @@ export function NovaOsForm({
           tipoServicoId,
           tiposServicoExtras: tiposIds.slice(1),
           enderecoId,
-          equipamentosIds: selEq ?? undefined,
+          equipamentosIds: selEq.length ? selEq : undefined,
           horaInicio,
           horaFim,
           dias,
@@ -170,7 +168,7 @@ export function NovaOsForm({
         </div>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
           onCriar={(busca) => setCadastrando(busca)}
-          onChange={(id) => { setClienteId(id); setAmbienteId(''); setSelEq(null); setEnderecoId('') }} />
+          onChange={(id) => { setClienteId(id); setAmbienteId(''); setSelEq([]); setEnderecoId('') }} />
         {cadastrando !== null && (
           <ClienteRapidoModal nomeInicial={cadastrando} comAmbiente onFechar={() => setCadastrando(null)}
             onCriado={({ cliente, ambiente }) => {
@@ -179,33 +177,15 @@ export function NovaOsForm({
                 setAmbienteId(ambiente.id)
               }
               setClientesExtras((l) => [...l, { id: cliente.id, razaoSocial: cliente.razaoSocial, nomeFantasia: null }])
-              setClienteId(cliente.id); setSelEq(null); setCadastrando(null)
+              setClienteId(cliente.id); setSelEq([]); setCadastrando(null)
             }} />
         )}
       </div>
 
       {(() => { const c = clientes.find((x) => x.id === clienteId) as { endereco?: string; enderecosExtras?: EnderecoCliente[] } | undefined; return <SeletorEnderecoOs extras={c?.enderecosExtras ?? []} principal={c?.endereco} value={enderecoId} onChange={setEnderecoId} /> })()}
 
-      {/* Ambiente */}
+      {/* Ambientes: cadastro rápido (a escolha do local é feita marcando os equipamentos) */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Ambiente / Local <span className="ml-1 text-xs font-normal text-gray-500">(opcional)</span>
-        </label>
-        <select
-          value={ambienteId}
-          onChange={(e) => { setAmbienteId(e.target.value); setSelEq(null) }}
-          disabled={!clienteId}
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white disabled:opacity-50"
-        >
-          <option value="">
-            {clienteId ? 'Sem local definido (usar o cliente)' : 'Selecione o cliente primeiro…'}
-          </option>
-          {ambientesFiltrados.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nome}{a.localizacaoInterna ? ` — ${a.localizacaoInterna}` : ''}
-            </option>
-          ))}
-        </select>
         {clienteId && (
           <p className="text-xs text-gray-600 mt-1">
             {ambientesFiltrados.length === 0 ? 'Este cliente ainda não tem ambiente — a O.S. pode ser aberta assim mesmo. ' : ''}
@@ -222,7 +202,7 @@ export function NovaOsForm({
             onCriado={(a) => {
               const c = clientes.find((x) => x.id === clienteId) ?? null
               setAmbientes((l) => [...l, { ...a, cliente: c, equipamentos: [] }])
-              setAmbienteId(a.id); setSelEq(null); setCadastrandoAmb(false)
+              setAmbienteId(a.id); setCadastrandoAmb(false)
             }} />
         )}
       </div>
@@ -234,7 +214,7 @@ export function NovaOsForm({
             Equipamentos desta O.S.
             <span className="ml-1 text-xs font-normal text-gray-500">(marque um, vários ou todos)</span>
           </label>
-          <SeletorEquipamentos equipamentos={equipsCliente} selecionados={equipsSelecionados} onChange={setSelEq} />
+          <SeletorEquipamentos equipamentos={equipsCliente} selecionados={selEq} onChange={setSelEq} />
           <p className="text-xs text-gray-500 mt-1">Aparecem os equipamentos de todos os ambientes do cliente, agrupados por ambiente.</p>
         </div>
       )}
@@ -250,9 +230,9 @@ export function NovaOsForm({
           onChange={setModeloChecklistId}
           permitirNenhum
         />
-        {modeloChecklistId !== NENHUM_CHECKLIST && clienteId && (!ambienteId || (ambienteSelecionado && ambienteSelecionado.equipamentos.length === 0)) && (
+        {modeloChecklistId !== NENHUM_CHECKLIST && clienteId && selEq.length === 0 && (
           <p className="text-xs text-gray-600 mt-1">
-            O checklist é aplicado a cada equipamento da O.S. Sem ambiente (ou em ambiente sem equipamentos) a O.S. sai sem checklist.
+            O checklist é aplicado a cada equipamento da O.S. Sem equipamento marcado, a O.S. sai sem checklist.
           </p>
         )}
       </div>

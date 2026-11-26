@@ -62,7 +62,6 @@ export function EditarOsForm({
 }) {
   const router = useRouter()
   const [clienteId, setClienteId] = useState(initialValues.clienteId)
-  const [ambienteId, setAmbienteId] = useState(initialValues.ambienteId)
   const [enderecoId, setEnderecoId] = useState(initialValues.enderecoId ?? '')
   const [tiposIds, setTiposIds] = useState<string[]>(
     [initialValues.tipoServicoId, ...initialValues.tiposServicoExtras].filter((x): x is string => !!x),
@@ -71,19 +70,19 @@ export function EditarOsForm({
   const ambientesDoCliente = ambientes.filter((a) => a.clienteId === clienteId)
 
   // Equipamentos da O.S.: começa com os atuais; ao trocar de ambiente passa a valer o do novo (todos marcados)
-  const ambienteAtual = ambientes.find((a) => a.id === ambienteId)
-  const equipsAmbiente = ambienteAtual?.equipamentos ?? []
   // todos os equipamentos do cliente (de qualquer ambiente), agrupados pelo nome do ambiente
   const equipsCliente: EquipamentoOpcao[] = ambientesDoCliente.flatMap((a) => (a.equipamentos ?? []).map((e) => ({ ...e, grupo: a.nome })))
   const [selEquips, setSelEquips] = useState<string[]>(equipamentosAtuaisIds)
-  const ambienteMudou = ambienteId !== initialValues.ambienteId
-  const base = ambienteMudou ? equipsAmbiente.map((e) => e.id) : equipamentosAtuaisIds
-  const mudouSelecao = selEquips.length !== base.length || selEquips.some((x) => !base.includes(x))
-  const trocarAmbiente = (id: string) => {
-    setAmbienteId(id)
-    const novo = ambientes.find((a) => a.id === id)
-    setSelEquips(id === initialValues.ambienteId ? equipamentosAtuaisIds : (novo?.equipamentos ?? []).map((e) => e.id))
-  }
+  // O ambiente da O.S. acompanha os equipamentos marcados: continua o atual enquanto algum equipamento dele estiver marcado
+  // (ou sem seleção); senão passa a ser o do primeiro marcado. Com itens já executados o local não muda.
+  const trocouCliente = clienteId !== initialValues.clienteId
+  const ambienteEfetivo = trocouCliente
+    ? (ambientesDoCliente.find((a) => (a.equipamentos ?? []).some((e) => selEquips.includes(e.id)))?.id ?? '')
+    : localTravado || selEquips.length === 0 || ambientesDoCliente.find((a) => a.id === initialValues.ambienteId)?.equipamentos?.some((e) => selEquips.includes(e.id))
+      ? initialValues.ambienteId
+      : (ambientesDoCliente.find((a) => (a.equipamentos ?? []).some((e) => selEquips.includes(e.id)))?.id ?? initialValues.ambienteId)
+  const ambienteMudou = ambienteEfetivo !== initialValues.ambienteId
+  const mudouSelecao = selEquips.length !== equipamentosAtuaisIds.length || selEquips.some((x) => !equipamentosAtuaisIds.includes(x))
 
   const [tecnicoId, setTecnicoId] = useState(initialValues.tecnicoId ?? '')
   const [ajudantes, setAjudantes] = useState<string[]>(initialValues.auxiliaresIds)
@@ -105,14 +104,14 @@ export function EditarOsForm({
     const dias: DiaOs[] = diasJson ? JSON.parse(diasJson) : []
 
     // cliente/ambiente só vão quando mudaram (evita mexer nos itens à toa)
-    const localMudou = clienteId !== initialValues.clienteId || ambienteId !== initialValues.ambienteId
+    const localMudou = clienteId !== initialValues.clienteId || ambienteEfetivo !== initialValues.ambienteId
 
     setError(null)
     startTransition(async () => {
       const res = await editarOs(osId, {
         dataAgendamento, observacoesGerais, tecnicoId, auxiliaresIds: ajudantes.filter((a) => a !== tecnicoId), tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, dias, horaInicio, horaFim,
-        ...(localMudou ? { clienteId, ambienteId } : {}),
-        ...(equipsCliente.length > 0 && mudouSelecao ? { equipamentosIds: selEquips } : {}),
+        ...(localMudou ? { clienteId, ambienteId: ambienteEfetivo } : {}),
+        ...(equipsCliente.length > 0 && (mudouSelecao || ambienteMudou) ? { equipamentosIds: selEquips } : {}),
         ...(checklistId === NENHUM_CHECKLIST ? { semChecklist: true } : checklistId ? { modeloChecklistId: checklistId } : {}),
       })
       if (!res.ok) { setError(res.error); return }
@@ -128,25 +127,10 @@ export function EditarOsForm({
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente" disabled={localTravado}
-          onChange={(id) => { setClienteId(id); setAmbienteId(''); setSelEquips([]); setEnderecoId('') }} />
-        <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">
-          Ambiente / Local <span className="ml-1 text-xs font-normal text-gray-500">(opcional)</span>
-        </label>
-        <select
-          value={ambienteId}
-          onChange={(e) => trocarAmbiente(e.target.value)}
-          disabled={localTravado || !clienteId}
-          aria-label="Ambiente"
-          className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white disabled:opacity-60"
-        >
-          <option value="">Sem local definido (usar o cliente)</option>
-          {ambientesDoCliente.map((a) => (
-            <option key={a.id} value={a.id}>{a.nome}{a.localizacaoInterna ? ` — ${a.localizacaoInterna}` : ''}</option>
-          ))}
-        </select>
+          onChange={(id) => { setClienteId(id); setSelEquips([]); setEnderecoId('') }} />
         {localTravado && (
           <p className="text-xs text-gray-600 mt-1">
-            Cliente e ambiente não podem mudar: esta O.S. já tem itens executados ou com observações. Para outro local, crie uma nova O.S.
+            O cliente não pode mudar: esta O.S. já tem itens executados ou com observações. Para outro cliente, crie uma nova O.S.
           </p>
         )}
       </div>
