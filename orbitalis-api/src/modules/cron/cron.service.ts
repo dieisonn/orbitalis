@@ -218,10 +218,9 @@ export class CronService {
           diaInteiro: false,
           avisar: true,
           inicio: { gt: new Date(agora), lte: new Date(agora + (24 * 60 + 2) * 60_000) },
-          OR: [{ tecnicoId: { not: null } }, { ordemServico: { auxiliares: { some: {} } } }],
         },
         select: {
-          id: true, titulo: true, inicio: true, avisosMinutos: true, tecnicoId: true, ordemServicoId: true,
+          id: true, empresaId: true, titulo: true, inicio: true, avisosMinutos: true, tecnicoId: true, ordemServicoId: true,
           ordemServico: { select: { status: true, auxiliares: { select: { tecnicoId: true } } } },
           cliente: { select: { razaoSocial: true, nomeFantasia: true } },
         },
@@ -229,8 +228,23 @@ export class CronService {
       });
       if (!eventos.length) return;
 
+      // administradores com aviso ativado em algum aparelho recebem os eventos da empresa (agenda completa)
+      const assinAdmins = await this.prisma.pushAssinatura.findMany({
+        where: { usuario: { tipo: 'admin' } },
+        select: { usuarioId: true, usuario: { select: { empresaId: true } } },
+      });
+      const adminsPorEmpresa = new Map<string | null, Set<string>>();
+      for (const a of assinAdmins) {
+        const k = a.usuario.empresaId ?? null;
+        if (!adminsPorEmpresa.has(k)) adminsPorEmpresa.set(k, new Set());
+        adminsPorEmpresa.get(k)!.add(a.usuarioId);
+      }
+      const admins = new Set(assinAdmins.map((a) => a.usuarioId));
       const alvos = (e: (typeof eventos)[number]) =>
-        [...new Set([e.tecnicoId, ...(e.ordemServico?.auxiliares.map((a) => a.tecnicoId) ?? [])].filter((x): x is string => !!x))];
+        [...new Set([
+          e.tecnicoId, ...(e.ordemServico?.auxiliares.map((a) => a.tecnicoId) ?? []),
+          ...(adminsPorEmpresa.get(e.empresaId ?? null) ?? []),
+        ].filter((x): x is string => !!x))];
       const usuarioIds = [...new Set(eventos.flatMap(alvos))];
       const usuarios = await this.prisma.usuario.findMany({ where: { id: { in: usuarioIds } }, select: { id: true, avisosAgenda: true } });
       const padrao = new Map(usuarios.map((u) => [u.id, u.avisosAgenda?.length ? u.avisosAgenda : [30]]));
@@ -253,7 +267,7 @@ export class CronService {
           void this.push.notificar([uid], {
             titulo: e.titulo,
             corpo: `Começa às ${hora} — em ${Math.max(1, Math.ceil(falta))} min${cliente ? ` · ${cliente}` : ''}`,
-            url: e.ordemServicoId ? `/minhas-os/${e.ordemServicoId}` : '/minha-agenda',
+            url: admins.has(uid) ? '/agenda' : e.ordemServicoId ? `/minhas-os/${e.ordemServicoId}` : '/minha-agenda',
             tag: `evento-${e.id}`,
           });
           enviados++;
