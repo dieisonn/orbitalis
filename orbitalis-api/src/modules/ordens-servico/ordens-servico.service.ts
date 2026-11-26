@@ -1,4 +1,5 @@
 import { enderecoDaOs, lerEnderecos } from '../../common/enderecos';
+import { MOTIVOS_CANCELAMENTO, respDoMotivo } from './cancelamento';
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
@@ -964,20 +965,67 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id/cancelar — Admin cancela
-  async cancelar(id: string, user?: { id: string; role: string }) {
+  /** Cancelamento sempre leva motivo; quando a causa é da empresa (ou "outro"), a explicação é obrigatória para ficar documentado. */
+  private validarCancelamento(motivo?: string, detalhe?: string | null) {
+    if (!motivo || !MOTIVOS_CANCELAMENTO[motivo]) throw new BadRequestException('Informe o motivo do cancelamento');
+    const texto = (detalhe ?? '').trim();
+    if ((respDoMotivo(motivo) === 'empresa' || motivo === 'outro') && texto.length < 5) {
+      throw new BadRequestException('Explique o que aconteceu (mínimo de 5 caracteres) para documentar o cancelamento');
+    }
+    if (texto.length > 2000) throw new BadRequestException('Explicação muito longa (máximo 2000 caracteres)');
+    return { motivo, detalhe: texto || null };
+  }
+
+  private obsCancelamento(c: { motivo: string; detalhe: string | null }) {
+    return `Cancelada: ${MOTIVOS_CANCELAMENTO[c.motivo].label}${c.detalhe ? ` — ${c.detalhe}` : ''}`;
+  }
+
+  async cancelar(id: string, user?: { id: string; role: string }, dto?: { motivo?: string; detalhe?: string | null }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
     if (os.status === 'concluida') {
       throw new BadRequestException('Não é possível cancelar uma O.S. já concluída');
     }
+    const c = this.validarCancelamento(dto?.motivo, dto?.detalhe);
 
     const cancelada = await this.prisma.ordemServico.update({
       where: { id },
-      data: { status: 'cancelada' },
+      data: { status: 'cancelada', cancelamentoMotivo: c.motivo, cancelamentoDetalhe: c.detalhe, canceladaEm: new Date() },
     });
-    await this.registrarHistorico(id, os.status, 'cancelada', user);
+    await this.registrarHistorico(id, os.status, 'cancelada', user, { observacao: this.obsCancelamento(c) });
     void this.avisarEquipe(id, 'O.S. cancelada', `${await this.descricaoParaAviso(id)} foi cancelada.`);
     return cancelada;
+  }
+
+  // GET /ordens-servico/cancelamentos?de&ate — cancelamentos por motivo e por responsável (empresa x cliente)
+  async relatorioCancelamentos(de?: string, ate?: string) {
+    const hoje = new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10);
+    const ok = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(new Date(`${v}T00:00:00-03:00`).getTime());
+    const d1 = ok(de) ? de! : new Date(Date.now() - 3 * 3600_000 - 89 * 86_400_000).toISOString().slice(0, 10);
+    const d2 = ok(ate) ? ate! : hoje;
+    const lista = await this.prisma.ordemServico.findMany({
+      where: { status: 'cancelada', canceladaEm: { gte: new Date(`${d1}T00:00:00-03:00`), lt: new Date(new Date(`${d2}T00:00:00-03:00`).getTime() + 86_400_000) } },
+      select: { id: true, numero: true, cancelamentoMotivo: true, cancelamentoDetalhe: true, canceladaEm: true, tipoServico: { select: { sigla: true } }, tecnico: { select: { nome: true } }, ambiente: { select: { cliente: { select: { razaoSocial: true, nomeFantasia: true } } } } },
+      orderBy: { canceladaEm: 'desc' },
+    });
+    const porMotivo = new Map<string, number>();
+    const porResp = { empresa: 0, cliente: 0, outro: 0, semMotivo: 0 };
+    for (const o of lista) {
+      const m = o.cancelamentoMotivo ?? 'sem_motivo';
+      porMotivo.set(m, (porMotivo.get(m) ?? 0) + 1);
+      const r = respDoMotivo(o.cancelamentoMotivo);
+      if (r) porResp[r]++; else porResp.semMotivo++;
+    }
+    return {
+      periodo: { de: d1, ate: d2 },
+      total: lista.length,
+      porResponsavel: porResp,
+      porMotivo: Array.from(porMotivo, ([codigo, qtd]) => ({ codigo, label: MOTIVOS_CANCELAMENTO[codigo]?.label ?? 'Sem motivo registrado (antes desta função)', resp: respDoMotivo(codigo), qtd })).sort((a, b) => b.qtd - a.qtd),
+      ordens: lista.map((o) => ({
+        id: o.id, numero: o.numero, sigla: o.tipoServico?.sigla ?? 'OS', motivo: o.cancelamentoMotivo, detalhe: o.cancelamentoDetalhe, canceladaEm: o.canceladaEm,
+        cliente: o.ambiente.cliente.nomeFantasia || o.ambiente.cliente.razaoSocial, tecnico: o.tecnico?.nome ?? null,
+      })),
+    };
   }
 
   // Registra no histórico a mudança de status (quando aconteceu, quem registrou e por quê)
@@ -1019,8 +1067,9 @@ export class OrdensServicoService {
   }
 
   // PATCH /ordens-servico/:id/status — Admin altera status manualmente
-  async alterarStatus(id: string, status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string }) {
+  async alterarStatus(id: string, status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string; cancelamentoMotivo?: string; cancelamentoDetalhe?: string | null }) {
     if ((status as string) === 'agendada') status = 'aberta'; // status unificado
+    const canc = status === 'cancelada' ? this.validarCancelamento(extra?.cancelamentoMotivo, extra?.cancelamentoDetalhe) : null;
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('Ordem de Serviço não encontrada');
 
@@ -1042,21 +1091,27 @@ export class OrdensServicoService {
         // — a data informada pelo admin (quando de fato aconteceu) vale sobre a do registro
         dataConclusao: status === 'concluida' ? (informada ?? os.dataConclusao ?? agora) : null,
         ...(status === 'em_andamento' && (informada || !os.dataInicio) ? { dataInicio: agora } : {}),
+        // cancelada: guarda o motivo; qualquer outro status (reabertura) limpa
+        ...(canc ? { cancelamentoMotivo: canc.motivo, cancelamentoDetalhe: canc.detalhe, canceladaEm: agora } : { cancelamentoMotivo: null, cancelamentoDetalhe: null, canceladaEm: null }),
       },
     });
-    await this.registrarHistorico(id, os.status, status, user, { ocorridoEm: agora, observacao: extra?.observacao });
+    await this.registrarHistorico(id, os.status, status, user, { ocorridoEm: agora, observacao: canc ? this.obsCancelamento(canc) : extra?.observacao });
     return atualizada;
   }
 
   // PATCH /ordens-servico/bulk-status — Altera status de múltiplas O.S. de uma vez
-  async bulkAlterarStatus(ids: string[], status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string }) {
+  async bulkAlterarStatus(ids: string[], status: OsStatus, user?: { id: string; role: string }, extra?: { dataOcorrencia?: string; observacao?: string; cancelamentoMotivo?: string; cancelamentoDetalhe?: string | null }) {
     if ((status as string) === 'agendada') status = 'aberta'; // status unificado
+    const canc = status === 'cancelada' ? this.validarCancelamento(extra?.cancelamentoMotivo, extra?.cancelamentoDetalhe) : null;
     const informada = this.lerDataOcorrencia(extra?.dataOcorrencia);
     const agora = informada ?? new Date();
     const antes = await this.prisma.ordemServico.findMany({ where: { id: { in: ids } }, select: { id: true, status: true } });
     const { count } = await this.prisma.ordemServico.updateMany({
       where: { id: { in: ids } },
-      data: { status, ...(status !== 'concluida' ? { dataConclusao: null } : {}) },
+      data: {
+        status, ...(status !== 'concluida' ? { dataConclusao: null } : {}),
+        ...(canc ? { cancelamentoMotivo: canc.motivo, cancelamentoDetalhe: canc.detalhe, canceladaEm: agora } : { cancelamentoMotivo: null, cancelamentoDetalhe: null, canceladaEm: null }),
+      },
     });
     // Mantém as datas coerentes com o status
     if (status === 'concluida') {
@@ -1071,7 +1126,7 @@ export class OrdensServicoService {
         data: { dataInicio: agora },
       });
     }
-    for (const o of antes) await this.registrarHistorico(o.id, o.status, status, user, { ocorridoEm: agora, observacao: extra?.observacao });
+    for (const o of antes) await this.registrarHistorico(o.id, o.status, status, user, { ocorridoEm: agora, observacao: canc ? this.obsCancelamento(canc) : extra?.observacao });
     return { atualizadas: count };
   }
 

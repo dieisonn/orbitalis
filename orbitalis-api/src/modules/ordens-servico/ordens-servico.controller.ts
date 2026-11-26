@@ -75,6 +75,13 @@ export class OrdensServicoController {
   }
 
   // GET /api/v1/ordens-servico/painel — Admin (dashboard)
+  // GET /api/v1/ordens-servico/cancelamentos?de&ate — Admin
+  @Get('cancelamentos')
+  @Roles(UsuarioTipo.admin)
+  cancelamentos(@Query('de') de?: string, @Query('ate') ate?: string) {
+    return this.ordensServicoService.relatorioCancelamentos(de, ate);
+  }
+
   @Get('painel')
   @Roles(UsuarioTipo.admin)
   painel() {
@@ -171,8 +178,8 @@ export class OrdensServicoController {
   // PATCH /api/v1/ordens-servico/:id/cancelar — Admin
   @Patch(':id/cancelar')
   @Roles(UsuarioTipo.admin)
-  cancelar(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    return this.ordensServicoService.cancelar(id, user);
+  cancelar(@Param('id') id: string, @CurrentUser() user: AuthUser, @Body() body: { motivo?: string; detalhe?: string | null }) {
+    return this.ordensServicoService.cancelar(id, user, body);
   }
 
   // PATCH /api/v1/ordens-servico/:id/concluir — Admin (assinatura + gás)
@@ -196,8 +203,8 @@ export class OrdensServicoController {
   // PATCH /api/v1/ordens-servico/bulk-status — Altera status em lote
   @Patch('bulk-status')
   @Roles(UsuarioTipo.admin)
-  bulkAlterarStatus(@Body() body: { ids: string[]; status: OsStatus; dataOcorrencia?: string; observacao?: string }, @CurrentUser() user: AuthUser) {
-    return this.ordensServicoService.bulkAlterarStatus(body.ids, body.status, user, { dataOcorrencia: body.dataOcorrencia, observacao: body.observacao });
+  bulkAlterarStatus(@Body() body: { ids: string[]; status: OsStatus; dataOcorrencia?: string; observacao?: string; cancelamentoMotivo?: string; cancelamentoDetalhe?: string | null }, @CurrentUser() user: AuthUser) {
+    return this.ordensServicoService.bulkAlterarStatus(body.ids, body.status, user, { dataOcorrencia: body.dataOcorrencia, observacao: body.observacao, cancelamentoMotivo: body.cancelamentoMotivo, cancelamentoDetalhe: body.cancelamentoDetalhe });
   }
 
   // PATCH /api/v1/ordens-servico/:id/status — Admin ou Técnico altera status
@@ -205,10 +212,10 @@ export class OrdensServicoController {
   @Roles(UsuarioTipo.admin, UsuarioTipo.tecnico)
   alterarStatus(
     @Param('id') id: string,
-    @Body() body: { status: OsStatus; dataOcorrencia?: string; observacao?: string },
+    @Body() body: { status: OsStatus; dataOcorrencia?: string; observacao?: string; cancelamentoMotivo?: string; cancelamentoDetalhe?: string | null },
     @CurrentUser() user: AuthUser,
   ) {
-    return this.ordensServicoService.alterarStatus(id, body.status, user, { dataOcorrencia: body.dataOcorrencia, observacao: body.observacao });
+    return this.ordensServicoService.alterarStatus(id, body.status, user, { dataOcorrencia: body.dataOcorrencia, observacao: body.observacao, cancelamentoMotivo: body.cancelamentoMotivo, cancelamentoDetalhe: body.cancelamentoDetalhe });
   }
 
   // PATCH /api/v1/ordens-servico/:id/financeiro — Admin registra valores
