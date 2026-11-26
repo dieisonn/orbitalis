@@ -258,6 +258,9 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
         />
       )}
 
+      {/* espaço para a barra fixa não cobrir as últimas linhas */}
+      {selected.size > 0 && <div className="h-64 md:h-48" aria-hidden />}
+
       {msg && selected.size === 0 && (
         <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-700 text-white text-sm font-semibold px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
           {msg}
@@ -266,94 +269,108 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
       )}
 
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 max-w-[95vw]">
-        <div className="flex flex-wrap items-center justify-center gap-3 bg-gray-900 text-white px-5 py-2.5 rounded-2xl shadow-2xl">
-          <span className="text-sm font-semibold whitespace-nowrap">Triagem em bloco:</span>
-          <select
-            value={bulkTecnico}
-            onChange={(e) => setBulkTecnico(e.target.value)}
-            aria-label="Técnico da triagem em bloco"
-            className="bg-gray-800 text-white text-sm rounded-lg px-3 py-1.5 border border-white/20 focus:outline-none cursor-pointer max-w-52"
-          >
-            <option value="">Atribuir a…</option>
-            {tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>)}
-          </select>
-          <input
-            type="date"
-            value={bulkData}
-            onChange={(e) => setBulkData(e.target.value)}
-            title="Nova data para todas (vazio = cada O.S. mantém a sua)"
-            aria-label="Nova data para todas (vazio = cada O.S. mantém a sua)"
-            className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 border border-white/20 focus:outline-none [color-scheme:dark]"
-          />
-          <button
-            onClick={atribuirLote}
-            disabled={isPending || !bulkTecnico}
-            className="bg-white text-gray-900 text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-colors"
-          >
-            {isPending ? 'Atribuindo…' : 'Atribuir'}
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl">
-          <span className="text-sm font-semibold whitespace-nowrap">
-            {selected.size} selecionada{selected.size !== 1 ? 's' : ''}
-          </span>
-          <div className="w-px h-5 bg-white/20" />
-          <select
-            value={bulkStatus}
-            onChange={(e) => setBulkStatus(e.target.value)}
-            className="bg-gray-800 text-white text-sm rounded-lg px-3 py-1.5 border border-white/20 focus:outline-none cursor-pointer"
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          {(bulkStatus === 'concluida' || bulkStatus === 'em_andamento') && (
-            <input
-              type="datetime-local"
-              value={bulkQuando}
-              onChange={(e) => setBulkQuando(e.target.value)}
-              title="Quando aconteceu (vazio = agora)"
-              aria-label="Quando aconteceu (vazio = agora)"
-              className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1.5 border border-white/20 focus:outline-none [color-scheme:dark]"
-            />
-          )}
-          {bulkQuando && Math.abs(new Date(`${bulkQuando}:00-03:00`).getTime() - Date.now()) > 30 * 60_000 && (
-            <span role="alert" className="text-xs text-amber-300 max-w-48 leading-tight">
-              Data diferente de agora: permitido, mas o ideal é registrar quando acontece.
-            </span>
-          )}
-          <button
-            onClick={aplicarLote}
-            disabled={isPending}
-            className="bg-white text-gray-900 text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-60 transition-colors"
-          >
-            {isPending ? 'Aplicando…' : 'Aplicar'}
-          </button>
-          <div className="w-px h-5 bg-white/20" />
-          {selected.size >= 2 && (
-            <button
-              onClick={() => setUnindo(true)}
-              className="inline-flex items-center gap-1.5 text-sky-200 hover:text-white text-sm font-semibold transition-colors whitespace-nowrap"
-              title="Junta as O.S. do mesmo cliente e dia em uma visita só"
-            >
-              <Layers size={14} /> Unir em visita
-            </button>
-          )}
-          <button
-            onClick={() => setExcluindo(true)}
-            className="inline-flex items-center gap-1.5 text-red-300 hover:text-red-200 text-sm font-semibold transition-colors"
-          >
-            <Trash2 size={14} /> Excluir
-          </button>
-          <button
-            onClick={() => { setSelected(new Set()); setErro(null) }}
-            className="text-white/60 hover:text-white text-sm transition-colors"
-          >
-            Limpar
-          </button>
-          {erro && <span className="text-red-400 text-xs ml-1">{erro}</span>}
-        </div>
+        <div
+          role="region" aria-label="Ações em bloco"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(980px,calc(100vw-1.5rem))] bg-white border border-border rounded-2xl shadow-[0_12px_40px_-8px_rgba(0,0,0,0.25)]"
+        >
+          {/* Cabeçalho: contagem e ações gerais */}
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-border">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center justify-center min-w-6 h-6 px-1.5 rounded-full bg-primary text-white text-xs font-bold tabular-nums">{selected.size}</span>
+              <span className="text-sm font-semibold text-gray-900">selecionada{selected.size !== 1 ? 's' : ''}</span>
+              <button onClick={() => { setSelected(new Set()); setErro(null) }} className="text-xs text-gray-500 hover:text-gray-800 underline underline-offset-2">Limpar seleção</button>
+            </div>
+            <div className="flex items-center gap-2">
+              {selected.size >= 2 && (
+                <button
+                  onClick={() => setUnindo(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 border border-border rounded-lg hover:bg-surface transition-colors whitespace-nowrap"
+                  title="Junta as O.S. do mesmo cliente e dia em uma visita só"
+                >
+                  <Layers size={14} /> Unir em visita
+                </button>
+              )}
+              <button
+                onClick={() => setExcluindo(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-700 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <Trash2 size={14} /> Excluir
+              </button>
+            </div>
+          </div>
+
+          {/* Duas ações lado a lado */}
+          <div className="grid grid-cols-1 md:grid-cols-2 md:divide-x divide-border">
+            <div className="p-4 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Atribuir técnico</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={bulkTecnico}
+                  onChange={(e) => setBulkTecnico(e.target.value)}
+                  aria-label="Técnico da triagem em bloco"
+                  className="flex-1 min-w-36 text-sm bg-surface border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="">Escolha o técnico…</option>
+                  {tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nome ?? t.email}</option>)}
+                </select>
+                <input
+                  type="date"
+                  value={bulkData}
+                  onChange={(e) => setBulkData(e.target.value)}
+                  title="Nova data para todas (vazio = cada O.S. mantém a sua)"
+                  aria-label="Nova data para todas (vazio = cada O.S. mantém a sua)"
+                  className="text-sm bg-surface border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <button
+                  onClick={atribuirLote}
+                  disabled={isPending || !bulkTecnico}
+                  className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition"
+                >
+                  {isPending ? 'Atribuindo…' : 'Atribuir'}
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-500">Data vazia: cada O.S. mantém a sua.</p>
+            </div>
+
+            <div className="p-4 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Alterar status</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={bulkStatus}
+                  onChange={(e) => setBulkStatus(e.target.value)}
+                  aria-label="Novo status"
+                  className="flex-1 min-w-36 text-sm bg-surface border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  {STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                {(bulkStatus === 'concluida' || bulkStatus === 'em_andamento') && (
+                  <input
+                    type="datetime-local"
+                    value={bulkQuando}
+                    onChange={(e) => setBulkQuando(e.target.value)}
+                    title="Quando aconteceu (vazio = agora)"
+                    aria-label="Quando aconteceu (vazio = agora)"
+                    className="text-sm bg-surface border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                )}
+                <button
+                  onClick={aplicarLote}
+                  disabled={isPending}
+                  className="px-4 py-2 text-sm font-semibold bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-40 transition"
+                >
+                  {isPending ? 'Aplicando…' : 'Aplicar'}
+                </button>
+              </div>
+              {bulkQuando && Math.abs(new Date(`${bulkQuando}:00-03:00`).getTime() - Date.now()) > 30 * 60_000 ? (
+                <p role="alert" className="text-[11px] text-amber-700">Data diferente de agora: permitido, mas o ideal é registrar quando acontece.</p>
+              ) : (
+                <p className="text-[11px] text-gray-500">Concluída e em andamento aceitam a data em que aconteceu.</p>
+              )}
+            </div>
+          </div>
+          {erro && <p role="alert" className="px-4 pb-3 text-xs text-red-600">{erro}</p>}
         </div>
       )}
     </>
