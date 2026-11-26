@@ -62,6 +62,13 @@ export class CreateOrdemServicoDto {
   @IsUUID()
   equipamentoId?: string;
 
+  // Vários equipamentos do ambiente; omitido (e sem equipamentoId) = todos os do ambiente
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsUUID('all', { each: true })
+  equipamentosIds?: string[];
+
   // Checklist escolhido; se omitido, o sistema sugere pelo tipo e pelo tipo de serviço
   @IsOptional()
   @IsUUID()

@@ -243,6 +243,7 @@ export class OrdensServicoController {
       auxiliaresIds?: string[];
       modeloChecklistId?: string | null;
       semChecklist?: boolean;
+      equipamentosIds?: string[];
     },
   ) {
     return this.ordensServicoService.update(id, body);

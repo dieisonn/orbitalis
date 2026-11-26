@@ -132,10 +132,13 @@ export class OrdensServicoService {
     const statusInicial: OsStatus = 'aberta';
 
     let equipamentosParaItens = ambiente.equipamentos;
-    if (dto.equipamentoId) {
-      const eq = ambiente.equipamentos.find((e) => e.id === dto.equipamentoId);
-      if (!eq) throw new NotFoundException('Equipamento não encontrado neste ambiente');
-      equipamentosParaItens = [eq];
+    const escolhidos = Array.from(new Set([...(dto.equipamentosIds ?? []), ...(dto.equipamentoId ? [dto.equipamentoId] : [])]));
+    if (escolhidos.length) {
+      equipamentosParaItens = escolhidos.map((eid) => {
+        const eq = ambiente.equipamentos.find((e) => e.id === eid);
+        if (!eq) throw new NotFoundException('Equipamento não encontrado neste ambiente');
+        return eq;
+      });
     }
 
     // Checklist próprio do caso: escolhido pelo admin ou sugerido por tipo + tipo de serviço
@@ -1232,6 +1235,7 @@ export class OrdensServicoService {
     auxiliaresIds?: string[];
     modeloChecklistId?: string | null;
     semChecklist?: boolean;
+    equipamentosIds?: string[];
   }) {
     const os = await this.prisma.ordemServico.findUnique({ where: { id } });
     if (!os) throw new NotFoundException('O.S. não encontrada');
@@ -1240,6 +1244,9 @@ export class OrdensServicoService {
       throw new BadRequestException('Lista de ajudantes inválida');
     }
     if (dto.modeloChecklistId && !UUID.test(dto.modeloChecklistId)) throw new BadRequestException('Checklist inválido');
+    if (dto.equipamentosIds !== undefined && (!Array.isArray(dto.equipamentosIds) || dto.equipamentosIds.length > 200 || !dto.equipamentosIds.every((x) => typeof x === 'string' && UUID.test(x)))) {
+      throw new BadRequestException('Lista de equipamentos inválida');
+    }
     const tecnicoFinal = dto.tecnicoId !== undefined ? dto.tecnicoId || null : os.tecnicoId;
     if (dto.auxiliaresIds?.length && !tecnicoFinal) throw new BadRequestException('Escolha o técnico responsável antes de adicionar ajudantes');
 
@@ -1298,15 +1305,38 @@ export class OrdensServicoService {
     const updated = await this.prisma.$transaction(async (tx) => {
       if (novoAmbienteId && novoAmbiente) {
         await tx.ordemServicoItem.deleteMany({ where: { ordemServicoId: id } });
-        if (novoAmbiente.equipamentos.length > 0) {
+        const doNovo = dto.equipamentosIds ? novoAmbiente.equipamentos.filter((e) => dto.equipamentosIds!.includes(e.id)) : novoAmbiente.equipamentos;
+        if (dto.equipamentosIds && doNovo.length !== new Set(dto.equipamentosIds).size) throw new BadRequestException('Há equipamento que não pertence ao ambiente escolhido');
+        if (doNovo.length > 0) {
           const snapshot = snapshotAtual ?? (await resolverChecklistItens(this.prisma, {
             tipo: (dto.tipo as any) ?? os.tipo,
             tipoServicoId: dto.tipoServicoId === undefined ? os.tipoServicoId ?? undefined : dto.tipoServicoId || undefined,
           }));
           await tx.ordemServicoItem.createMany({
-            data: novoAmbiente.equipamentos.map((eq) => ({
+            data: doNovo.map((eq) => ({
               ordemServicoId: id, equipamentoId: eq.id, statusItem: 'pendente' as const, checklistSnapshot: snapshot,
             })),
+          });
+        }
+      }
+      if (dto.equipamentosIds && !novoAmbienteId) {
+        const desejados = new Set(dto.equipamentosIds);
+        const doAmbiente = await tx.equipamento.findMany({ where: { ambienteId: os.ambienteId, deletedAt: null }, select: { id: true, nome: true } });
+        if (dto.equipamentosIds.some((e) => !doAmbiente.some((x) => x.id === e))) throw new BadRequestException('Há equipamento que não pertence ao ambiente desta O.S.');
+        const atuais = await tx.ordemServicoItem.findMany({ where: { ordemServicoId: id }, include: { equipamento: { select: { nome: true } } } });
+        const remover = atuais.filter((i) => !desejados.has(i.equipamentoId));
+        const emUso = remover.filter((i) => i.statusItem !== 'pendente' || i.observacoesTecnicas);
+        if (emUso.length) throw new BadRequestException(`Não dá para retirar ${emUso.map((i) => i.equipamento?.nome ?? 'equipamento').join(', ')}: o técnico já executou ou anotou neste item.`);
+        if (remover.length) await tx.ordemServicoItem.deleteMany({ where: { id: { in: remover.map((i) => i.id) } } });
+        const jaTem = new Set(atuais.map((i) => i.equipamentoId));
+        const novos = dto.equipamentosIds.filter((e) => !jaTem.has(e));
+        if (novos.length) {
+          const snapshot = atuais[0]?.checklistSnapshot ?? (await resolverChecklistItens(this.prisma, {
+            tipo: (dto.tipo as any) ?? os.tipo,
+            tipoServicoId: dto.tipoServicoId === undefined ? os.tipoServicoId ?? undefined : dto.tipoServicoId || undefined,
+          }));
+          await tx.ordemServicoItem.createMany({
+            data: novos.map((eid) => ({ ordemServicoId: id, equipamentoId: eid, statusItem: 'pendente' as const, checklistSnapshot: snapshot as any })),
           });
         }
       }
