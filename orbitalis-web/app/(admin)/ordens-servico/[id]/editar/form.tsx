@@ -73,11 +73,12 @@ export function EditarOsForm({
   // Equipamentos da O.S.: começa com os atuais; ao trocar de ambiente passa a valer o do novo (todos marcados)
   const ambienteAtual = ambientes.find((a) => a.id === ambienteId)
   const equipsAmbiente = ambienteAtual?.equipamentos ?? []
+  // todos os equipamentos do cliente (de qualquer ambiente), agrupados pelo nome do ambiente
+  const equipsCliente: EquipamentoOpcao[] = ambientesDoCliente.flatMap((a) => (a.equipamentos ?? []).map((e) => ({ ...e, grupo: a.nome })))
   const [selEquips, setSelEquips] = useState<string[]>(equipamentosAtuaisIds)
   const ambienteMudou = ambienteId !== initialValues.ambienteId
-  const mudouSelecao = ambienteMudou
-    ? selEquips.length !== equipsAmbiente.length
-    : selEquips.length !== equipamentosAtuaisIds.length || selEquips.some((x) => !equipamentosAtuaisIds.includes(x))
+  const base = ambienteMudou ? equipsAmbiente.map((e) => e.id) : equipamentosAtuaisIds
+  const mudouSelecao = selEquips.length !== base.length || selEquips.some((x) => !base.includes(x))
   const trocarAmbiente = (id: string) => {
     setAmbienteId(id)
     const novo = ambientes.find((a) => a.id === id)
@@ -111,7 +112,7 @@ export function EditarOsForm({
       const res = await editarOs(osId, {
         dataAgendamento, observacoesGerais, tecnicoId, auxiliaresIds: ajudantes.filter((a) => a !== tecnicoId), tipo, tipoServicoId, tiposServicoExtras: tiposIds.slice(1), enderecoId, dias, horaInicio, horaFim,
         ...(localMudou ? { clienteId, ambienteId } : {}),
-        ...(equipsAmbiente.length > 0 && mudouSelecao ? { equipamentosIds: selEquips } : {}),
+        ...(equipsCliente.length > 0 && mudouSelecao ? { equipamentosIds: selEquips } : {}),
         ...(checklistId === NENHUM_CHECKLIST ? { semChecklist: true } : checklistId ? { modeloChecklistId: checklistId } : {}),
       })
       if (!res.ok) { setError(res.error); return }
@@ -150,16 +151,16 @@ export function EditarOsForm({
         )}
       </div>
 
-      {equipsAmbiente.length > 0 && (
+      {equipsCliente.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Equipamentos desta O.S. <span className="ml-1 text-xs font-normal text-gray-500">(marque um, vários ou todos)</span>
           </label>
           <SeletorEquipamentos
-            equipamentos={equipsAmbiente}
+            equipamentos={equipsCliente}
             selecionados={selEquips}
             onChange={setSelEquips}
-            travados={ambienteMudou ? [] : equipamentosEmUsoIds}
+            travados={equipamentosEmUsoIds}
           />
           <p className="text-xs text-gray-500 mt-1">Equipamento já executado pelo técnico não pode ser retirado. Os novos entram com o checklist atual da O.S.</p>
         </div>

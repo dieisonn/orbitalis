@@ -43,7 +43,8 @@ export function NovaOsForm({
   const [error, setError]           = useState<string | null>(null)
   const [clienteId, setClienteId]   = useState('')
   const [ambienteId, setAmbienteId] = useState('')
-  const [excluidos, setExcluidos] = useState<string[]>([]) // equipamentos do ambiente que ficam de fora (vazio = todos)
+  // Equipamentos: null = padrão (todos os do ambiente escolhido); lista = escolha manual (pode incluir outros ambientes do cliente)
+  const [selEq, setSelEq] = useState<string[] | null>(null)
   // tipos de serviço marcados: o primeiro é o principal
   const [enderecoId, setEnderecoId] = useState('')
   const [tiposIds, setTiposIds] = useState<string[]>([])
@@ -72,13 +73,14 @@ export function NovaOsForm({
 
   const ambienteSelecionado = ambientes.find((a) => a.id === ambienteId)
   const equipsAmbiente = ambienteSelecionado?.equipamentos ?? []
-  const equipsSelecionados = equipsAmbiente.filter((e) => !excluidos.includes(e.id)).map((e) => e.id)
+  const equipsCliente = ambientesFiltrados.flatMap((a) => a.equipamentos.map((e) => ({ ...e, grupo: a.nome })))
+  const equipsSelecionados = selEq ?? equipsAmbiente.map((e) => e.id)
   const tipoSelecionado     = tiposServico.find((t) => t.id === tipoServicoId)
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!clienteId) return
-    if (equipsAmbiente.length > 0 && equipsSelecionados.length === 0) { setError('Escolha ao menos um equipamento (ou outro ambiente).'); return }
+    if (selEq !== null && selEq.length === 0) { setError('Escolha ao menos um equipamento (ou volte a marcar os do ambiente).'); return }
     const fd = new FormData(e.currentTarget)
     const dataAgendamento   = fd.get('dataAgendamento')   as string
     const horaInicio        = fd.get('horaInicio')        as string
@@ -103,7 +105,7 @@ export function NovaOsForm({
           tipoServicoId,
           tiposServicoExtras: tiposIds.slice(1),
           enderecoId,
-          equipamentosIds: excluidos.length ? equipsSelecionados : undefined,
+          equipamentosIds: selEq ?? undefined,
           horaInicio,
           horaFim,
           dias,
@@ -168,7 +170,7 @@ export function NovaOsForm({
         </div>
         <ClienteSelect clientes={clientes} value={clienteId} required ariaLabel="Cliente"
           onCriar={(busca) => setCadastrando(busca)}
-          onChange={(id) => { setClienteId(id); setAmbienteId(''); setExcluidos([]); setEnderecoId('') }} />
+          onChange={(id) => { setClienteId(id); setAmbienteId(''); setSelEq(null); setEnderecoId('') }} />
         {cadastrando !== null && (
           <ClienteRapidoModal nomeInicial={cadastrando} comAmbiente onFechar={() => setCadastrando(null)}
             onCriado={({ cliente, ambiente }) => {
@@ -177,7 +179,7 @@ export function NovaOsForm({
                 setAmbienteId(ambiente.id)
               }
               setClientesExtras((l) => [...l, { id: cliente.id, razaoSocial: cliente.razaoSocial, nomeFantasia: null }])
-              setClienteId(cliente.id); setExcluidos([]); setCadastrando(null)
+              setClienteId(cliente.id); setSelEq(null); setCadastrando(null)
             }} />
         )}
       </div>
@@ -191,7 +193,7 @@ export function NovaOsForm({
         </label>
         <select
           value={ambienteId}
-          onChange={(e) => { setAmbienteId(e.target.value); setExcluidos([]) }}
+          onChange={(e) => { setAmbienteId(e.target.value); setSelEq(null) }}
           disabled={!clienteId}
           className="w-full px-4 py-2.5 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white disabled:opacity-50"
         >
@@ -220,23 +222,20 @@ export function NovaOsForm({
             onCriado={(a) => {
               const c = clientes.find((x) => x.id === clienteId) ?? null
               setAmbientes((l) => [...l, { ...a, cliente: c, equipamentos: [] }])
-              setAmbienteId(a.id); setExcluidos([]); setCadastrandoAmb(false)
+              setAmbienteId(a.id); setSelEq(null); setCadastrandoAmb(false)
             }} />
         )}
       </div>
 
       {/* Equipamento */}
-      {ambienteSelecionado && ambienteSelecionado.equipamentos.length > 0 && (
+      {equipsCliente.length > 0 && (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Equipamentos desta O.S.
             <span className="ml-1 text-xs font-normal text-gray-500">(marque um, vários ou todos)</span>
           </label>
-          <SeletorEquipamentos
-            equipamentos={equipsAmbiente}
-            selecionados={equipsSelecionados}
-            onChange={(ids) => setExcluidos(equipsAmbiente.filter((e) => !ids.includes(e.id)).map((e) => e.id))}
-          />
+          <SeletorEquipamentos equipamentos={equipsCliente} selecionados={equipsSelecionados} onChange={setSelEq} />
+          <p className="text-xs text-gray-500 mt-1">Aparecem os equipamentos de todos os ambientes do cliente, agrupados por ambiente.</p>
         </div>
       )}
 
