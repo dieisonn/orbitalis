@@ -8,6 +8,8 @@ self.addEventListener('push', (event) => {
     badge: '/icons/badge-96.png',
     tag: d.tag || undefined,
     renotify: !!d.tag,
+    requireInteraction: true,   // fica na tela até a pessoa fechar ou clicar (Chrome/Edge no computador)
+    silent: false,
     data: { url: d.url || '/minhas-os' },
   }))
 })
