@@ -7,6 +7,8 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { OsActionsMenu } from '@/components/ui/os-actions-menu'
 import { OsPagination } from '@/components/ui/os-pagination'
 import { alterarStatusLote, atribuirTecnicoLote } from './actions'
+import { CancelamentoCampos } from '@/components/ui/cancelamento-campos'
+import { cancelamentoValido } from '@/lib/cancelamento'
 import { excluirOsLote, unirOsLote } from './excluir-os-action'
 import { Trash2, X, Loader2, Layers } from 'lucide-react'
 
@@ -61,6 +63,8 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('concluida')
   const [bulkQuando, setBulkQuando] = useState('')
+  const [bulkMotivo, setBulkMotivo] = useState('')
+  const [bulkDetalhe, setBulkDetalhe] = useState('')
   const [isPending, startTransition] = useTransition()
   const [erro, setErro] = useState<string | null>(null)
   const [excluindo, setExcluindo] = useState(false)
@@ -104,9 +108,10 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
 
   function aplicarLote() {
     setErro(null)
+    if (bulkStatus === 'cancelada' && !cancelamentoValido(bulkMotivo, bulkDetalhe)) { setErro('Informe o motivo do cancelamento (e a explicação, quando a causa for da empresa).'); return }
     const ids = Array.from(selected)
     startTransition(async () => {
-      const res = await alterarStatusLote(ids, bulkStatus, bulkStatus === 'concluida' || bulkStatus === 'em_andamento' ? bulkQuando || undefined : undefined)
+      const res = await alterarStatusLote(ids, bulkStatus, bulkStatus === 'concluida' || bulkStatus === 'em_andamento' ? bulkQuando || undefined : undefined, undefined, bulkStatus === 'cancelada' ? { motivo: bulkMotivo, detalhe: bulkDetalhe } : undefined)
       if (!res.ok) {
         setErro(res.error ?? 'Erro desconhecido')
         return
@@ -363,6 +368,9 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                   {isPending ? 'Aplicando…' : 'Aplicar'}
                 </button>
               </div>
+              {bulkStatus === 'cancelada' && (
+                <CancelamentoCampos motivo={bulkMotivo} detalhe={bulkDetalhe} onMotivo={setBulkMotivo} onDetalhe={setBulkDetalhe} />
+              )}
               {bulkQuando && Math.abs(new Date(`${bulkQuando}:00-03:00`).getTime() - Date.now()) > 30 * 60_000 ? (
                 <p role="alert" className="text-[11px] text-amber-700">Data diferente de agora: permitido, mas o ideal é registrar quando acontece.</p>
               ) : (

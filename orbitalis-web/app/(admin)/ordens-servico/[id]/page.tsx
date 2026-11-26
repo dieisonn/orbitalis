@@ -8,6 +8,7 @@ import {
   FileText, DollarSign, ClipboardCheck, AlertCircle, Wind, Camera,
 } from 'lucide-react'
 import { numeroOs } from '@/lib/os-numero'
+import { motivoLabel, motivoResp, RESP_LABEL } from '@/lib/cancelamento'
 import { AuxiliaresOs } from './auxiliares-os'
 import { ConcluirOsBtn } from '@/components/ui/concluir-os-btn'
 
@@ -53,6 +54,9 @@ type OrdemServico = {
   valorMaoObra: number | null
   valorPecas: number | null
   observacoesGerais: string | null
+  cancelamentoMotivo?: string | null
+  cancelamentoDetalhe?: string | null
+  canceladaEm?: string | null
   assinaturaBase64: string | null
   tipoGas: string | null
   quantidadeGasGramas: number | null
@@ -277,6 +281,17 @@ export default async function OsDetailPage({ params }: Props) {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {os.status === 'cancelada' && (
+          <div className={`mt-4 rounded-lg border px-4 py-3 text-sm ${motivoResp(os.cancelamentoMotivo) === 'empresa' ? 'bg-red-50 border-red-200 text-red-900' : 'bg-gray-50 border-border text-gray-800'}`}>
+            <p className="font-semibold">
+              Cancelada{os.canceladaEm ? ` em ${fmtDataHora(os.canceladaEm)}` : ''}
+              {motivoResp(os.cancelamentoMotivo) && <span className="ml-2 text-xs font-medium opacity-80">· {RESP_LABEL[motivoResp(os.cancelamentoMotivo)!]}</span>}
+            </p>
+            <p className="mt-0.5">{motivoLabel(os.cancelamentoMotivo) ?? 'Motivo não registrado (cancelada antes desta função existir)'}</p>
+            {os.cancelamentoDetalhe && <p className="mt-1 text-sm opacity-90">{os.cancelamentoDetalhe}</p>}
           </div>
         )}
 

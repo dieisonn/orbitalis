@@ -7,6 +7,8 @@ import {
   FileText, Trash2, XCircle, ChevronLeft, Check, ClipboardList,
 } from 'lucide-react'
 import { triarOs, cancelarOs, alterarStatusOs } from '@/app/(admin)/ordens-servico/actions'
+import { CancelamentoCampos } from '@/components/ui/cancelamento-campos'
+import { cancelamentoValido } from '@/lib/cancelamento'
 import { registrarFinanceiro } from '@/app/(admin)/ordens-servico/financeiro-action'
 import { excluirOs } from '@/app/(admin)/ordens-servico/excluir-os-action'
 
@@ -92,11 +94,16 @@ function TriarPanel({ osId, tecnicos, back, close }: { osId: string; tecnicos: T
 
 function CancelarPanel({ osId, back, close }: { osId: string; back: () => void; close: () => void }) {
   const [pending, startTransition] = useTransition()
+  const [motivo, setMotivo] = useState('')
+  const [detalhe, setDetalhe] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
   const router = useRouter()
 
   function handleCancelar() {
+    setErro(null)
     startTransition(async () => {
-      await cancelarOs(osId)
+      const r = await cancelarOs(osId, motivo, detalhe)
+      if (!r.ok) { setErro(r.error ?? 'Erro ao cancelar'); return }
       close(); router.refresh()
     })
   }
@@ -105,13 +112,15 @@ function CancelarPanel({ osId, back, close }: { osId: string; back: () => void; 
     <div>
       <PanelHeader title="Cancelar O.S." onBack={back} />
       <div className="p-3 space-y-3">
-        <p className="text-xs text-gray-600">Deseja cancelar esta O.S.? A ação não pode ser desfeita.</p>
+        <p className="text-xs text-gray-600">Informe o motivo: o cancelamento fica documentado no histórico da O.S.</p>
+        <CancelamentoCampos motivo={motivo} detalhe={detalhe} onMotivo={setMotivo} onDetalhe={setDetalhe} />
+        {erro && <p role="alert" className="text-xs text-destructive">{erro}</p>}
         <div className="flex gap-2">
           <button type="button" onClick={back}
             className="flex-1 py-1.5 text-xs border border-border rounded-lg hover:bg-gray-50 transition-colors">
             Voltar
           </button>
-          <button type="button" onClick={handleCancelar} disabled={pending}
+          <button type="button" onClick={handleCancelar} disabled={pending || !cancelamentoValido(motivo, detalhe)}
             className="flex-1 py-1.5 text-xs font-semibold bg-destructive text-white rounded-lg hover:bg-destructive/90 disabled:opacity-60 transition-colors">
             {pending ? '…' : 'Cancelar O.S.'}
           </button>
@@ -125,13 +134,15 @@ function StatusPanel({ osId, status, back, close }: { osId: string; status: OsSt
   const [selected, setSelected] = useState<OsStatus>(status)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [motivo, setMotivo] = useState('')
+  const [detalhe, setDetalhe] = useState('')
   const router = useRouter()
 
   function handleConfirm() {
     if (selected === status) return
     setError(null)
     startTransition(async () => {
-      const result = await alterarStatusOs(osId, selected)
+      const result = await alterarStatusOs(osId, selected, undefined, undefined, selected === 'cancelada' ? { motivo, detalhe } : undefined)
       if (!result.ok) { setError(result.error ?? 'Erro'); return }
       close(); router.refresh()
     })
@@ -147,13 +158,16 @@ function StatusPanel({ osId, status, back, close }: { osId: string; status: OsSt
             <option key={s} value={s}>{STATUS_LABELS[s]}</option>
           ))}
         </select>
+        {selected === 'cancelada' && selected !== status && (
+          <CancelamentoCampos motivo={motivo} detalhe={detalhe} onMotivo={setMotivo} onDetalhe={setDetalhe} />
+        )}
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
           <button type="button" onClick={back}
             className="flex-1 py-1.5 text-xs border border-border rounded-lg hover:bg-gray-50 transition-colors">
             Voltar
           </button>
-          <button type="button" onClick={handleConfirm} disabled={selected === status || pending}
+          <button type="button" onClick={handleConfirm} disabled={selected === status || pending || (selected === 'cancelada' && !cancelamentoValido(motivo, detalhe))}
             className="flex-1 py-1.5 text-xs font-semibold bg-action text-white rounded-lg hover:bg-action/90 disabled:opacity-40 transition-colors">
             {pending ? '…' : 'Confirmar'}
           </button>

@@ -3,6 +3,8 @@
 import { useTransition, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { triarOs, cancelarOs } from '@/app/(admin)/ordens-servico/actions'
+import { CancelamentoCampos } from '@/components/ui/cancelamento-campos'
+import { cancelamentoValido } from '@/lib/cancelamento'
 import { UserCheck, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
 
 type Tecnico = { id: string; email: string }
@@ -40,27 +42,49 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
     })
   }
 
+  const [cancelando, setCancelando] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const [detalheCanc, setDetalheCanc] = useState('')
+  const [erroCanc, setErroCanc] = useState<string | null>(null)
+
   function handleCancelar() {
-    if (!confirm('Cancelar esta O.S.? Ação irreversível.')) return
+    setErroCanc(null)
     startTransition(async () => {
-      await cancelarOs(osId)
+      const r = await cancelarOs(osId, motivo, detalheCanc)
+      if (!r.ok) { setErroCanc(r.error ?? 'Erro ao cancelar'); return }
       router.refresh()
     })
   }
 
   const hoje = new Date().toISOString().split('T')[0]
 
+  const painelCancelar = (
+    <div className="mt-2 p-3 bg-white border border-border rounded-xl shadow-md text-left w-72 space-y-2">
+      <p className="text-xs text-gray-600">O cancelamento fica documentado no histórico da O.S.</p>
+      <CancelamentoCampos motivo={motivo} detalhe={detalheCanc} onMotivo={setMotivo} onDetalhe={setDetalheCanc} />
+      {erroCanc && <p role="alert" className="text-xs text-destructive">{erroCanc}</p>}
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setCancelando(false)} className="flex-1 py-1.5 text-xs border border-border rounded-lg hover:bg-gray-50">Voltar</button>
+        <button type="button" onClick={handleCancelar} disabled={isPending || !cancelamentoValido(motivo, detalheCanc)}
+          className="flex-1 py-1.5 text-xs font-semibold bg-destructive text-white rounded-lg hover:bg-destructive/90 disabled:opacity-40">
+          {isPending ? '…' : 'Cancelar O.S.'}
+        </button>
+      </div>
+    </div>
+  )
+
   if (status !== 'aberta') {
     return (
       <div className="text-right">
         <button
-          onClick={handleCancelar}
+          onClick={() => setCancelando((v) => !v)}
           disabled={isPending}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-destructive/10 text-destructive rounded-lg hover:bg-destructive/20 disabled:opacity-60 transition-colors"
         >
           <XCircle size={12} />
-          {isPending ? '…' : 'Cancelar O.S.'}
+          Cancelar O.S.
         </button>
+        {cancelando && <div className="flex justify-end">{painelCancelar}</div>}
       </div>
     )
   }
@@ -121,7 +145,7 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
               </button>
               <button
                 type="button"
-                onClick={handleCancelar}
+                onClick={() => setCancelando((v) => !v)}
                 disabled={isPending}
                 className="px-3 py-2 bg-destructive/10 text-destructive text-xs font-semibold rounded-lg hover:bg-destructive/20 disabled:opacity-60 transition-colors"
                 title="Cancelar O.S."
@@ -129,6 +153,7 @@ export function TriarForm({ osId, status, tecnicos }: Props) {
                 <XCircle size={14} />
               </button>
             </div>
+            {cancelando && painelCancelar}
           </form>
         </div>
       )}

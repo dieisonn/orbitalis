@@ -7,6 +7,7 @@ import {
   UserX, Cpu,
 } from 'lucide-react'
 import { OsChart } from '@/components/ui/os-chart'
+import { CardCancelamentos } from '@/components/ui/card-cancelamentos'
 import { YearSelector } from '@/components/ui/year-selector'
 import { OnboardingCard } from '@/components/ui/onboarding-card'
 
@@ -256,6 +257,10 @@ export default async function DashboardPage({ searchParams }: Props) {
             </div>
           )}
         </div>
+
+        <Suspense fallback={null}>
+          <CardCancelamentos />
+        </Suspense>
       </div>
 
       {/* Planos vencendo + tipos de equipamento */}

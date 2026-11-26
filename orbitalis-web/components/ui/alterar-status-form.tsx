@@ -2,6 +2,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { alterarStatusOs } from '@/app/(admin)/ordens-servico/actions'
+import { CancelamentoCampos } from '@/components/ui/cancelamento-campos'
+import { cancelamentoValido } from '@/lib/cancelamento'
 import { RefreshCw } from 'lucide-react'
 
 type OsStatus = 'aberta' | 'agendada' | 'em_andamento' | 'concluida' | 'cancelada'
@@ -33,6 +35,8 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
   const [open, setOpen] = useState(false)
   const [quando, setQuando] = useState(agoraLocal)
   const [obs, setObs] = useState('')
+  const [motivo, setMotivo] = useState('')
+  const [detalhe, setDetalhe] = useState('')
   const router = useRouter()
 
   // Não exibe para status 'aberta' — o TriarForm já cuida dessa transição
@@ -44,7 +48,7 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
     if (!changed) return
     setError(null)
     startTransition(async () => {
-      const result = await alterarStatusOs(osId, selected, quando, obs)
+      const result = await alterarStatusOs(osId, selected, quando, obs, selected === 'cancelada' ? { motivo, detalhe } : undefined)
       if (!result.ok) { setError(result.error ?? 'Erro'); return }
       setOpen(false)
       router.refresh()
@@ -55,7 +59,7 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
     <div className="text-right">
       <button
         type="button"
-        onClick={() => { setOpen((v) => !v); setSelected(status); setError(null); setQuando(agoraLocal()); setObs('') }}
+        onClick={() => { setOpen((v) => !v); setSelected(status); setError(null); setQuando(agoraLocal()); setObs(''); setMotivo(''); setDetalhe('') }}
         className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
       >
         <RefreshCw size={11} />
@@ -88,7 +92,10 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
               )}
             </div>
           )}
-          {changed && (
+          {changed && selected === 'cancelada' && (
+            <CancelamentoCampos motivo={motivo} detalhe={detalhe} onMotivo={setMotivo} onDetalhe={setDetalhe} />
+          )}
+          {changed && selected !== 'cancelada' && (
             <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} placeholder="Observação (opcional)"
               className="w-full text-xs border border-border rounded-lg px-2 py-1.5 bg-white resize-none focus:outline-none focus:ring-2 focus:ring-primary/30" />
           )}
@@ -104,7 +111,7 @@ export function AlterarStatusForm({ osId, status }: { osId: string; status: OsSt
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={!changed || pending}
+              disabled={!changed || pending || (selected === 'cancelada' && !cancelamentoValido(motivo, detalhe))}
               className="flex-1 py-1.5 text-xs font-semibold bg-action text-white rounded hover:bg-action/90 disabled:opacity-40 transition-colors"
             >
               {pending ? '…' : 'Confirmar'}
