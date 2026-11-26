@@ -7,7 +7,7 @@ import {
   type EventoAgenda, type Dia, DIAS_SEMANA, MESES, hoje, somarDias, chaveDia, chaveDoInstante, mesmoDia,
   diaDaSemana, diffDias, instante, relogio, hhmm, diaPorExtenso, DIA_MS, STATUS_OS_LABEL,
 } from '@/lib/agenda'
-import { textoSobre } from '@/lib/cor'
+import { textoSobre, clarear } from '@/lib/cor'
 import { ROTULO_FERIADO, type Feriado, type TipoFeriado } from '@/lib/feriados'
 import { FeriadosModal } from './feriados-modal'
 import { AvisosAgendaBotao } from '@/components/layout/avisos-agenda'
@@ -36,14 +36,17 @@ function intervalo(visao: Visao, cursor: Dia): { inicio: Dia; dias: number } {
   return { inicio: ini, dias: semanas * 7 }
 }
 
-const estiloStatus = (e: EventoAgenda) => {
+// Evento que já terminou fica desbotado; cancelado, mais ainda e riscado.
+// Usa cor clareada (opaca) e não transparência: eventos sobrepostos não podem deixar ver o que está atrás.
+const estiloStatus = (e: EventoAgenda): React.CSSProperties => {
   const st = e.ordemServico?.status
-  // Evento que já terminou fica desbotado; cancelado, mais ainda
   const passado = new Date(e.fim).getTime() < Date.now()
+  const fundo = clarear(e.corHex, st === 'cancelada' ? 0.6 : passado ? 0.35 : 0)
   return {
-    opacity: st === 'cancelada' ? 0.5 : passado ? 0.6 : 1,
+    backgroundColor: fundo,
+    color: textoSobre(fundo),
     textDecoration: st === 'cancelada' ? 'line-through' : undefined,
-  } as React.CSSProperties
+  }
 }
 
 // Visão e data ficam na URL (?v=semana&d=2026-08-12): recarregar a página volta para o mesmo lugar
@@ -426,7 +429,7 @@ function Chip({ e, onAbrir, onMenu, onArrastar }: { e: EventoAgenda; onAbrir: Ao
       onClick={(ev) => { ev.stopPropagation(); onAbrir(e, ancoraDe(ev.currentTarget)) }}
       onContextMenu={(ev) => { ev.preventDefault(); ev.stopPropagation(); onMenu(e, ev.clientX, ev.clientY) }}
       title={`${e.diaInteiro ? '' : hhmm(e.inicio) + ' '}${e.titulo}`}
-      style={{ backgroundColor: e.corHex, color: textoSobre(e.corHex), ...estiloStatus(e) }}
+      style={estiloStatus(e)}
       className="w-full text-left text-[11px] leading-tight text-white rounded px-1.5 py-1 truncate hover:brightness-110">
       {!e.diaInteiro && <span className="font-semibold mr-1">{hhmm(e.inicio)}</span>}
       {e.titulo}
@@ -439,7 +442,8 @@ function Chip({ e, onAbrir, onMenu, onArrastar }: { e: EventoAgenda; onAbrir: Ao
 function CartaoEvento({ e, onAbrir }: { e: EventoAgenda; onAbrir: AoAbrir }) {
   const st = e.ordemServico?.status
   return (
-    <button onClick={(ev) => onAbrir(e, ancoraDe(ev.currentTarget))} style={estiloStatus(e)}
+    <button onClick={(ev) => onAbrir(e, ancoraDe(ev.currentTarget))}
+      style={{ opacity: st === 'cancelada' ? 0.5 : new Date(e.fim).getTime() < Date.now() ? 0.6 : 1, textDecoration: st === 'cancelada' ? 'line-through' : undefined }}
       className="w-full text-left flex gap-3 bg-white border border-border rounded-xl overflow-hidden active:bg-surface">
       <span className="w-1.5 shrink-0" style={{ backgroundColor: e.corHex }} />
       <span className="flex-1 min-w-0 py-2.5 pr-3">
@@ -653,7 +657,7 @@ function BlocoEvento({ e, d, topo, altura, nivel, idx, de, esmaecido, onAbrir, o
         left: `calc(${nivel * 10}px + (100% - ${nivel * 10}px - 2px) * ${idx / de})`,
         width: `calc((100% - ${nivel * 10}px - 2px) / ${de})`,
         ...(nivel > 0 ? { boxShadow: '0 2px 6px rgb(19 24 21 / 0.3)' } : {}),
-        backgroundColor: e.corHex, color: textoSobre(e.corHex), ...estiloStatus(e),
+        ...estiloStatus(e),
         ...(esmaecido ? { opacity: 0.35 } : {}),
       }}
       className={`absolute flex flex-col items-start justify-start text-left text-white rounded px-1.5 py-1 overflow-hidden border border-white/60 hover:brightness-110 text-[11px] leading-tight ${arrastavel ? 'cursor-grab active:cursor-grabbing' : ''}`}>

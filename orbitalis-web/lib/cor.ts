@@ -17,3 +17,13 @@ export function textoSobre(fundoHex: string): '#ffffff' | '#111111' {
   const comPreto = (l + 0.05) / 0.0612 // luminância de #111 ≈ 0.0056
   return comBranco >= comPreto || comBranco >= 4.5 ? '#ffffff' : '#111111'
 }
+
+/** Mistura a cor com branco (0 = a própria cor, 1 = branco). Dá o efeito "desbotado" sem transparência, que deixaria ver o que está atrás. */
+export function clarear(hex: string, t: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim())
+  if (!m) return hex
+  const n = parseInt(m[1], 16)
+  const mix = (v: number) => Math.round(v + (255 - v) * t)
+  const h = (v: number) => mix(v).toString(16).padStart(2, '0')
+  return `#${h((n >> 16) & 255)}${h((n >> 8) & 255)}${h(n & 255)}`
+}
