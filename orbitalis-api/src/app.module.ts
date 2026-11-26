@@ -21,6 +21,7 @@ import { NotificacoesModule } from './modules/notificacoes/notificacoes.module';
 import { ContratosModule } from './modules/contratos/contratos.module';
 import { AlertasModule } from './modules/alertas/alertas.module';
 import { AgendaModule } from './modules/agenda/agenda.module';
+import { CapacidadeModule } from './modules/capacidade/capacidade.module';
 import { FeriadosModule } from './modules/feriados/feriados.module';
 import { TiposServicoModule } from './modules/tipos-servico/tipos-servico.module';
 import { BuscaModule } from './modules/busca/busca.module';
@@ -55,6 +56,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     ContratosModule,
     AlertasModule,
     AgendaModule,
+    CapacidadeModule,
     FeriadosModule,
     TiposServicoModule,
     BuscaModule,

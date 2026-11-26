@@ -826,3 +826,35 @@ model AvisoUsuario {
   @@index([empresaId])
   @@map("avisos_usuario")
 }
+
+
+// ─────────────────────────────────────────
+// Capacidade de horas: jornada semanal (empresa ou técnico) e ajustes por data
+// ─────────────────────────────────────────
+// tecnicoId nulo = jornada padrão da empresa. `minutos` tem 7 posições (domingo a sábado).
+model JornadaSemanal {
+  id           String   @id @default(uuid()) @db.Uuid
+  empresaId    String?  @map("empresa_id") @db.Uuid
+  tecnicoId    String?  @map("tecnico_id") @db.Uuid
+  minutos      Int[]
+  atualizadoEm DateTime @default(now()) @updatedAt @map("atualizado_em")
+
+  @@index([empresaId])
+  @@index([tecnicoId])
+  @@map("jornadas_semanais")
+}
+
+// Exceção de um técnico num dia: 0 = folga/férias; outro valor = jornada daquele dia (ex.: meio período)
+model JornadaAjuste {
+  id        String   @id @default(uuid()) @db.Uuid
+  empresaId String?  @map("empresa_id") @db.Uuid
+  tecnicoId String   @map("tecnico_id") @db.Uuid
+  data      DateTime @db.Date
+  minutos   Int
+  motivo    String?  @db.VarChar(120)
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  @@unique([tecnicoId, data])
+  @@index([empresaId])
+  @@map("jornada_ajustes")
+}
