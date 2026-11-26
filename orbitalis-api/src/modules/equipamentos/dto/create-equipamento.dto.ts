@@ -1,8 +1,14 @@
-import { IsArray, IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { ValidateIf, IsArray, IsDateString, IsIn, IsNumber, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
 
 export class CreateEquipamentoDto {
+  // Ambiente é opcional: sem ele o equipamento fica em "Sem local definido" do cliente
+  @IsOptional()
   @IsUUID()
-  ambienteId: string;
+  ambienteId?: string;
+
+  @ValidateIf((o) => !o.ambienteId)
+  @IsUUID()
+  clienteId?: string;
 
   @IsString()
   @MinLength(2)

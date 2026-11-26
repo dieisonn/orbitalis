@@ -30,18 +30,39 @@ export class EquipamentosService {
     return randomBytes(4).toString('hex').toUpperCase();
   }
 
+  // Ambiente "Sem local definido" do cliente (criado sob demanda)
+  private async ambientePadrao(clienteId: string): Promise<string> {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { id: clienteId, deletedAt: null },
+      select: { id: true, endereco: true },
+    });
+    if (!cliente) throw new NotFoundException('Cliente não encontrado');
+    const nome = 'Sem local definido';
+    const existente = await this.prisma.ambiente.findFirst({
+      where: { clienteId, nome, deletedAt: null },
+      select: { id: true },
+    });
+    if (existente) return existente.id;
+    const novo = await this.prisma.ambiente.create({
+      data: { clienteId, nome, localizacaoInterna: cliente.endereco || nome, metrosQuadrados: 0, capacidadeTermica: 'A definir' },
+      select: { id: true },
+    });
+    return novo.id;
+  }
+
   async create(dto: CreateEquipamentoDto) {
     const codigoQr = this.gerarCodigoQr();
     const { planoIds } = dto;
+    const ambienteId = dto.ambienteId || (await this.ambientePadrao(dto.clienteId as string));
     if (planoIds?.length) {
       const ok = await this.prisma.ambiente.count({
-        where: { id: dto.ambienteId, cliente: { planosManutencao: { some: {} } } },
+        where: { id: ambienteId, cliente: { planosManutencao: { some: {} } } },
       });
       if (!ok) planoIds.length = 0;
     }
     const criado = await this.prisma.equipamento.create({
       data: {
-        ambienteId: dto.ambienteId,
+        ambienteId,
         codigoQr,
         nome: dto.nome,
         marca: dto.marca,
@@ -63,8 +84,13 @@ export class EquipamentosService {
 
   // Planos ativos do cliente do ambiente — candidatos para receber um equipamento novo
   async planosElegiveis(ambienteId: string) {
-    const amb = await this.prisma.ambiente.findFirst({ where: { id: ambienteId, deletedAt: null }, select: { clienteId: true } });
-    if (!amb) return [];
+    // Aceita id de ambiente ou, sem ambiente escolhido, o id do cliente
+    let amb = await this.prisma.ambiente.findFirst({ where: { id: ambienteId, deletedAt: null }, select: { clienteId: true } });
+    if (!amb) {
+      const cli = await this.prisma.cliente.findFirst({ where: { id: ambienteId, deletedAt: null }, select: { id: true } });
+      if (!cli) return [];
+      amb = { clienteId: cli.id };
+    }
     const hoje = new Date();
     hoje.setUTCHours(0, 0, 0, 0);
     const planos = await this.prisma.planoManutencao.findMany({
