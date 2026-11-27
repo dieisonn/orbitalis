@@ -652,6 +652,9 @@ model Fornecedor {
   nomeFantasia      String?  @map("nome_fantasia") @db.VarChar(255)
   cpfCnpj           String?  @map("cpf_cnpj") @db.VarChar(18)
   inscricaoEstadual String?  @map("inscricao_estadual") @db.VarChar(30)
+  inscricaoMunicipal String? @map("inscricao_municipal") @db.VarChar(30)
+  rg                String?  @db.VarChar(30)
+  dataNascimento    DateTime? @map("data_nascimento") @db.Date
   email             String?  @db.VarChar(255)
   telefone          String?  @db.VarChar(30)
   celular           String?  @db.VarChar(30)
@@ -1054,4 +1057,19 @@ model JornadaAjuste {
   @@unique([tecnicoId, data])
   @@index([empresaId])
   @@map("jornada_ajustes")
+}
+
+// Markup padrão da empresa: categoria '' = regra geral; demais = regra do grupo de produtos.
+// Preço de venda = custo final × (1 + percentual/100)
+model MarkupRegra {
+  id         String   @id @default(uuid()) @db.Uuid
+  empresaId  String?  @map("empresa_id") @db.Uuid
+  categoria  String   @default("") @db.VarChar(80)
+  percentual Decimal  @default(0) @db.Decimal(7, 2)
+  criadoEm   DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@unique([empresaId, categoria])
+  @@index([empresaId])
+  @@map("markup_regras")
 }

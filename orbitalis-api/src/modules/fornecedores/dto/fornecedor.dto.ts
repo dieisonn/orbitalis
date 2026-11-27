@@ -1,10 +1,15 @@
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, Length, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { SelecaoSimplesDto } from '../../../common/dto/selecao.dto';
+import { IsBoolean, IsDateString, IsEmail, IsIn, IsOptional, IsString, Length, MaxLength, MinLength, ValidateIf } from 'class-validator';
 
 class CamposFornecedor {
   @IsOptional() @IsIn(['F', 'J']) tipoPessoa?: 'F' | 'J';
   @IsOptional() @IsString() @MaxLength(255) nomeFantasia?: string;
   @IsOptional() @IsString() @MaxLength(18) cpfCnpj?: string;
   @IsOptional() @IsString() @MaxLength(30) inscricaoEstadual?: string;
+  @IsOptional() @IsString() @MaxLength(30) inscricaoMunicipal?: string;
+  @IsOptional() @IsString() @MaxLength(30) rg?: string;
+  // aaaa-mm-dd; vazio limpa
+  @ValidateIf((_, v) => v !== undefined && v !== null && v !== '') @IsDateString() dataNascimento?: string;
   // vazio é aceito (limpa o campo)
   @ValidateIf((_, v) => v !== undefined && v !== null && v !== '') @IsEmail() @MaxLength(255) email?: string;
   @IsOptional() @IsString() @MaxLength(30) telefone?: string;
@@ -27,4 +32,8 @@ export class CreateFornecedorDto extends CamposFornecedor {
 export class UpdateFornecedorDto extends CamposFornecedor {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(255) razaoSocial?: string;
   @IsOptional() @IsBoolean() ativo?: boolean;
+}
+
+export class LoteFornecedorDto extends SelecaoSimplesDto {
+  @IsIn(['ativar', 'inativar', 'excluir']) acao: 'ativar' | 'inativar' | 'excluir';
 }
