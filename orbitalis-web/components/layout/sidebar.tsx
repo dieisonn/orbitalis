@@ -30,6 +30,10 @@ import {
   History,
   Filter,
   Gauge,
+  Package,
+  Boxes,
+  Truck,
+  ListChecks,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { SearchButton } from '@/components/ui/search-palette'
@@ -59,6 +63,15 @@ const NAV_GROUPS: { label: string | null; items: { href: string; label: string; 
       { href: '/clientes',     label: 'Clientes',     icon: Users },
       { href: '/ambientes',    label: 'Ambientes',    icon: Building2 },
       { href: '/equipamentos', label: 'Equipamentos', icon: Cpu },
+    ],
+  },
+  {
+    label: 'Produtos e estoque',
+    items: [
+      { href: '/produtos',          label: 'Produtos',            icon: Package },
+      { href: '/estoque',           label: 'Estoque',             icon: Boxes },
+      { href: '/fornecedores',      label: 'Fornecedores',        icon: Truck },
+      { href: '/catalogo-servicos', label: 'Catálogo de serviços', icon: ListChecks },
     ],
   },
   {

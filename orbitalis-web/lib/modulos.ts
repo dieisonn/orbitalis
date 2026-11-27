@@ -30,6 +30,7 @@ const ROTAS: [string, string][] = [
   ['/equipamentos/confiabilidade', 'relatorios'],
   ['/planos-manutencao', 'planos'], ['/contratos', 'planos'],
   ['/orcamentos', 'orcamentos'],
+  ['/produtos', 'orcamentos'], ['/estoque', 'orcamentos'], ['/fornecedores', 'orcamentos'], ['/catalogo-servicos', 'orcamentos'],
   ['/financeiro', 'financeiro'],
   ['/funil-visitas', 'orcamentos'],
   ['/capacidade', 'relatorios'],

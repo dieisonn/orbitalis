@@ -11,6 +11,7 @@ const ADMIN_ONLY = [
   '/dashboard', '/clientes', '/ambientes', '/equipamentos', '/ordens-servico', '/planos-manutencao',
   '/usuarios', '/checklists', '/alertas', '/orcamentos', '/contratos', '/equipe', '/financeiro',
   '/relatorios', '/funil-visitas', '/capacidade', '/servicos', '/tecnicos', '/configuracoes', '/agenda', '/auditoria',
+  '/produtos', '/estoque', '/fornecedores', '/catalogo-servicos',
 ]
 const CLIENT_ONLY = ['/meus-ambientes', '/abrir-chamado', '/historico', '/meu-painel', '/meus-orcamentos']
 const TECNICO_ONLY = ['/minhas-os', '/minha-agenda', '/avisos']
