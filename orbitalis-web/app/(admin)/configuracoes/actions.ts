@@ -58,3 +58,13 @@ export async function salvarThresholdsConfiabilidade(
     return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar' }
   }
 }
+
+export async function definirNumeracao(nome: string, proximo: number) {
+  try {
+    await api.put('/configuracao/numeracao', { nome, proximo })
+    revalidatePath('/configuracoes')
+    return { ok: true as const }
+  } catch (err) {
+    return { ok: false as const, error: err instanceof Error ? err.message : 'Erro ao salvar' }
+  }
+}

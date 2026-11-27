@@ -3,6 +3,7 @@ import { api } from '@/lib/api'
 import { Plus, FileText } from 'lucide-react'
 import { ThOrdenavel } from '@/components/ui/th-ordenavel'
 import { STATUS_COLOR, STATUS_LABEL as BASE_LABEL } from '@/lib/orcamento'
+import { AcoesLinhaOrcamento } from './acoes-linha'
 import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
 
 type Orcamento = {
@@ -68,6 +69,7 @@ export default async function OrcamentosPage({ searchParams }: { searchParams: P
                 <ThOrdenavel campo="total" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</ThOrdenavel>
                 <ThOrdenavel campo="data" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Data</ThOrdenavel>
                 <ThOrdenavel campo="status" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</ThOrdenavel>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -102,6 +104,9 @@ export default async function OrcamentosPage({ searchParams }: { searchParams: P
                         O.S. #{String(orc.ordemServico.numero ?? '').padStart(4, '0')}
                       </Link>
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <AcoesLinhaOrcamento id={orc.id} numero={orc.numero} status={orc.status} temOs={!!orc.ordemServico} />
                   </td>
                 </tr>
               ))}

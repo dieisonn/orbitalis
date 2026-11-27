@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import { ConfiguracaoForm } from './form'
 import { ResponsavelTecnicoCard } from './responsavel-tecnico-card'
 import { ConfiabilidadeCard } from './confiabilidade-card'
+import { NumeracaoCard, type Numeracao } from './numeracao-card'
 
 type Config = {
   nomeEmpresa: string
@@ -37,12 +38,14 @@ export default async function ConfiguracoesPage({
     corPrimaria: '#0505ad', cnpj: null, telefone: null, endereco: null,
   }
   let tecnicos: Tecnico[] = []
+  let numeracoes: Numeracao[] = []
   try {
     [config] = await Promise.all([
       api.get<Config>('/configuracao'),
     ])
     const tecnicosRes = await api.get<{ data: Tecnico[] }>('/usuarios/tecnicos?perPage=1000').catch(() => ({ data: [] as Tecnico[] }))
     tecnicos = tecnicosRes.data
+    numeracoes = await api.get<Numeracao[]>('/configuracao/numeracao').catch(() => [] as Numeracao[])
   } catch { /* usa padrão */ }
 
   return (
@@ -63,6 +66,8 @@ export default async function ConfiguracoesPage({
         responsavelTecnicoId={config.responsavelTecnicoId ?? null}
         responsavelTecnico={config.responsavelTecnico ?? null}
       />
+
+      {numeracoes.length > 0 && <NumeracaoCard numeracoes={numeracoes} />}
 
       <ConfiabilidadeCard
         mttrLimiteHoras={config.mttrLimiteHoras ?? null}
