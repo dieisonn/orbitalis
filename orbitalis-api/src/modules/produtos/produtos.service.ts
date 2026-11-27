@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { montarOrdem } from '../../common/ordenacao';
 import { PrismaService } from '../../prisma/prisma.service';
 import { calcularMovimento, MOTIVOS_POR_TIPO, TipoMovimento } from './calculo-estoque';
 import { CreateProdutoDto, MovimentarEstoqueDto, UpdateProdutoDto } from './dto/produto.dto';
@@ -58,17 +59,26 @@ export class ProdutosService {
   }
 
   /** Página de resultados (limite 10–200). Sem filtro de situação o banco pagina; com ele filtra em memória. */
-  async listarPaginado(f: FiltroProdutos, pagina: number, limite: number) {
+  private static readonly ORDENS = {
+    nome: (d: 'asc' | 'desc') => ({ nome: d }),
+    categoria: (d: 'asc' | 'desc') => ({ categoria: d }),
+    custo: (d: 'asc' | 'desc') => ({ precoCusto: d }),
+    venda: (d: 'asc' | 'desc') => ({ precoVenda: d }),
+    estoque: (d: 'asc' | 'desc') => ({ saldo: d }),
+  };
+
+  async listarPaginado(f: FiltroProdutos, pagina: number, limite: number, ordem?: string, dir?: string) {
     const lim = Math.min(Math.max(Math.floor(limite) || 50, 10), 200);
     const pag = Math.max(Math.floor(pagina) || 1, 1);
     const where = this.filtroListagem(f);
+    const orderBy = montarOrdem(ProdutosService.ORDENS, { ordem: 'nome', dir: 'asc' }, ordem, dir);
     if (f.situacao === 'abaixo_minimo' || f.situacao === 'zerado') {
-      const todos = this.filtrarSituacao(await this.prisma.produto.findMany({ where, orderBy: { nome: 'asc' }, take: 5000, include: ProdutosService.INCLUDE_FORN }), f.situacao);
+      const todos = this.filtrarSituacao(await this.prisma.produto.findMany({ where, orderBy, take: 5000, include: ProdutosService.INCLUDE_FORN }), f.situacao);
       return { itens: todos.slice((pag - 1) * lim, pag * lim), total: todos.length, pagina: pag, limite: lim };
     }
     const [total, itens] = await Promise.all([
       this.prisma.produto.count({ where }),
-      this.prisma.produto.findMany({ where, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pag - 1) * lim, take: lim, include: ProdutosService.INCLUDE_FORN }),
+      this.prisma.produto.findMany({ where, orderBy, skip: (pag - 1) * lim, take: lim, include: ProdutosService.INCLUDE_FORN }),
     ]);
     return { itens, total, pagina: pag, limite: lim };
   }

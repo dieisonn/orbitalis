@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { textoSobre } from '@/lib/cor'
 import { Plus, Pencil, Trash2, Lock, Loader2 } from 'lucide-react'
 import type { TipoServico } from './page'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import { ordenarLista, type Ordem } from '@/lib/ordenacao'
 
 type FormData = {
   sigla: string
@@ -36,6 +38,16 @@ async function apiCall(method: string, path: string, body?: object) {
   }
   return res.json().catch(() => null)
 }
+
+const PADRAO_ORDEM: Ordem = { ordem: '', dir: 'asc' }
+const CAMPOS_TIPO = {
+  sigla: (t: TipoServico) => t.sigla,
+  nome: (t: TipoServico) => t.nome,
+  duracao: (t: TipoServico) => t.duracaoMinutos,
+  valor: (t: TipoServico) => t.valorPadrao,
+  relatorio: (t: TipoServico) => t.entraNoRelatorio,
+}
+const CAMPOS_ORDEM = Object.keys(CAMPOS_TIPO)
 
 export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
   const [tipos, setTipos] = useState<TipoServico[]>(inicial)
@@ -120,8 +132,9 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
     })
   }
 
-  const ativos   = tipos.filter((t) => t.ativo)
-  const inativos = tipos.filter((t) => !t.ativo)
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
+  const ativos   = ordenarLista(tipos.filter((t) => t.ativo), ordem, CAMPOS_TIPO)
+  const inativos = ordenarLista(tipos.filter((t) => !t.ativo), ordem, CAMPOS_TIPO)
 
   return (
     <>
@@ -140,12 +153,12 @@ export function ServicosClient({ tipos: inicial }: { tipos: TipoServico[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sigla</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nome</th>
+              <ThOrdenavel campo="sigla" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sigla</ThOrdenavel>
+              <ThOrdenavel campo="nome" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nome</ThOrdenavel>
               <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cor</th>
-              <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Duração</th>
-              <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Valor Padrão</th>
-              <th className="hidden lg:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">No relatório</th>
+              <ThOrdenavel campo="duracao" atual={ordem} padrao={PADRAO_ORDEM} className="hidden md:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Duração</ThOrdenavel>
+              <ThOrdenavel campo="valor" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Valor Padrão</ThOrdenavel>
+              <ThOrdenavel campo="relatorio" atual={ordem} padrao={PADRAO_ORDEM} className="hidden lg:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">No relatório</ThOrdenavel>
               <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Ações</th>
             </tr>
           </thead>

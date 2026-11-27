@@ -43,6 +43,8 @@ type Props = {
     dataFim?: string
     atrasadas?: string
     orderBy?: string
+    ordem?: string
+    dir?: string
     page?: string
   }>
 }
@@ -59,7 +61,9 @@ export default async function OrdensServicoPage({ searchParams }: Props) {
   if (dataInicio) qs.set('dataInicio', dataInicio)
   if (dataFim)    qs.set('dataFim', dataFim)
   if (atrasadas)  qs.set('atrasadas', atrasadas)
-  if (orderBy)    qs.set('orderBy', orderBy)
+  const ordemOk = sp.ordem && ['numero', 'cliente', 'status', 'tecnico', 'data', 'itens'].includes(sp.ordem)
+  if (ordemOk) qs.set('orderBy', `${sp.ordem}_${sp.dir === 'desc' ? 'desc' : 'asc'}`)
+  else if (orderBy) qs.set('orderBy', orderBy)
   if (page)       qs.set('page', page)
   qs.set('perPage', '20')
 

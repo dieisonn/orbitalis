@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, Loader2, ArrowDownUp, History, Percent, Tags, Printer, X } from 'lucide-react'
 import { Paginacao } from '@/components/ui/paginacao'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import type { Ordem } from '@/lib/ordenacao'
 import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
 import { brl, qtd, nomeForn, UNIDADES, MOTIVOS, MOTIVOS_POR_TIPO, type Fornecedor, type Produto } from '@/lib/suprimentos'
@@ -21,8 +23,13 @@ function SaldoBadge({ p }: { p: Produto }) {
   return <span className={`inline-block px-2 py-0.5 rounded-full border text-xs font-semibold ${cls}`}>{qtd(s)} {p.unidade}</span>
 }
 
+const CAMPOS_ORDEM = ['nome', 'categoria', 'custo', 'venda', 'estoque']
+const PADRAO_ORDEM: Ordem = { ordem: 'nome', dir: 'asc' }
+
 export function ProdutosClient({ produtos, total, pagina, limite, markup, categorias, fornecedores, filtros }: { produtos: Produto[]; total: number; pagina: number; limite: number; markup: RegraMarkup; categorias: string[]; fornecedores: Fornecedor[]; filtros: Filtros }) {
   const router = useRouter()
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
+  const spAtual = useSearchParams()
   const [pendente, iniciar] = useTransition()
   const [busca, setBusca] = useState(filtros.q)
   const [erro, setErro] = useState<string | null>(null)
@@ -71,6 +78,7 @@ export function ProdutosClient({ produtos, total, pagina, limite, markup, catego
     const f = { ...filtros, q: busca.trim(), ...patch }
     const p = new URLSearchParams()
     for (const [k, v] of Object.entries(f)) if (v) p.set(k, v)
+    for (const k of ['ordem', 'dir']) { const v = spAtual.get(k); if (v) p.set(k, v) }
     router.push(`/produtos${p.size ? `?${p}` : ''}`)
   }
 
@@ -164,11 +172,11 @@ export function ProdutosClient({ produtos, total, pagina, limite, markup, catego
               <thead>
                 <tr className="border-b border-border bg-surface text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   <th className="w-10 px-4 py-3"><input type="checkbox" checked={todosDaPagina || todosFiltro} onChange={alternarTodos} aria-label="Selecionar todos desta página" className="h-4 w-4 accent-[var(--color-action)]" /></th>
-                  <th className="text-left px-4 py-3">Produto</th>
-                  <th className="hidden md:table-cell text-left px-4 py-3">Categoria</th>
-                  <th className="hidden sm:table-cell text-right px-4 py-3">Custo</th>
-                  <th className="hidden sm:table-cell text-right px-4 py-3">Venda</th>
-                  <th className="text-right px-4 py-3">Estoque</th>
+                  <ThOrdenavel campo="nome" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3">Produto</ThOrdenavel>
+                  <ThOrdenavel campo="categoria" atual={ordem} padrao={PADRAO_ORDEM} className="hidden md:table-cell text-left px-4 py-3">Categoria</ThOrdenavel>
+                  <ThOrdenavel campo="custo" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-right px-4 py-3">Custo</ThOrdenavel>
+                  <ThOrdenavel campo="venda" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-right px-4 py-3">Venda</ThOrdenavel>
+                  <ThOrdenavel campo="estoque" atual={ordem} padrao={PADRAO_ORDEM} className="text-right px-4 py-3">Estoque</ThOrdenavel>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>

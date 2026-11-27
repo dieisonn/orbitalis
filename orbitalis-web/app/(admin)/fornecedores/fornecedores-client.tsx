@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
 import { Paginacao } from '@/components/ui/paginacao'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import type { Ordem } from '@/lib/ordenacao'
 import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
 import { AvisoLote, BarraSelecao, CheckSelecao, ModalLote, botaoLote, botaoLotePerigo, useSelecao } from '@/components/ui/lote'
 import { formatarDocumento, type Fornecedor } from '@/lib/suprimentos'
@@ -22,8 +24,13 @@ const doForn = (f: Fornecedor): DadosFornecedor => ({
   complemento: f.complemento ?? '', bairro: f.bairro ?? '', cidade: f.cidade ?? '', uf: f.uf ?? '', observacoes: f.observacoes ?? '',
 })
 
+const CAMPOS_ORDEM = ['nome', 'documento', 'contato', 'cidade', 'produtos']
+const PADRAO_ORDEM: Ordem = { ordem: 'nome', dir: 'asc' }
+
 export function FornecedoresClient({ fornecedores, total, pagina, limite, q, ativo }: { fornecedores: Fornecedor[]; total: number; pagina: number; limite: number; q: string; ativo: string }) {
   const router = useRouter()
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
+  const spAtual = useSearchParams()
   const [pendente, iniciar] = useTransition()
   const [busca, setBusca] = useState(q)
   const [modal, setModal] = useState<{ id: string | null } | null>(null)
@@ -49,6 +56,7 @@ export function FornecedoresClient({ fornecedores, total, pagina, limite, q, ati
     const p = new URLSearchParams()
     if (novoQ) p.set('q', novoQ)
     if (novoAtivo) p.set('ativo', novoAtivo)
+    for (const k of ['ordem', 'dir']) { const v = spAtual.get(k); if (v) p.set(k, v) }
     router.push(`/fornecedores${p.size ? `?${p}` : ''}`)
   }
 
@@ -101,11 +109,11 @@ export function FornecedoresClient({ fornecedores, total, pagina, limite, q, ati
               <thead>
                 <tr className="border-b border-border bg-surface text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   <th className="w-10 px-4 py-3"><CheckSelecao marcado={sel.todosDaPagina || sel.todosFiltro} onChange={sel.alternarTodos} rotulo="Selecionar todos desta página" /></th>
-                  <th className="text-left px-4 py-3">Nome</th>
-                  <th className="hidden md:table-cell text-left px-4 py-3">CPF/CNPJ</th>
-                  <th className="hidden lg:table-cell text-left px-4 py-3">Contato</th>
-                  <th className="hidden md:table-cell text-left px-4 py-3">Cidade</th>
-                  <th className="hidden sm:table-cell text-right px-4 py-3">Produtos</th>
+                  <ThOrdenavel campo="nome" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3">Nome</ThOrdenavel>
+                  <ThOrdenavel campo="documento" atual={ordem} padrao={PADRAO_ORDEM} className="hidden md:table-cell text-left px-4 py-3">CPF/CNPJ</ThOrdenavel>
+                  <ThOrdenavel campo="contato" atual={ordem} padrao={PADRAO_ORDEM} className="hidden lg:table-cell text-left px-4 py-3">Contato</ThOrdenavel>
+                  <ThOrdenavel campo="cidade" atual={ordem} padrao={PADRAO_ORDEM} className="hidden md:table-cell text-left px-4 py-3">Cidade</ThOrdenavel>
+                  <ThOrdenavel campo="produtos" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-right px-4 py-3">Produtos</ThOrdenavel>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>

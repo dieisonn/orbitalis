@@ -95,7 +95,22 @@ export class PlanosManutencaoService {
     });
   }
 
-  async findAll(page = 1, perPage = 20) {
+  /** orderBy = campo_asc|campo_desc (cliente, tecnico, equipamentos, frequencia, proxima, ativo). */
+  private ordemListagem(orderBy?: string): object[] {
+    const [campo, d] = (orderBy ?? '').split('_');
+    const dir: 'asc' | 'desc' = d === 'desc' ? 'desc' : 'asc';
+    const mapa: Record<string, object> = {
+      cliente: { cliente: { razaoSocial: dir } },
+      tecnico: { tecnico: { nome: dir } },
+      equipamentos: { equipamentosConfig: { _count: dir } },
+      frequencia: { frequenciaDias: dir },
+      proxima: { proximaGeracao: dir },
+      ativo: { ativo: dir },
+    };
+    return mapa[campo] ? [mapa[campo], { id: 'asc' }] : [{ cliente: { razaoSocial: 'asc' } }, { proximaGeracao: 'asc' }];
+  }
+
+  async findAll(page = 1, perPage = 20, orderBy?: string) {
     const skip = (page - 1) * perPage;
     const [data, total] = await Promise.all([
       this.prisma.planoManutencao.findMany({
@@ -105,7 +120,7 @@ export class PlanosManutencaoService {
           tipoServico: { select: { sigla: true, corHex: true } },
           _count: { select: { equipamentosConfig: true, ordensServico: { where: { status: { notIn: ['concluida', 'cancelada'] } } } } },
         },
-        orderBy: [{ cliente: { razaoSocial: 'asc' } }, { proximaGeracao: 'asc' }],
+        orderBy: this.ordemListagem(orderBy),
         skip,
         take: perPage,
       }),

@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { Plus, FileText } from 'lucide-react'
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
 
 type Item = { id: string; descricao: string; precoUnitario: number; quantidade: number }
 type Orcamento = {
@@ -30,8 +32,19 @@ const STATUS_COLOR: Record<string, string> = {
   expirado:  'bg-yellow-50 text-yellow-700',
 }
 
-export default async function OrcamentosPage() {
-  const orcamentos = await api.get<Orcamento[]>('/orcamentos').catch(() => [])
+const PADRAO_ORDEM: Ordem = { ordem: 'numero', dir: 'desc' }
+const CAMPOS = {
+  numero: (o: Orcamento) => o.numero,
+  titulo: (o: Orcamento) => o.titulo,
+  cliente: (o: Orcamento) => o.cliente.nomeFantasia ?? o.cliente.razaoSocial,
+  itens: (o: Orcamento) => o._count.itens,
+  data: (o: Orcamento) => new Date(o.criadoEm),
+  status: (o: Orcamento) => STATUS_LABEL[o.status],
+}
+
+export default async function OrcamentosPage({ searchParams }: { searchParams: Promise<{ ordem?: string; dir?: string }> }) {
+  const ordem = lerOrdem(await searchParams, Object.keys(CAMPOS), PADRAO_ORDEM)
+  const orcamentos = ordenarLista(await api.get<Orcamento[]>('/orcamentos').catch(() => [] as Orcamento[]), ordem, CAMPOS)
 
   return (
     <div className="space-y-6">
@@ -60,11 +73,11 @@ export default async function OrcamentosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">N°</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Título / Cliente</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Itens</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                <ThOrdenavel campo="numero" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">N°</ThOrdenavel>
+                <ThOrdenavel campo="titulo" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Título / Cliente</ThOrdenavel>
+                <ThOrdenavel campo="itens" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Itens</ThOrdenavel>
+                <ThOrdenavel campo="data" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Data</ThOrdenavel>
+                <ThOrdenavel campo="status" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</ThOrdenavel>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { Paginacao } from '@/components/ui/paginacao'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import type { Ordem } from '@/lib/ordenacao'
 import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
 import { AvisoLote, BarraSelecao, CheckSelecao, ModalLote, botaoLote, botaoLotePerigo, useSelecao } from '@/components/ui/lote'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
@@ -13,8 +15,13 @@ import { salvarServico, excluirServico, alternarServico, executarLoteServicos, t
 type Tipo = { id: string; sigla: string; nome: string }
 const VAZIO: DadosServico = { nome: '', descricao: '', unidade: 'un', valor: 0, tipoServicoId: '', codigo: '', valorCusto: 0, comissaoPercentual: 0, atividadeServico: '', nbs: '' }
 
+const CAMPOS_ORDEM = ['nome', 'tipo', 'valor']
+const PADRAO_ORDEM: Ordem = { ordem: 'nome', dir: 'asc' }
+
 export function ServicosCatalogoClient({ servicos, total, pagina, limite, tipos, q, ativo }: { servicos: ServicoCatalogo[]; total: number; pagina: number; limite: number; tipos: Tipo[]; q: string; ativo: string }) {
   const router = useRouter()
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
+  const spAtual = useSearchParams()
   const [pendente, iniciar] = useTransition()
   const [busca, setBusca] = useState(q)
   const [modal, setModal] = useState<{ id: string | null } | null>(null)
@@ -46,6 +53,7 @@ export function ServicosCatalogoClient({ servicos, total, pagina, limite, tipos,
     const p = new URLSearchParams()
     if (novoQ) p.set('q', novoQ)
     if (novoAtivo) p.set('ativo', novoAtivo)
+    for (const k of ['ordem', 'dir']) { const v = spAtual.get(k); if (v) p.set(k, v) }
     router.push(`/catalogo-servicos${p.size ? `?${p}` : ''}`)
   }
   function abrir(s?: ServicoCatalogo) {
@@ -101,9 +109,9 @@ export function ServicosCatalogoClient({ servicos, total, pagina, limite, tipos,
               <thead>
                 <tr className="border-b border-border bg-surface text-xs font-semibold text-gray-500 uppercase tracking-wide">
                   <th className="w-10 px-4 py-3"><CheckSelecao marcado={sel.todosDaPagina || sel.todosFiltro} onChange={sel.alternarTodos} rotulo="Selecionar todos desta página" /></th>
-                  <th className="text-left px-4 py-3">Serviço</th>
-                  <th className="hidden md:table-cell text-left px-4 py-3">Tipo na agenda</th>
-                  <th className="text-right px-4 py-3">Valor</th>
+                  <ThOrdenavel campo="nome" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3">Serviço</ThOrdenavel>
+                  <ThOrdenavel campo="tipo" atual={ordem} padrao={PADRAO_ORDEM} className="hidden md:table-cell text-left px-4 py-3">Tipo na agenda</ThOrdenavel>
+                  <ThOrdenavel campo="valor" atual={ordem} padrao={PADRAO_ORDEM} className="text-right px-4 py-3">Valor</ThOrdenavel>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>

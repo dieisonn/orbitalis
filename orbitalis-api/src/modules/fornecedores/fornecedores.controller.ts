@@ -16,9 +16,9 @@ export class FornecedoresController {
   constructor(private readonly svc: FornecedoresService) {}
 
   @Get()
-  listar(@Query('q') q?: string, @Query('ativo') ativo?: string, @Query('pagina') pagina?: string, @Query('limite') limite?: string) {
+  listar(@Query('q') q?: string, @Query('ativo') ativo?: string, @Query('pagina') pagina?: string, @Query('limite') limite?: string, @Query('ordem') ordem?: string, @Query('dir') dir?: string) {
     // com `limite` devolve { itens, total, pagina, limite }; sem ele, a lista inteira (uso interno)
-    if (limite) return this.svc.listarPaginado(q, ativo, Number(pagina) || 1, Number(limite));
+    if (limite) return this.svc.listarPaginado(q, ativo, Number(pagina) || 1, Number(limite), ordem, dir);
     return this.svc.listar(q, ativo);
   }
 

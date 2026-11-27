@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { montarOrdem } from '../../common/ordenacao';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateServicoDto, LoteServicoDto, UpdateServicoDto } from './dto/servico.dto';
 import { ajustarPreco, calcularVenda } from '../produtos/markup';
@@ -31,14 +32,21 @@ export class ServicosCatalogoService {
     return this.prisma.servico.findMany({ where: this.filtro(q, ativo), orderBy: { nome: 'asc' }, take: 5000 });
   }
 
+  private static readonly ORDENS = {
+    nome: (d: 'asc' | 'desc') => ({ nome: d }),
+    tipo: (d: 'asc' | 'desc') => ({ tipoServico: { nome: d } }),
+    valor: (d: 'asc' | 'desc') => ({ valor: d }),
+    codigo: (d: 'asc' | 'desc') => ({ codigo: d }),
+  };
+
   /** Página de resultados (limite 10–200). */
-  async listarPaginado(q: string | undefined, ativo: string | undefined, pagina: number, limite: number) {
+  async listarPaginado(q: string | undefined, ativo: string | undefined, pagina: number, limite: number, ordem?: string, dir?: string) {
     const lim = Math.min(Math.max(Math.floor(limite) || 50, 10), 200);
     const pag = Math.max(Math.floor(pagina) || 1, 1);
     const where = this.filtro(q, ativo);
     const [total, itens] = await Promise.all([
       this.prisma.servico.count({ where }),
-      this.prisma.servico.findMany({ where, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pag - 1) * lim, take: lim }),
+      this.prisma.servico.findMany({ where, orderBy: montarOrdem(ServicosCatalogoService.ORDENS, { ordem: 'nome', dir: 'asc' }, ordem, dir), skip: (pag - 1) * lim, take: lim }),
     ]);
     return { itens, total, pagina: pag, limite: lim };
   }

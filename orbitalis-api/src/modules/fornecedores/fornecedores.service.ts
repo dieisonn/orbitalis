@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { montarOrdem } from '../../common/ordenacao';
 import { normalizarCpfCnpj } from '../../common/documento';
 import { CreateFornecedorDto, LoteFornecedorDto, UpdateFornecedorDto } from './dto/fornecedor.dto';
 import { dataHoraBr, lerPlanilha, lerSimNao, montarPlanilha, ResultadoImportacao, resultadoVazio, semAcento } from '../../common/planilha';
@@ -39,18 +40,26 @@ export class FornecedoresService {
 
   private static readonly COM_PRODUTOS = { _count: { select: { produtos: { where: { deletedAt: null } } } } } as const;
 
+  private static readonly ORDENS = {
+    nome: (d: 'asc' | 'desc') => ({ razaoSocial: d }),
+    documento: (d: 'asc' | 'desc') => ({ cpfCnpj: d }),
+    contato: (d: 'asc' | 'desc') => ({ contato: d }),
+    cidade: (d: 'asc' | 'desc') => ({ cidade: d }),
+    produtos: (d: 'asc' | 'desc') => ({ produtos: { _count: d } }),
+  };
+
   listar(q?: string, ativo?: string) {
     return this.prisma.fornecedor.findMany({ where: this.filtro(q, ativo), orderBy: { razaoSocial: 'asc' }, take: 5000, include: FornecedoresService.COM_PRODUTOS });
   }
 
   /** Página de resultados (limite 10–200). */
-  async listarPaginado(q: string | undefined, ativo: string | undefined, pagina: number, limite: number) {
+  async listarPaginado(q: string | undefined, ativo: string | undefined, pagina: number, limite: number, ordem?: string, dir?: string) {
     const lim = Math.min(Math.max(Math.floor(limite) || 50, 10), 200);
     const pag = Math.max(Math.floor(pagina) || 1, 1);
     const where = this.filtro(q, ativo);
     const [total, itens] = await Promise.all([
       this.prisma.fornecedor.count({ where }),
-      this.prisma.fornecedor.findMany({ where, orderBy: [{ razaoSocial: 'asc' }, { id: 'asc' }], skip: (pag - 1) * lim, take: lim, include: FornecedoresService.COM_PRODUTOS }),
+      this.prisma.fornecedor.findMany({ where, orderBy: montarOrdem(FornecedoresService.ORDENS, { ordem: 'nome', dir: 'asc' }, ordem, dir), skip: (pag - 1) * lim, take: lim, include: FornecedoresService.COM_PRODUTOS }),
     ]);
     return { itens, total, pagina: pag, limite: lim };
   }

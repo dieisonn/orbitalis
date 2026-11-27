@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 ﻿import { api } from '@/lib/api'
 import { EquipamentosView, type EquipamentoItem } from './equipamentos-view'
 import { deletarEquipamento } from './actions'
@@ -50,7 +51,7 @@ export default async function EquipamentosPage() {
         </div>
       </div>
 
-      <EquipamentosView equipamentos={equipamentos} stats={stats} deletarAction={deletarEquipamento} />
+      <Suspense><EquipamentosView equipamentos={equipamentos} stats={stats} deletarAction={deletarEquipamento} /></Suspense>
     </div>
   )
 }

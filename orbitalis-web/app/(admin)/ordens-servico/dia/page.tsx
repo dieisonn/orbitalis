@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Printer } from 'lucide-react'
 import { api } from '@/lib/api'
@@ -104,7 +105,7 @@ export default async function OsDoDiaPage({ searchParams }: Props) {
         {excedeu && <p className="mt-3 text-sm text-yellow-800 bg-yellow-50 border border-yellow-200 rounded-md px-3 py-2">Há mais de {MAX_OS} O.S. neste dia; mostrando as primeiras {MAX_OS}. Filtre por técnico para ver o restante.</p>}
       </div>
 
-      <DiaClient resumos={resumos} completas={completas} config={config} diaLongo={diaLongo} />
+      <Suspense><DiaClient resumos={resumos} completas={completas} config={config} diaLongo={diaLongo} /></Suspense>
     </div>
   )
 }

@@ -3,13 +3,14 @@ import type { Fornecedor } from '@/lib/suprimentos'
 import { lerPaginacao } from '@/lib/paginacao'
 import { FornecedoresClient } from './fornecedores-client'
 
-export default async function FornecedoresPage({ searchParams }: { searchParams: Promise<{ q?: string; ativo?: string; pagina?: string; limite?: string }> }) {
+export default async function FornecedoresPage({ searchParams }: { searchParams: Promise<{ q?: string; ativo?: string; pagina?: string; limite?: string; ordem?: string; dir?: string }> }) {
   const { q = '', ativo = '', ...pg } = await searchParams
   const { pagina, limite } = lerPaginacao(pg.pagina, pg.limite)
   const qs = new URLSearchParams()
   if (q) qs.set('q', q)
   if (ativo) qs.set('ativo', ativo)
   qs.set('pagina', String(pagina)); qs.set('limite', String(limite))
+  if (pg.ordem) { qs.set('ordem', pg.ordem); if (pg.dir) qs.set('dir', pg.dir) }
   const resp = await api.get<{ itens: Fornecedor[]; total: number }>(`/fornecedores?${qs}`).catch(() => ({ itens: [] as Fornecedor[], total: 0 }))
   return (
     <div>

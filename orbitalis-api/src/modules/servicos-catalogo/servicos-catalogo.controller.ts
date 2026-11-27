@@ -16,8 +16,8 @@ export class ServicosCatalogoController {
   constructor(private readonly svc: ServicosCatalogoService) {}
 
   @Get()
-  listar(@Query('q') q?: string, @Query('ativo') ativo?: string, @Query('pagina') pagina?: string, @Query('limite') limite?: string) {
-    if (limite) return this.svc.listarPaginado(q, ativo, Number(pagina) || 1, Number(limite));
+  listar(@Query('q') q?: string, @Query('ativo') ativo?: string, @Query('pagina') pagina?: string, @Query('limite') limite?: string, @Query('ordem') ordem?: string, @Query('dir') dir?: string) {
+    if (limite) return this.svc.listarPaginado(q, ativo, Number(pagina) || 1, Number(limite), ordem, dir);
     return this.svc.listar(q, ativo);
   }
 

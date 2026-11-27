@@ -1,5 +1,6 @@
 'use client'
 
+import { fmtHoras } from '@/lib/horas'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 export type DiaCap = { data: string; capacidadeMin: number; programadoMin: number; realizadoMin: number; tecnicosEmCampo: number }
@@ -8,10 +9,6 @@ const ROTULO: Record<string, string> = { capacidade: 'Disponível', programado: 
 const COR: Record<string, string> = { capacidade: '#c4ccd6', programado: '#4f6fb5', realizado: '#3d9970' }
 const DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
-export const fmtHoras = (min: number) => {
-  const h = Math.floor(min / 60), m = Math.round(min % 60)
-  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
-}
 
 export function CapacidadeChart({ dias }: { dias: DiaCap[] }) {
   const dados = dias.map((d) => {

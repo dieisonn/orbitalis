@@ -11,6 +11,8 @@ import { CancelamentoCampos } from '@/components/ui/cancelamento-campos'
 import { cancelamentoValido } from '@/lib/cancelamento'
 import { excluirOsLote, unirOsLote } from './excluir-os-action'
 import { Trash2, X, Loader2, Layers } from 'lucide-react'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import type { Ordem } from '@/lib/ordenacao'
 
 type OrdemServico = {
   id: string
@@ -58,8 +60,12 @@ type Props = {
   perPage: number
 }
 
+const CAMPOS_ORDEM = ['numero', 'cliente', 'status', 'tecnico', 'data', 'itens']
+const PADRAO_ORDEM: Ordem = { ordem: 'numero', dir: 'desc' }
+
 export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props) {
   const router = useRouter()
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState('concluida')
   const [bulkQuando, setBulkQuando] = useState('')
@@ -137,12 +143,12 @@ export function OsTable({ ordens, tecnicos, currentPage, total, perPage }: Props
                   onChange={toggleAll}
                 />
               </th>
-              <th className="px-2 sm:px-3 py-2.5">Nº</th>
-              <th className="px-3 py-2.5 sm:min-w-[240px]">Cliente e ambiente</th>
-              <th className="hidden sm:table-cell px-3 py-2.5">Status</th>
-              <th className="hidden lg:table-cell px-3 py-2.5">Técnico</th>
-              <th className="hidden sm:table-cell px-3 py-2.5">Data</th>
-              <th className="hidden md:table-cell px-3 py-2.5 text-right">Itens</th>
+              <ThOrdenavel campo="numero" atual={ordem} padrao={PADRAO_ORDEM} className="px-2 sm:px-3 py-2.5">Nº</ThOrdenavel>
+              <ThOrdenavel campo="cliente" atual={ordem} padrao={PADRAO_ORDEM} className="px-3 py-2.5 sm:min-w-[240px]">Cliente e ambiente</ThOrdenavel>
+              <ThOrdenavel campo="status" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell px-3 py-2.5">Status</ThOrdenavel>
+              <ThOrdenavel campo="tecnico" atual={ordem} padrao={PADRAO_ORDEM} className="hidden lg:table-cell px-3 py-2.5">Técnico</ThOrdenavel>
+              <ThOrdenavel campo="data" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell px-3 py-2.5">Data</ThOrdenavel>
+              <ThOrdenavel campo="itens" atual={ordem} padrao={PADRAO_ORDEM} className="hidden md:table-cell px-3 py-2.5 text-right">Itens</ThOrdenavel>
               <th className="pl-3 pr-4 py-2.5 w-12"><span className="sr-only">Ações</span></th>
             </tr>
           </thead>

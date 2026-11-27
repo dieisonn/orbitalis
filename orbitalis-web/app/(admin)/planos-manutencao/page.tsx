@@ -2,6 +2,8 @@
 import { rotuloFrequencia } from '@/lib/frequencia'
 import { api } from '@/lib/api'
 import { DeletePlanoButton } from '@/components/ui/delete-plano-button'
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, type Ordem } from '@/lib/ordenacao'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { CalendarClock, CheckCircle, XCircle, ClipboardList, Pencil } from 'lucide-react'
 
@@ -18,15 +20,20 @@ type Plano = {
 
 type ApiResponse = { data: Plano[]; total: number; page: number; perPage: number }
 
-type Props = { searchParams: Promise<{ page?: string }> }
+type Props = { searchParams: Promise<{ page?: string; ordem?: string; dir?: string }> }
+
+const CAMPOS_ORDEM = ['cliente', 'tecnico', 'equipamentos', 'frequencia', 'proxima', 'ativo']
+const PADRAO_ORDEM: Ordem = { ordem: 'cliente', dir: 'asc' }
 
 export default async function PlanosPage({ searchParams }: Props) {
-  const { page } = await searchParams
+  const sp = await searchParams
+  const { page } = sp
+  const ordem = lerOrdem(sp, CAMPOS_ORDEM, PADRAO_ORDEM)
   const currentPage = Number(page) || 1
 
   let result: ApiResponse = { data: [], total: 0, page: 1, perPage: 20 }
   try {
-    result = await api.get<ApiResponse>(`/planos-manutencao?page=${currentPage}&perPage=20`)
+    result = await api.get<ApiResponse>(`/planos-manutencao?page=${currentPage}&perPage=20&orderBy=${ordem.ordem}_${ordem.dir}`)
   } catch { /* API indisponível */ }
 
   const planos = result.data
@@ -53,12 +60,12 @@ export default async function PlanosPage({ searchParams }: Props) {
           <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="border-b border-border bg-surface">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cliente</th>
-                <th className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Técnico</th>
-                <th className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Equip.</th>
-                <th className="hidden @3xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Frequência</th>
-                <th className="hidden @3xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Próx. Geração</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">Ativo</th>
+                <ThOrdenavel campo="cliente" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cliente</ThOrdenavel>
+                <ThOrdenavel campo="tecnico" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Técnico</ThOrdenavel>
+                <ThOrdenavel campo="equipamentos" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Equip.</ThOrdenavel>
+                <ThOrdenavel campo="frequencia" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @3xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Frequência</ThOrdenavel>
+                <ThOrdenavel campo="proxima" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @3xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Próx. Geração</ThOrdenavel>
+                <ThOrdenavel campo="ativo" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-12">Ativo</ThOrdenavel>
                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-14 @xl:w-36"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>

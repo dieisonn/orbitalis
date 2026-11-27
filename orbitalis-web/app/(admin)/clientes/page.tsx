@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { DeleteButton } from '@/components/ui/delete-button'
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, type Ordem } from '@/lib/ordenacao'
 import { ListPagination } from '@/components/ui/list-pagination'
 import { ExportarClientesButton } from '@/components/ui/clientes-import-export'
 import { ImportarClientesButton } from '@/components/ui/importar-clientes'
@@ -25,16 +27,21 @@ type Cliente = {
 
 type ApiResponse = { data: Cliente[]; total: number; page: number; perPage: number }
 
-type Props = { searchParams: Promise<{ page?: string; q?: string }> }
+type Props = { searchParams: Promise<{ page?: string; q?: string; ordem?: string; dir?: string }> }
+
+const CAMPOS_ORDEM = ['razao', 'documento', 'telefone', 'endereco', 'ambientes']
+const PADRAO_ORDEM: Ordem = { ordem: 'razao', dir: 'asc' }
 
 export default async function ClientesPage({ searchParams }: Props) {
-  const { page, q } = await searchParams
+  const sp = await searchParams
+  const { page, q } = sp
+  const ordem = lerOrdem(sp, CAMPOS_ORDEM, PADRAO_ORDEM)
   const currentPage = Number(page) || 1
   const busca = q?.trim() ?? ''
 
   let result: ApiResponse = { data: [], total: 0, page: 1, perPage: 20 }
   try {
-    result = await api.get<ApiResponse>(`/clientes?page=${currentPage}&perPage=20${busca ? `&q=${encodeURIComponent(busca)}` : ''}`)
+    result = await api.get<ApiResponse>(`/clientes?page=${currentPage}&perPage=20&orderBy=${ordem.ordem}_${ordem.dir}${busca ? `&q=${encodeURIComponent(busca)}` : ''}`)
   } catch { /* API indisponível */ }
 
   const clientes = result.data
@@ -75,11 +82,11 @@ export default async function ClientesPage({ searchParams }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Razão Social</th>
-                <th className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CPF/CNPJ</th>
-                <th className="hidden @2xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Telefone</th>
-                <th className="hidden @4xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Endereço</th>
-                <th className="text-center px-2 @xl:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amb.</th>
+                <ThOrdenavel campo="razao" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Razão Social</ThOrdenavel>
+                <ThOrdenavel campo="documento" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CPF/CNPJ</ThOrdenavel>
+                <ThOrdenavel campo="telefone" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @2xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Telefone</ThOrdenavel>
+                <ThOrdenavel campo="endereco" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @4xl:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Endereço</ThOrdenavel>
+                <ThOrdenavel campo="ambientes" atual={ordem} padrao={PADRAO_ORDEM} className="text-center px-2 @xl:px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Amb.</ThOrdenavel>
                 <th className="px-4 py-3"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>

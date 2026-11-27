@@ -1,12 +1,15 @@
 import Link from 'next/link'
 import { AlertTriangle, ArrowDown, ArrowUp, Boxes, PackageX, Wallet, SlidersHorizontal } from 'lucide-react'
 import { api } from '@/lib/api'
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
 import { brl, dataHora, MOTIVOS, nomeForn, qtd, type Movimento, type Produto, type ResumoEstoque } from '@/lib/suprimentos'
 
 const sel = 'px-3 py-2 border border-border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/40'
 
-export default async function EstoquePage({ searchParams }: { searchParams: Promise<{ produtoId?: string; tipo?: string; de?: string; ate?: string }> }) {
-  const { produtoId = '', tipo = '', de = '', ate = '' } = await searchParams
+export default async function EstoquePage({ searchParams }: { searchParams: Promise<{ produtoId?: string; tipo?: string; de?: string; ate?: string; ordem?: string; dir?: string }> }) {
+  const sp = await searchParams
+  const { produtoId = '', tipo = '', de = '', ate = '' } = sp
   const qs = new URLSearchParams()
   for (const [k, v] of Object.entries({ produtoId, tipo, de, ate })) if (v) qs.set(k, v)
   const [resumo, movimentos, produtos] = await Promise.all([
@@ -14,6 +17,17 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
     api.get<Movimento[]>(`/produtos/movimentos?${qs}`).catch(() => [] as Movimento[]),
     api.get<Produto[]>('/produtos?ativo=true').catch(() => [] as Produto[]),
   ])
+  const PADRAO: Ordem = { ordem: 'data', dir: 'desc' }
+  const CAMPOS = {
+    data: (m: Movimento) => new Date(m.criadoEm),
+    produto: (m: Movimento) => m.produto.nome,
+    movimento: (m: Movimento) => MOTIVOS[m.motivo] ?? m.motivo,
+    quantidade: (m: Movimento) => m.delta,
+    saldo: (m: Movimento) => m.saldoApos,
+    origem: (m: Movimento) => [m.fornecedor ? nomeForn(m.fornecedor) : '', m.documento ?? '', m.observacao ?? ''].join(' ').trim(),
+  }
+  const ordem = lerOrdem(sp, Object.keys(CAMPOS), PADRAO)
+  const movimentosOrdenados = ordenarLista(movimentos, ordem, CAMPOS)
   const cards = [
     { icone: Boxes, rotulo: 'Produtos com controle', valor: String(resumo?.totalProdutos ?? 0) },
     { icone: Wallet, rotulo: 'Valor em estoque (custo)', valor: brl(resumo?.valorEmEstoque ?? 0) },
@@ -84,16 +98,16 @@ export default async function EstoquePage({ searchParams }: { searchParams: Prom
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  <th className="text-left px-4 py-3">Data</th>
-                  <th className="text-left px-4 py-3">Produto</th>
-                  <th className="text-left px-4 py-3">Movimento</th>
-                  <th className="text-right px-4 py-3">Quantidade</th>
-                  <th className="text-right px-4 py-3">Saldo</th>
-                  <th className="hidden md:table-cell text-left px-4 py-3">Origem</th>
+                  <ThOrdenavel campo="data" atual={ordem} padrao={PADRAO} className="text-left px-4 py-3">Data</ThOrdenavel>
+                  <ThOrdenavel campo="produto" atual={ordem} padrao={PADRAO} className="text-left px-4 py-3">Produto</ThOrdenavel>
+                  <ThOrdenavel campo="movimento" atual={ordem} padrao={PADRAO} className="text-left px-4 py-3">Movimento</ThOrdenavel>
+                  <ThOrdenavel campo="quantidade" atual={ordem} padrao={PADRAO} className="text-right px-4 py-3">Quantidade</ThOrdenavel>
+                  <ThOrdenavel campo="saldo" atual={ordem} padrao={PADRAO} className="text-right px-4 py-3">Saldo</ThOrdenavel>
+                  <ThOrdenavel campo="origem" atual={ordem} padrao={PADRAO} className="hidden md:table-cell text-left px-4 py-3">Origem</ThOrdenavel>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {movimentos.map((m) => (
+                {movimentosOrdenados.map((m) => (
                   <tr key={m.id}>
                     <td className="px-4 py-3 whitespace-nowrap text-gray-700">{dataHora(m.criadoEm)}</td>
                     <td className="px-4 py-3 font-medium text-gray-900">{m.produto.nome}</td>

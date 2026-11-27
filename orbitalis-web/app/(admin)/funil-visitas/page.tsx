@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { Filter } from 'lucide-react'
 
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
+
 type Orc = {
   id: string; numero: number; status: string; titulo: string; valor: number
   ordemServico: { id: string; numero: number | null; sigla: string } | null
@@ -38,16 +41,28 @@ const brl = (v: number) => Number(v).toLocaleString('pt-BR', { style: 'currency'
 const num = (sigla: string, n: number | null) => `${sigla}-${String(n ?? 0).padStart(4, '0')}`
 const iso = (d: Date) => new Date(d.getTime() - 3 * 3600_000).toISOString().slice(0, 10)
 
-type Props = { searchParams: Promise<{ de?: string; ate?: string; r?: string }> }
+type Props = { searchParams: Promise<{ de?: string; ate?: string; r?: string; ordem?: string; dir?: string }> }
+
+const PADRAO_ORDEM: Ordem = { ordem: '', dir: 'asc' }
+const CAMPOS_VISITA = {
+  visita: (v: Visita) => (v.dataConclusao ? new Date(v.dataConclusao) : null),
+  cliente: (v: Visita) => v.cliente.nomeFantasia || v.cliente.razaoSocial,
+  tecnico: (v: Visita) => v.tecnico,
+  resultado: (v: Visita) => RES[v.resultado].label,
+  orcamento: (v: Visita) => v.orcamentos[0]?.numero ?? null,
+  valor: (v: Visita) => v.valor,
+}
 
 export default async function FunilVisitasPage({ searchParams }: Props) {
-  const { de: deP, ate: ateP, r } = await searchParams
+  const sp = await searchParams
+  const { de: deP, ate: ateP, r } = sp
+  const ordem = lerOrdem(sp, Object.keys(CAMPOS_VISITA), PADRAO_ORDEM)
   const hoje = new Date()
   const ate = ateP || iso(hoje)
   const de = deP || iso(new Date(hoje.getTime() - 90 * 86400_000))
 
   const f = await api.get<Funil>(`/orcamentos/funil?de=${de}&ate=${ate}`).catch(() => null)
-  const lista = (f?.visitas ?? []).filter((v) => !r || v.resultado === r)
+  const lista = ordenarLista((f?.visitas ?? []).filter((v) => !r || v.resultado === r), ordem, CAMPOS_VISITA)
   const t = f?.totais
   const qs = (extra: Record<string, string>) => {
     const p = new URLSearchParams({ de, ate, ...extra })
@@ -116,12 +131,12 @@ export default async function FunilVisitasPage({ searchParams }: Props) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-gray-500 border-b border-border">
-                    <th className="px-4 py-2.5 font-medium">Visita</th>
-                    <th className="px-4 py-2.5 font-medium">Cliente</th>
-                    <th className="px-4 py-2.5 font-medium">Técnico</th>
-                    <th className="px-4 py-2.5 font-medium">Resultado</th>
-                    <th className="px-4 py-2.5 font-medium">Orçamento / O.S.</th>
-                    <th className="px-4 py-2.5 font-medium text-right">Valor</th>
+                    <ThOrdenavel campo="visita" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium">Visita</ThOrdenavel>
+                    <ThOrdenavel campo="cliente" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium">Cliente</ThOrdenavel>
+                    <ThOrdenavel campo="tecnico" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium">Técnico</ThOrdenavel>
+                    <ThOrdenavel campo="resultado" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium">Resultado</ThOrdenavel>
+                    <ThOrdenavel campo="orcamento" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium">Orçamento / O.S.</ThOrdenavel>
+                    <ThOrdenavel campo="valor" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium text-right">Valor</ThOrdenavel>
                   </tr>
                 </thead>
                 <tbody>
