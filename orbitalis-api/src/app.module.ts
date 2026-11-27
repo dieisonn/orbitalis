@@ -24,6 +24,10 @@ import { AgendaModule } from './modules/agenda/agenda.module';
 import { CapacidadeModule } from './modules/capacidade/capacidade.module';
 import { FeriadosModule } from './modules/feriados/feriados.module';
 import { TiposServicoModule } from './modules/tipos-servico/tipos-servico.module';
+import { FornecedoresModule } from './modules/fornecedores/fornecedores.module';
+import { ProdutosModule } from './modules/produtos/produtos.module';
+import { InventariosModule } from './modules/inventarios/inventarios.module';
+import { ServicosCatalogoModule } from './modules/servicos-catalogo/servicos-catalogo.module';
 import { BuscaModule } from './modules/busca/busca.module';
 import { OrcamentosModule } from './modules/orcamentos/orcamentos.module';
 import { FinanceiroModule } from './modules/financeiro/financeiro.module';
@@ -59,6 +63,10 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     CapacidadeModule,
     FeriadosModule,
     TiposServicoModule,
+    FornecedoresModule,
+    ProdutosModule,
+    InventariosModule,
+    ServicosCatalogoModule,
     BuscaModule,
     OrcamentosModule,
     FinanceiroModule,

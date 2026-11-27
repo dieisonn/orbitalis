@@ -10,6 +10,7 @@ const TENANT_MODELS = new Set([
   'convite', 'eventoAgenda', 'feriadoEmpresa', 'logAuditoria', 'ordemServicoDia',
   'ordemServicoAuxiliar', 'ordemServicoFoto', 'pushAssinatura', 'avisoUsuario',
   'jornadaSemanal', 'jornadaAjuste',
+  'fornecedor', 'produto', 'movimentoEstoque', 'servico', 'inventario', 'inventarioItem',
 ]);
 
 // Operações em lote que aceitam where livre
@@ -43,6 +44,10 @@ const REFERENCIAS: Record<string, Record<string, string>> = {
   ordemServico:           { ambienteId: 'ambiente', tecnicoId: 'usuario', tipoServicoId: 'tipoServico', planoId: 'planoManutencao' },
   ordemServicoItem:       { ordemServicoId: 'ordemServico', equipamentoId: 'equipamento' },
   ordemServicoAuxiliar:   { ordemServicoId: 'ordemServico', tecnicoId: 'usuario' },
+  produto:                { fornecedorPadraoId: 'fornecedor' },
+  movimentoEstoque:       { produtoId: 'produto', fornecedorId: 'fornecedor' },
+  servico:                { tipoServicoId: 'tipoServico' },
+  inventarioItem:         { inventarioId: 'inventario', produtoId: 'produto' },
   orcamento: {
     clienteId: 'cliente', ambienteId: 'ambiente', tipoServicoId: 'tipoServico',
     modeloChecklistId: 'modeloChecklist', ordemServicoId: 'ordemServico', criadoPorId: 'usuario',
@@ -52,7 +57,10 @@ const REFERENCIAS: Record<string, Record<string, string>> = {
 const WRITE_OPS = new Set(['create', 'createMany', 'createManyAndReturn', 'update', 'updateMany', 'upsert']);
 
 // Modelos com numeração sequencial por empresa → nome do contador
-const NUMERADOS: Record<string, string> = { ordemServico: 'ordem_servico', orcamento: 'orcamento' };
+const NUMERADOS: Record<string, string> = {
+  ordemServico: 'ordem_servico', orcamento: 'orcamento',
+  fornecedor: 'fornecedor', produto: 'produto', servico: 'servico', inventario: 'inventario',
+};
 
 type ProximoNumero = (empresaId: string, nome: string) => Promise<number>;
 
