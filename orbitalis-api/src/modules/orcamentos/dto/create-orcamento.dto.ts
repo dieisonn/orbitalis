@@ -106,7 +106,7 @@ export class AnexoOrcamentoDto {
   @IsString() @IsNotEmpty() @MaxLength(100)
   tipo: string;
 
-  // até 5 MB de arquivo (≈ 6,9 milhões de caracteres em base64)
-  @IsString() @IsNotEmpty() @MaxLength(7_000_000)
+  // até 3 MB de arquivo (≈ 4,2 milhões de caracteres em base64)
+  @IsString() @IsNotEmpty() @MaxLength(4_200_000)
   conteudoBase64: string;
 }

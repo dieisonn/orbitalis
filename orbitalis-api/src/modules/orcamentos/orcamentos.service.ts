@@ -10,7 +10,8 @@ import { resolverChecklistItens } from '../../common/checklist-resolver';
 
 const TIPOS_ANEXO = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
 const ORDEM_ITENS: Prisma.OrcamentoItemOrderByWithRelationInput[] = [{ ordem: 'asc' }, { descricao: 'asc' }];
-const MAX_ANEXO_BYTES = 5 * 1024 * 1024;
+// 3 MB: o site (Vercel) só repassa requisições de até 4,5 MB e o arquivo viaja em base64 (+33%)
+const MAX_ANEXO_BYTES = 3 * 1024 * 1024;
 const MAX_ANEXOS = 20;
 
 // Dados que o cliente pode ver pelo link público (sem informações internas da operação)
@@ -610,7 +611,7 @@ export class OrcamentosService {
     if (!/^[A-Za-z0-9+/=\s]+$/.test(dto.conteudoBase64)) throw new BadRequestException('Arquivo inválido');
     const conteudo = Buffer.from(dto.conteudoBase64, 'base64');
     if (conteudo.length === 0) throw new BadRequestException('Arquivo vazio');
-    if (conteudo.length > MAX_ANEXO_BYTES) throw new BadRequestException('Arquivo maior que 5 MB');
+    if (conteudo.length > MAX_ANEXO_BYTES) throw new BadRequestException('Arquivo maior que 3 MB');
     if ((await this.prisma.orcamentoAnexo.count({ where: { orcamentoId: id } })) >= MAX_ANEXOS)
       throw new BadRequestException(`Limite de ${MAX_ANEXOS} anexos por orçamento`);
     const nome = dto.nome.replace(/[\\/\r\n"]/g, '_').slice(0, 255);
