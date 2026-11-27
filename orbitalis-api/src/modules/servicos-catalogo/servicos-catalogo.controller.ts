@@ -5,7 +5,7 @@ import { Modulo } from '../../common/decorators/modulo.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { ImportarPlanilhaDto } from '../../common/dto/importar-planilha.dto';
-import { CreateServicoDto, UpdateServicoDto } from './dto/servico.dto';
+import { CreateServicoDto, LoteServicoDto, UpdateServicoDto } from './dto/servico.dto';
 import { ServicosCatalogoService } from './servicos-catalogo.service';
 
 @Controller('catalogo-servicos')
@@ -29,6 +29,11 @@ export class ServicosCatalogoController {
   @Get('modelo-importacao')
   async modelo() {
     return this.xlsx(await this.svc.modeloImportacao(), 'Importacao_Modelo_Servicos.xlsx');
+  }
+
+  @Post('lote')
+  lote(@Body() dto: LoteServicoDto) {
+    return this.svc.executarLote(dto);
   }
 
   @Post('importar')

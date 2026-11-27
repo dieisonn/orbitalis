@@ -6,6 +6,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1'
 const RECURSOS: Record<string, { rota: string; arquivo: string; modelo: string }> = {
   'catalogo-servicos': { rota: 'catalogo-servicos', arquivo: 'Servicos.xlsx', modelo: 'Importacao_Modelo_Servicos.xlsx' },
   produtos: { rota: 'produtos', arquivo: 'Produtos.xlsx', modelo: 'Importacao_Modelo_Produtos.xlsx' },
+  fornecedores: { rota: 'fornecedores', arquivo: 'Fornecedores.xlsx', modelo: 'Importacao_Modelo_Fornecedores.xlsx' },
 }
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 

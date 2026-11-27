@@ -1,3 +1,4 @@
+import { SelecaoSimplesDto } from '../../../common/dto/selecao.dto';
 import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, Length, MaxLength, MinLength, ValidateIf } from 'class-validator';
 
 class CamposFornecedor {
@@ -27,4 +28,8 @@ export class CreateFornecedorDto extends CamposFornecedor {
 export class UpdateFornecedorDto extends CamposFornecedor {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(255) razaoSocial?: string;
   @IsOptional() @IsBoolean() ativo?: boolean;
+}
+
+export class LoteFornecedorDto extends SelecaoSimplesDto {
+  @IsIn(['ativar', 'inativar', 'excluir']) acao: 'ativar' | 'inativar' | 'excluir';
 }

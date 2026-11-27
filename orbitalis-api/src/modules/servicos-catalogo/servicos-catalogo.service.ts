@@ -1,7 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateServicoDto, UpdateServicoDto } from './dto/servico.dto';
+import { CreateServicoDto, LoteServicoDto, UpdateServicoDto } from './dto/servico.dto';
+import { ajustarPreco, calcularVenda } from '../produtos/markup';
 import { dataHoraBr, formatarNumeroBr, lerNumeroBr, lerPlanilha, lerSimNao, montarPlanilha, ResultadoImportacao, resultadoVazio } from '../../common/planilha';
 
 // Layout idêntico ao do sistema de origem (exportação) e à planilha modelo de importação
@@ -216,5 +217,44 @@ export class ServicosCatalogoService {
       }
     }
     return res;
+  }
+
+  // ---------- ações em lote
+  async executarLote(dto: LoteServicoDto) {
+    let ids: string[];
+    if (dto.ids?.length) {
+      ids = (await this.prisma.servico.findMany({ where: { id: { in: dto.ids }, deletedAt: null }, select: { id: true } })).map((r) => r.id);
+    } else if (dto.filtro) {
+      ids = (await this.prisma.servico.findMany({ where: this.filtro(dto.filtro.q, dto.filtro.ativo), select: { id: true }, take: 5001 })).map((r) => r.id);
+    } else throw new BadRequestException('Selecione ao menos um serviço');
+    if (ids.length === 0) throw new BadRequestException('Nenhum serviço encontrado na seleção');
+    if (ids.length > 5000) throw new BadRequestException('Seleção acima de 5000 serviços. Refine a busca.');
+    const feito = (afetados: number, ignorados = 0, motivoIgnorados?: string) => ({ acao: dto.acao, afetados, ignorados, motivoIgnorados });
+
+    switch (dto.acao) {
+      case 'ativar':
+      case 'inativar':
+        return feito((await this.prisma.servico.updateMany({ where: { id: { in: ids } }, data: { ativo: dto.acao === 'ativar' } })).count);
+      case 'excluir':
+        return feito((await this.prisma.servico.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date(), ativo: false, codigo: null } })).count);
+      case 'atividade':
+        return feito((await this.prisma.servico.updateMany({ where: { id: { in: ids } }, data: { atividadeServico: (dto.atividade_nova ?? '').trim() || null } })).count);
+      case 'ajuste_preco': {
+        if (dto.percentual === undefined || dto.percentual === 0) throw new BadRequestException('Informe o percentual de ajuste');
+        const lista = await this.prisma.servico.findMany({ where: { id: { in: ids } }, select: { id: true, valor: true } });
+        await this.prisma.$transaction(lista.map((x) => this.prisma.servico.update({ where: { id: x.id }, data: { valor: ajustarPreco(Number(x.valor), dto.percentual!) } })));
+        return feito(lista.length);
+      }
+      case 'markup': {
+        const geral = Number((await this.prisma.markupRegra.findFirst({ where: { categoria: '' } }))?.percentual ?? 0);
+        const pct = dto.percentual ?? (geral > 0 ? geral : undefined);
+        if (pct === undefined) throw new BadRequestException('Nenhum markup definido. Informe um percentual ou configure o markup padrão em Produtos.');
+        const lista = await this.prisma.servico.findMany({ where: { id: { in: ids } }, select: { id: true, valorCusto: true } });
+        const comCusto = lista.filter((x) => Number(x.valorCusto) > 0);
+        await this.prisma.$transaction(comCusto.map((x) => this.prisma.servico.update({ where: { id: x.id }, data: { valor: calcularVenda(Number(x.valorCusto), pct) } })));
+        const sem = lista.length - comCusto.length;
+        return feito(comCusto.length, sem, sem ? `${sem} sem custo informado` : undefined);
+      }
+    }
   }
 }

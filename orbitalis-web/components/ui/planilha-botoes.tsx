@@ -12,7 +12,7 @@ type Resultado = {
 type Item = { arquivo: File; res?: Resultado; erro?: string; gravado?: boolean }
 
 /** Exportar / Baixar modelo / Importar (.xlsx, um ou vários arquivos) com pré-visualização antes de gravar. */
-export function PlanilhaBotoes({ recurso, nome, estoque = false }: { recurso: 'catalogo-servicos' | 'produtos'; nome: string; estoque?: boolean }) {
+export function PlanilhaBotoes({ recurso, nome, estoque = false }: { recurso: 'catalogo-servicos' | 'produtos' | 'fornecedores'; nome: string; estoque?: boolean }) {
   const router = useRouter()
   const input = useRef<HTMLInputElement>(null)
   const [aberto, setAberto] = useState(false)
@@ -75,7 +75,7 @@ export function PlanilhaBotoes({ recurso, nome, estoque = false }: { recurso: 'c
               Envie planilhas <strong>.xlsx</strong> (uma ou várias) no mesmo formato da exportação ou do modelo.
               {estoque
                 ? ' Produto com código que já existe é atualizado (o saldo não muda); produto novo entra com o estoque informado como saldo inicial.'
-                : ' Serviço com código que já existe é atualizado; os demais são criados.'}
+                : recurso === 'fornecedores' ? ' Fornecedor com o mesmo CPF/CNPJ (ou código, se não tiver documento) é atualizado; os demais são criados.' : ' Serviço com código que já existe é atualizado; os demais são criados.'}
             </p>
             <a href={`/api/planilhas/${recurso}/modelo-importacao`} className="inline-flex items-center gap-2 text-primary font-medium hover:underline"><FileSpreadsheet size={14} /> Baixar planilha modelo</a>
 
