@@ -2,41 +2,20 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FileText, ExternalLink, Printer } from 'lucide-react'
-import { OrcamentoActions, GerarOsPanel } from './actions'
+import { OrcamentoActions, GerarOsPanel, StatusSelect, AnexosPanel } from './actions'
+import { STATUS_COLOR, STATUS_LABEL, fmtData, type OrcamentoCompleto } from '@/lib/orcamento'
 import { TIPO_OS_LABEL, type TipoOs } from '@/lib/checklist'
 
-type OrcItem = { id: string; descricao: string; quantidade: number; unidade: string; precoUnitario: number; categoria: 'servico' | 'peca' }
-type Orcamento = {
-  id: string; numero: number; status: string; titulo: string
-  validadeDias: number; observacoes: string | null; tokenPublico: string
-  criadoEm: string; aprovadoEm: string | null; rejeitadoEm: string | null
-  cliente: { id: string; razaoSocial: string; nomeFantasia: string | null; documento: string; endereco: string }
-  criadoPor: { nome: string | null; email: string } | null
-  itens: OrcItem[]
-  tipoOs: TipoOs
-  ambienteId: string | null
-  ambiente: { id: string; nome: string } | null
-  tipoServico: { id: string; sigla: string; nome: string; corHex: string } | null
-  modeloChecklist: { id: string; nome: string } | null
-  ordemServico: { id: string; numero: number | null; status: string } | null
-  visitaOrigem?: { id: string; numero: number | null; dataConclusao: string | null; tipoServico: { sigla: string } | null } | null
-}
+type Orcamento = OrcamentoCompleto
 
-const STATUS_LABEL: Record<string, string> = {
-  rascunho: 'Rascunho', enviado: 'Aguardando aprovação', aprovado: 'Aprovado', rejeitado: 'Rejeitado', expirado: 'Expirado',
-}
-const STATUS_COLOR: Record<string, string> = {
-  rascunho: 'bg-gray-100 text-gray-600', enviado: 'bg-blue-50 text-blue-700',
-  aprovado: 'bg-green-50 text-green-700', rejeitado: 'bg-red-50 text-red-600', expirado: 'bg-yellow-50 text-yellow-700',
-}
+function fmtBRL(v: number | string) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—')
 
-function fmtBRL(v: number) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
-function fmt(d: string | null) { return d ? new Date(d).toLocaleDateString('pt-BR') : '—' }
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ aviso?: string }> }
 
-type Props = { params: Promise<{ id: string }> }
-
-export default async function OrcamentoPage({ params }: Props) {
+export default async function OrcamentoPage({ params, searchParams }: Props) {
   const { id } = await params
+  const { aviso } = await searchParams
   let orc: Orcamento
   try { orc = await api.get<Orcamento>(`/orcamentos/${id}`) }
   catch { notFound() }
@@ -50,7 +29,7 @@ export default async function OrcamentoPage({ params }: Props) {
           .catch(() => [])
       : []
 
-  const total = orc.itens.reduce((acc, it) => acc + Number(it.quantidade) * Number(it.precoUnitario), 0)
+  const t = orc.totais
   const webOrigin = process.env.NEXT_PUBLIC_WEB_URL ?? ''
   const linkPublico = `${webOrigin}/o/${orc.tokenPublico}`
 
@@ -80,6 +59,10 @@ export default async function OrcamentoPage({ params }: Props) {
           <OrcamentoActions orc={{ id: orc.id, status: orc.status, tokenPublico: orc.tokenPublico }} />
         </div>
       </div>
+
+      <StatusSelect id={orc.id} status={orc.status} />
+
+      {aviso && <div role="status" className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-900">{aviso}</div>}
 
       {/* Link público */}
       {orc.status === 'enviado' && (
@@ -208,21 +191,61 @@ export default async function OrcamentoPage({ params }: Props) {
             })}
           </tbody>
           <tfoot>
+            {(t.descontoValor > 0 || t.frete > 0) && (
+              <tr className="border-t-2 border-border">
+                <td colSpan={3} className="px-5 py-2 text-right text-sm text-gray-500">Subtotal</td>
+                <td className="px-5 py-2 text-right text-sm text-gray-700">{fmtBRL(t.subtotal)}</td>
+              </tr>
+            )}
+            {t.descontoValor > 0 && (
+              <tr>
+                <td colSpan={3} className="px-5 py-1 text-right text-sm text-gray-500">Desconto{orc.descontoTipo === 'percentual' ? ` (${Number(orc.desconto)}%)` : ''}</td>
+                <td className="px-5 py-1 text-right text-sm text-red-600">− {fmtBRL(t.descontoValor)}</td>
+              </tr>
+            )}
+            {t.frete > 0 && (
+              <tr>
+                <td colSpan={3} className="px-5 py-1 text-right text-sm text-gray-500">Frete / despesas</td>
+                <td className="px-5 py-1 text-right text-sm text-gray-700">{fmtBRL(t.frete)}</td>
+              </tr>
+            )}
             <tr className="border-t-2 border-border bg-muted/20">
               <td colSpan={3} className="px-5 py-3 text-right text-sm font-semibold text-gray-900">Total</td>
-              <td className="px-5 py-3 text-right text-lg font-bold text-gray-900">{fmtBRL(total)}</td>
+              <td className="px-5 py-3 text-right text-lg font-bold text-gray-900">{fmtBRL(t.total)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
 
-      {/* Observações */}
+      {(orc.formaPagamento || orc.parcelas.length > 0) && (
+        <div className="bg-white border border-border rounded-lg p-5 text-sm space-y-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pagamento</p>
+          {orc.formaPagamento && <p className="text-gray-900">{orc.formaPagamento}</p>}
+          {orc.parcelas.length > 0 && (
+            <ul className="divide-y divide-border">
+              {orc.parcelas.map((pc) => (
+                <li key={pc.id} className="flex justify-between py-1.5"><span className="text-gray-600">{pc.numero}ª · vence {fmtData(pc.vencimento)}</span><span className="font-medium text-gray-900">{fmtBRL(Number(pc.valor))}</span></li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {orc.observacoes && (
         <div className="bg-white border border-border rounded-lg p-5">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Observações</p>
           <p className="text-sm text-gray-900 whitespace-pre-line">{orc.observacoes}</p>
         </div>
       )}
+
+      {orc.observacoesInternas && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-5">
+          <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-2">Observações internas (não aparecem para o cliente)</p>
+          <p className="text-sm text-amber-950 whitespace-pre-line">{orc.observacoesInternas}</p>
+        </div>
+      )}
+
+      <AnexosPanel orcamentoId={orc.id} anexos={orc.anexos} />
     </div>
   )
 }

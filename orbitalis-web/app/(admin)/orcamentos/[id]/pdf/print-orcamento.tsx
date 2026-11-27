@@ -8,19 +8,22 @@ type Orc = {
   cliente: { razaoSocial: string; nomeFantasia: string | null; documento: string; endereco: string; telefone: string | null }
   criadoPor: { nome: string | null; email: string } | null
   itens: OrcItem[]
+  totais: { subtotal: number; descontoValor: number; frete: number; total: number }
+  descontoTipo?: string; desconto?: number | string; formaPagamento?: string | null
+  parcelas?: { id: string; numero: number; vencimento: string; valor: number | string }[]
 }
 type Config = { nomeEmpresa: string; nomeFantasia: string | null; logoUrl: string | null; corPrimaria: string | null; cnpj: string | null; telefone: string | null; endereco: string | null } | null
 
 const STATUS_LABEL: Record<string, string> = { rascunho: 'Rascunho', enviado: 'Proposta', aprovado: 'Aprovado', rejeitado: 'Rejeitado', expirado: 'Expirado' }
 
-function fmtBRL(v: number) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+function fmtBRL(v: number | string) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 function fmt(d: string | null) { return d ? new Date(d).toLocaleDateString('pt-BR') : '—' }
 
 export function PrintOrcamento({ orc, config }: { orc: Orc; config?: Config }) {
   const numero = `ORC-${String(orc.numero).padStart(4, '0')}`
   const nomeEmpresa = config?.nomeFantasia ?? config?.nomeEmpresa ?? 'Orbitalis'
   const cor = config?.corPrimaria ?? '#0505ad'
-  const total = orc.itens.reduce((acc, it) => acc + Number(it.quantidade) * Number(it.precoUnitario), 0)
+  const t = orc.totais
   const validade = new Date(new Date(orc.criadoEm).getTime() + orc.validadeDias * 86400000)
 
   return (
@@ -114,13 +117,41 @@ export function PrintOrcamento({ orc, config }: { orc: Orc; config?: Config }) {
               ))}
             </tbody>
             <tfoot>
+              {(t.descontoValor > 0 || t.frete > 0) && (
+                <tr style={{ borderTop: '2px solid #111' }}>
+                  <td colSpan={4} style={{ padding: '6px 8px 2px', textAlign: 'right', color: '#555' }}>Subtotal</td>
+                  <td style={{ padding: '6px 8px 2px', textAlign: 'right' }}>{fmtBRL(t.subtotal)}</td>
+                </tr>
+              )}
+              {t.descontoValor > 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: '2px 8px', textAlign: 'right', color: '#555' }}>Desconto{orc.descontoTipo === 'percentual' ? ` (${Number(orc.desconto)}%)` : ''}</td>
+                  <td style={{ padding: '2px 8px', textAlign: 'right' }}>− {fmtBRL(t.descontoValor)}</td>
+                </tr>
+              )}
+              {t.frete > 0 && (
+                <tr>
+                  <td colSpan={4} style={{ padding: '2px 8px', textAlign: 'right', color: '#555' }}>Frete / despesas</td>
+                  <td style={{ padding: '2px 8px', textAlign: 'right' }}>{fmtBRL(t.frete)}</td>
+                </tr>
+              )}
               <tr style={{ borderTop: '2px solid #111', backgroundColor: '#fafafa' }}>
                 <td colSpan={4} style={{ padding: '8px', textAlign: 'right', fontWeight: 700 }}>Total</td>
-                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 900, fontSize: '12pt' }}>{fmtBRL(total)}</td>
+                <td style={{ padding: '8px', textAlign: 'right', fontWeight: 900, fontSize: '12pt' }}>{fmtBRL(t.total)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
+
+        {(orc.formaPagamento || (orc.parcelas?.length ?? 0) > 0) && (
+          <div style={{ padding: '10px 0', borderTop: '1px solid #ddd' }}>
+            <p style={{ fontSize: '7pt', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#777', margin: '0 0 6px 0' }}>Pagamento</p>
+            {orc.formaPagamento && <p style={{ margin: '0 0 4px 0' }}>{orc.formaPagamento}</p>}
+            {orc.parcelas?.map((pc) => (
+              <p key={pc.id} style={{ margin: 0, fontSize: '9pt' }}>{pc.numero}ª parcela — vencimento {new Date(pc.vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} — {fmtBRL(Number(pc.valor))}</p>
+            ))}
+          </div>
+        )}
 
         {/* Observações */}
         {orc.observacoes && (

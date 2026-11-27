@@ -7,15 +7,18 @@ type Orc = {
   id: string; numero: number; status: string; titulo: string; validadeDias: number; observacoes: string | null; criadoEm: string
   cliente: { razaoSocial: string; nomeFantasia: string | null }
   itens: OrcItem[]
+  totais: { subtotal: number; descontoValor: number; frete: number; total: number }
+  descontoTipo?: string; desconto?: number | string; formaPagamento?: string | null
+  parcelas?: { id?: string; numero: number; vencimento: string; valor: number | string }[]
 }
 
-function fmtBRL(v: number) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+function fmtBRL(v: number | string) { return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
 
 export function AprovarOrcamento({ orc, token }: { orc: Orc; token: string }) {
   const [status, setStatus] = useState(orc.status)
   const [loading, setLoading] = useState<'aprovar' | 'rejeitar' | null>(null)
 
-  const total = orc.itens.reduce((acc, it) => acc + Number(it.quantidade) * Number(it.precoUnitario), 0)
+  const t = orc.totais
   const validade = new Date(new Date(orc.criadoEm).getTime() + orc.validadeDias * 86400000)
 
   async function acao(tipo: 'aprovar' | 'rejeitar') {
@@ -97,13 +100,46 @@ export function AprovarOrcamento({ orc, token }: { orc: Orc; token: string }) {
               ))}
             </tbody>
             <tfoot>
+              {(t.descontoValor > 0 || t.frete > 0) && (
+                <tr className="border-t-2 border-gray-200">
+                  <td colSpan={2} className="px-5 py-2 text-right text-gray-500">Subtotal</td>
+                  <td className="px-5 py-2 text-right text-gray-700">{fmtBRL(t.subtotal)}</td>
+                </tr>
+              )}
+              {t.descontoValor > 0 && (
+                <tr>
+                  <td colSpan={2} className="px-5 py-1 text-right text-gray-500">Desconto{orc.descontoTipo === 'percentual' ? ` (${Number(orc.desconto)}%)` : ''}</td>
+                  <td className="px-5 py-1 text-right text-red-600">− {fmtBRL(t.descontoValor)}</td>
+                </tr>
+              )}
+              {t.frete > 0 && (
+                <tr>
+                  <td colSpan={2} className="px-5 py-1 text-right text-gray-500">Frete / despesas</td>
+                  <td className="px-5 py-1 text-right text-gray-700">{fmtBRL(t.frete)}</td>
+                </tr>
+              )}
               <tr className="bg-gray-50 border-t-2 border-gray-200">
                 <td colSpan={2} className="px-5 py-4 text-right font-bold text-gray-700">Total</td>
-                <td className="px-5 py-4 text-right text-xl font-bold text-gray-900">{fmtBRL(total)}</td>
+                <td className="px-5 py-4 text-right text-xl font-bold text-gray-900">{fmtBRL(t.total)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
+
+        {(orc.formaPagamento || (orc.parcelas?.length ?? 0) > 0) && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Pagamento</p>
+            {orc.formaPagamento && <p className="text-sm text-gray-800 mb-1">{orc.formaPagamento}</p>}
+            <ul className="text-sm text-gray-700 divide-y divide-gray-100">
+              {orc.parcelas?.map((pc) => (
+                <li key={pc.numero} className="flex justify-between py-1.5">
+                  <span>{pc.numero}ª parcela · {new Date(pc.vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
+                  <span className="font-medium">{fmtBRL(pc.valor)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Observações */}
         {orc.observacoes && (

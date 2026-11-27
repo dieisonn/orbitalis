@@ -2,9 +2,9 @@ import Link from 'next/link'
 import { api } from '@/lib/api'
 import { Plus, FileText } from 'lucide-react'
 import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { STATUS_COLOR, STATUS_LABEL as BASE_LABEL } from '@/lib/orcamento'
 import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
 
-type Item = { id: string; descricao: string; precoUnitario: number; quantidade: number }
 type Orcamento = {
   id: string
   numero: number
@@ -12,25 +12,13 @@ type Orcamento = {
   titulo: string
   criadoEm: string
   validadeDias: number
+  total: number
   cliente: { id: string; razaoSocial: string; nomeFantasia: string | null }
   _count: { itens: number }
   ordemServico: { id: string; numero: number | null } | null
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  rascunho:  'Rascunho',
-  enviado:   'Enviado',
-  aprovado:  'Aprovado',
-  rejeitado: 'Rejeitado',
-  expirado:  'Expirado',
-}
-const STATUS_COLOR: Record<string, string> = {
-  rascunho:  'bg-gray-100 text-gray-600',
-  enviado:   'bg-blue-50 text-blue-700',
-  aprovado:  'bg-green-50 text-green-700',
-  rejeitado: 'bg-red-50 text-red-600',
-  expirado:  'bg-yellow-50 text-yellow-700',
-}
+const STATUS_LABEL = { ...BASE_LABEL, enviado: 'Enviado' } as Record<string, string>
 
 const PADRAO_ORDEM: Ordem = { ordem: 'numero', dir: 'desc' }
 const CAMPOS = {
@@ -38,6 +26,7 @@ const CAMPOS = {
   titulo: (o: Orcamento) => o.titulo,
   cliente: (o: Orcamento) => o.cliente.nomeFantasia ?? o.cliente.razaoSocial,
   itens: (o: Orcamento) => o._count.itens,
+  total: (o: Orcamento) => Number(o.total),
   data: (o: Orcamento) => new Date(o.criadoEm),
   status: (o: Orcamento) => STATUS_LABEL[o.status],
 }
@@ -76,6 +65,7 @@ export default async function OrcamentosPage({ searchParams }: { searchParams: P
                 <ThOrdenavel campo="numero" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">N°</ThOrdenavel>
                 <ThOrdenavel campo="titulo" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Título / Cliente</ThOrdenavel>
                 <ThOrdenavel campo="itens" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Itens</ThOrdenavel>
+                <ThOrdenavel campo="total" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</ThOrdenavel>
                 <ThOrdenavel campo="data" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide hidden md:table-cell">Data</ThOrdenavel>
                 <ThOrdenavel campo="status" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</ThOrdenavel>
               </tr>
@@ -96,6 +86,9 @@ export default async function OrcamentosPage({ searchParams }: { searchParams: P
                   </td>
                   <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
                     {orc._count.itens} {orc._count.itens === 1 ? 'item' : 'itens'}
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                    {Number(orc.total).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </td>
                   <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
                     {new Date(orc.criadoEm).toLocaleDateString('pt-BR')}

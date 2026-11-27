@@ -29,7 +29,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const res = await fetch(`${BASE}/orcamentos/${id}`, { method: 'DELETE', headers: await getHeaders() })
+  const { 'Content-Type': _ct, ...semCorpo } = await getHeaders()
+  void _ct
+  const res = await fetch(`${BASE}/orcamentos/${id}`, { method: 'DELETE', headers: semCorpo })
   const data = await res.json().catch(() => ({}))
   return NextResponse.json(data, { status: res.status })
 }
