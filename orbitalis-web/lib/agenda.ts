@@ -14,7 +14,7 @@ export type EventoAgenda = {
   personalizado: boolean
   avisar?: boolean            // false = sem avisos neste evento
   avisosMinutos?: number[]    // antecedências próprias; vazio = avisos padrão de quem é avisado
-  tipoServico: { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number } | null
+  tipoServico: { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number; ehVisita?: boolean } | null
   tiposServico?: { id: string; sigla: string; nome: string; corHex: string; duracaoMinutos: number }[]   // principal + adicionais
   tecnico: { id: string; nome: string } | null
   cliente: { id: string; nome: string; telefone: string | null; endereco: string } | null

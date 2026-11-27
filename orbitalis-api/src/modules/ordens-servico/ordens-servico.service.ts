@@ -919,7 +919,25 @@ export class OrdensServicoService {
     const [comExtrasBase] = await this.comTiposExtras([os]);
     const comExtras = { ...comExtrasBase, enderecoServico: enderecoDaOs(os.ambiente.cliente, os.enderecoId) };
     if (user?.role === 'cliente') return { ...comExtras, historico: [] };
-    return comExtras;
+    // rastreio comercial (visita → orçamento → O.S. de execução): só para a equipe interna
+    if (user?.role === 'tecnico') return comExtras;
+    return { ...comExtras, rastreio: await this.rastreio(id) };
+  }
+
+  /** Orçamentos gerados por esta visita e o orçamento (e visita) que originou esta O.S. */
+  private async rastreio(osId: string) {
+    const resumo = { id: true, numero: true, titulo: true, status: true } as const;
+    const [geradosPorEstaVisita, origem] = await Promise.all([
+      this.prisma.orcamento.findMany({ where: { visitaOrigemId: osId }, orderBy: { numero: 'asc' }, select: { ...resumo, ordemServico: { select: { id: true, numero: true, status: true, tipoServico: { select: { sigla: true } } } } } }),
+      this.prisma.orcamento.findFirst({ where: { ordemServicoId: osId }, select: { ...resumo, visitaOrigemId: true } }),
+    ]);
+    const visita = origem?.visitaOrigemId
+      ? await this.prisma.ordemServico.findFirst({ where: { id: origem.visitaOrigemId }, select: { id: true, numero: true, status: true, tipoServico: { select: { sigla: true } } } })
+      : null;
+    return {
+      orcamentosGerados: geradosPorEstaVisita,
+      orcamentoOrigem: origem ? { id: origem.id, numero: origem.numero, titulo: origem.titulo, status: origem.status, visita } : null,
+    };
   }
 
   // PATCH /ordens-servico/:id/triar — Admin despacha a O.S. para o técnico (§US07)

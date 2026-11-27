@@ -21,7 +21,7 @@ const hojeMais = (dias: number) => new Date(Date.now() - 3 * 3600_000 + dias * 8
 let seq = 1
 
 export function OrcamentoForm({
-  clientes, ambientes, tiposServico, modelos, visitas = [], produtos, servicos, inicial,
+  clientes, ambientes, tiposServico, modelos, visitas = [], produtos, servicos, inicial, prefill,
 }: {
   clientes: Cliente[]
   ambientes: Ambiente[]
@@ -32,14 +32,16 @@ export function OrcamentoForm({
   servicos: ServicoOpt[]
   /** Preenchido na edição */
   inicial?: OrcamentoCompleto
+  /** Novo orçamento vindo de uma visita */
+  prefill?: { clienteId: string; ambienteId: string; visitaOrigemId: string; titulo: string }
 }) {
   const router = useRouter()
   const editando = !!inicial
-  const [titulo, setTitulo] = useState(inicial?.titulo ?? '')
-  const [clienteId, setClienteId] = useState(inicial?.clienteId ?? '')
+  const [titulo, setTitulo] = useState(inicial?.titulo ?? prefill?.titulo ?? '')
+  const [clienteId, setClienteId] = useState(inicial?.clienteId ?? prefill?.clienteId ?? '')
   const [validadeDias, setValidadeDias] = useState(String(inicial?.validadeDias ?? 30))
-  const [ambienteId, setAmbienteId] = useState(inicial?.ambienteId ?? '')
-  const [visitaOrigemId, setVisitaOrigemId] = useState(inicial?.visitaOrigemId ?? '')
+  const [ambienteId, setAmbienteId] = useState(inicial?.ambienteId ?? prefill?.ambienteId ?? '')
+  const [visitaOrigemId, setVisitaOrigemId] = useState(inicial?.visitaOrigemId ?? prefill?.visitaOrigemId ?? '')
   const [tipoOs, setTipoOs] = useState<TipoOs>(inicial?.tipoOs ?? 'corretiva')
   const [tipoServicoId, setTipoServicoId] = useState(inicial?.tipoServicoId ?? '')
   const [modeloChecklistId, setModeloChecklistId] = useState(inicial?.modeloChecklistId ?? '')

@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   X, MapPin, Navigation, ExternalLink, Loader2, Pencil, Trash2, RotateCcw, User, Phone, Clock,
-  Building2, Copy, AlignLeft, Wrench,
+  Building2, Copy, AlignLeft, Wrench, FileText,
 } from 'lucide-react'
 import {
   type EventoAgenda, relogio, hhmm, diaPorExtenso, duracaoLegivel, mapaUrl, wazeUrl, STATUS_OS_LABEL,
@@ -185,6 +185,12 @@ export function EventoPopover({ evento: e, ancora, onFechar, onEditar, onDuplica
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
               <ExternalLink size={14} /> Abrir O.S.
             </a>
+            {!somenteLeitura && e.tipoServico?.ehVisita && e.ordemServico?.status === 'concluida' && (
+              <a href={`/orcamentos/novo?visita=${e.ordemServico.id}`}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-gray-700 text-sm font-semibold rounded-lg hover:bg-surface">
+                <FileText size={14} /> Gerar orçamento
+              </a>
+            )}
             {e.personalizado && !somenteLeitura && (
               <button onClick={restaurar} disabled={ocupado}
                 className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-gray-700 text-sm rounded-lg hover:bg-surface">

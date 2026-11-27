@@ -18,7 +18,7 @@ const MAX_EVENTOS = 2000;
 
 const INCLUDE_EVENTO = {
   ordemServico: { select: { id: true, numero: true, status: true, tipo: true } },
-  tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true, duracaoMinutos: true } },
+  tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true, duracaoMinutos: true, ehVisita: true } },
   tecnico: { select: { id: true, nome: true, email: true } },
   cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true, telefone: true, endereco: true } },
 } satisfies Prisma.EventoAgendaInclude;

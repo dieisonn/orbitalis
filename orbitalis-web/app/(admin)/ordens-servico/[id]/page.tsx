@@ -11,6 +11,7 @@ import { numeroOs } from '@/lib/os-numero'
 import { motivoLabel, motivoResp, RESP_LABEL } from '@/lib/cancelamento'
 import { AuxiliaresOs } from './auxiliares-os'
 import { ConcluirOsBtn } from '@/components/ui/concluir-os-btn'
+import { STATUS_COLOR as ORC_COR, STATUS_LABEL as ORC_LABEL } from '@/lib/orcamento'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -39,6 +40,12 @@ type OsItem = {
     modelo: string | null
     numeroSerie: string | null
   }
+}
+
+type OrcResumo = { id: string; numero: number; titulo: string; status: string }
+type Rastreio = {
+  orcamentosGerados: (OrcResumo & { ordemServico: { id: string; numero: number | null; status: string; tipoServico: { sigla: string } | null } | null })[]
+  orcamentoOrigem: (OrcResumo & { visita: { id: string; numero: number | null; status: string; tipoServico: { sigla: string } | null } | null }) | null
 }
 
 type Tecnico = { id: string; email: string; nome: string | null }
@@ -72,7 +79,8 @@ type OrdemServico = {
   observacoesTecnico?: string | null
   observacoesTecnicoPor?: string | null
   observacoesTecnicoEm?: string | null
-  tipoServico?: { sigla: string; nome: string; corHex: string } | null
+  tipoServico?: { sigla: string; nome: string; corHex: string; ehVisita?: boolean } | null
+  rastreio?: Rastreio
   dias?: { id: string; data: string; horaInicio: string | null; horaFim: string | null }[]
   enderecoServico?: { rotulo: string | null; endereco: string }
   tiposServicoExtrasInfo?: { id: string; sigla: string; nome: string; corHex: string }[]
@@ -206,6 +214,15 @@ export default async function OsDetailPage({ params }: Props) {
             {(os.status === 'em_andamento' || (os.status === 'aberta' && os.tecnico)) && (
               <ConcluirOsBtn osId={os.id} osNum={osNum} />
             )}
+            {os.tipoServico?.ehVisita && os.status === 'concluida' && (
+              <a
+                href={`/orcamentos/novo?visita=${os.id}`}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white bg-action rounded-lg hover:bg-action/90 transition-colors"
+              >
+                <DollarSign size={14} />
+                Gerar orçamento
+              </a>
+            )}
             <a
               href={`/ordens-servico/${os.id}/editar`}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-600 border border-border rounded-lg hover:bg-surface transition-colors"
@@ -228,6 +245,46 @@ export default async function OsDetailPage({ params }: Props) {
             />
           </div>
         </div>
+
+        {os.rastreio && (os.rastreio.orcamentoOrigem || os.rastreio.orcamentosGerados.length > 0) && (
+          <div className="pt-4 pb-5 mb-1 border-t border-border" aria-label="Rastreio comercial">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Rastreio</p>
+            <ul className="space-y-1.5 text-sm">
+              {os.rastreio.orcamentoOrigem && (
+                <li className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-700">
+                  {os.rastreio.orcamentoOrigem.visita && (
+                    <>
+                      <span>Visita</span>
+                      <a href={`/ordens-servico/${os.rastreio.orcamentoOrigem.visita.id}`} className="font-semibold text-primary hover:underline">{numeroOs(os.rastreio.orcamentoOrigem.visita)}</a>
+                      <span aria-hidden className="text-gray-300">→</span>
+                    </>
+                  )}
+                  <span>Orçamento</span>
+                  <a href={`/orcamentos/${os.rastreio.orcamentoOrigem.id}`} className="font-semibold text-primary hover:underline">#{String(os.rastreio.orcamentoOrigem.numero).padStart(4, '0')}</a>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${ORC_COR[os.rastreio.orcamentoOrigem.status]}`}>{ORC_LABEL[os.rastreio.orcamentoOrigem.status]}</span>
+                  <span aria-hidden className="text-gray-300">→</span>
+                  <span className="font-semibold text-gray-900">{osNum} (esta O.S.)</span>
+                </li>
+              )}
+              {os.rastreio.orcamentosGerados.map((o) => (
+                <li key={o.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-gray-700">
+                  <span className="font-semibold text-gray-900">{osNum} (esta visita)</span>
+                  <span aria-hidden className="text-gray-300">→</span>
+                  <span>Orçamento</span>
+                  <a href={`/orcamentos/${o.id}`} className="font-semibold text-primary hover:underline">#{String(o.numero).padStart(4, '0')}</a>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${ORC_COR[o.status]}`}>{ORC_LABEL[o.status]}</span>
+                  {o.ordemServico && (
+                    <>
+                      <span aria-hidden className="text-gray-300">→</span>
+                      <span>O.S.</span>
+                      <a href={`/ordens-servico/${o.ordemServico.id}`} className="font-semibold text-primary hover:underline">{numeroOs(o.ordemServico)}</a>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Info grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 border-t border-border">
