@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { OrcamentosController, OrcamentosPublicoController } from './orcamentos.controller';
 import { AgendaModule } from '../agenda/agenda.module';
+import { ProdutosModule } from '../produtos/produtos.module';
 import { OrcamentosService } from './orcamentos.service';
 
 @Module({
-  imports: [PrismaModule, AgendaModule],
+  imports: [PrismaModule, AgendaModule, ProdutosModule],
   controllers: [OrcamentosController, OrcamentosPublicoController],
   providers: [OrcamentosService],
   exports: [OrcamentosService],

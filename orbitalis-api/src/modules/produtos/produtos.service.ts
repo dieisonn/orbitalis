@@ -227,7 +227,7 @@ export class ProdutosService {
   }
 
   /** Mesmo movimento, dentro de uma transação já aberta (usado pelo inventário para ajustar vários produtos de uma vez). */
-  async aplicarMovimentoTx(tx: any, id: string, dto: MovimentarEstoqueDto, motivo: string, usuarioId: string) {
+  async aplicarMovimentoTx(tx: any, id: string, dto: MovimentarEstoqueDto, motivo: string, usuarioId: string | null, origem?: { orcamentoId?: string }) {
     {
       const p = await tx.produto.findFirst({ where: { id, deletedAt: null } });
       if (!p) throw new NotFoundException('Produto não encontrado');
@@ -256,6 +256,7 @@ export class ProdutosService {
           fornecedorId: dto.tipo === 'entrada' ? (dto.fornecedorId || null) : null,
           documento: vazioNulo(dto.documento) ?? null,
           observacao: vazioNulo(dto.observacao) ?? null,
+          orcamentoId: origem?.orcamentoId ?? null,
           usuarioId,
         },
       });

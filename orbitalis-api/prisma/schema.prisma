@@ -608,7 +608,18 @@ model Orcamento {
   criadoPorId String?  @map("criado_por_id") @db.Uuid
   criadoPor   Usuario? @relation("OrcamentoCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
 
+  // Totais: total = soma dos itens − desconto + frete/outras despesas
+  descontoTipo        String  @default("valor") @map("desconto_tipo") @db.VarChar(10) // 'valor' | 'percentual'
+  desconto            Decimal @default(0) @db.Decimal(12, 2)
+  frete               Decimal @default(0) @db.Decimal(12, 2)
+  // Informativo (aparece no PDF e no link): "PIX", "Boleto", "Cartão"...
+  formaPagamento      String? @map("forma_pagamento") @db.VarChar(60)
+  // Só a equipe vê (não vai para o PDF nem para o link do cliente)
+  observacoesInternas String? @map("observacoes_internas") @db.Text
+
   itens        OrcamentoItem[]
+  parcelas     OrcamentoParcela[]
+  anexos       OrcamentoAnexo[]
 
   criadoEm    DateTime  @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
@@ -632,11 +643,44 @@ model OrcamentoItem {
   precoUnitario Decimal   @map("preco_unitario") @db.Decimal(10, 2)
   // 'servico' (mão de obra) ou 'peca' — alimenta valorMaoObra/valorPecas da O.S. gerada
   categoria     String    @default("servico") @db.VarChar(10)
+  // Origem no cadastro (referências sem relation, como visitaOrigemId): produto do estoque ou serviço do catálogo
+  produtoId     String?   @map("produto_id") @db.Uuid
+  servicoId     String?   @map("servico_id") @db.Uuid
+  ordem         Int       @default(0)
+  // Quanto deste item já saiu do estoque (a baixa é conciliada ao aprovar, editar ou reabrir o orçamento)
+  estoqueBaixado Decimal  @default(0) @map("estoque_baixado") @db.Decimal(14, 3)
 
   orcamentoId String    @map("orcamento_id") @db.Uuid
   orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
 
+  @@index([orcamentoId])
   @@map("orcamento_itens")
+}
+
+model OrcamentoParcela {
+  id          String    @id @default(uuid()) @db.Uuid
+  numero      Int
+  vencimento  DateTime  @db.Date
+  valor       Decimal   @db.Decimal(12, 2)
+  orcamentoId String    @map("orcamento_id") @db.Uuid
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+
+  @@index([orcamentoId])
+  @@map("orcamento_parcelas")
+}
+
+model OrcamentoAnexo {
+  id          String    @id @default(uuid()) @db.Uuid
+  nome        String    @db.VarChar(255)
+  tipo        String    @db.VarChar(100)
+  tamanho     Int
+  conteudo    Bytes
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+  orcamentoId String    @map("orcamento_id") @db.Uuid
+  orcamento   Orcamento @relation(fields: [orcamentoId], references: [id], onDelete: Cascade)
+
+  @@index([orcamentoId])
+  @@map("orcamento_anexos")
 }
 
 // ─────────────────────────────────────────

@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards,
+  Body, Controller, Delete, Get, Param, Patch, Post, Query, StreamableFile, UseGuards,
 } from '@nestjs/common';
 import { OrcamentoStatus, UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -7,7 +7,7 @@ import { Modulo } from '../../common/decorators/modulo.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
-import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
+import { AlterarStatusOrcamentoDto, AnexoOrcamentoDto, CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { OrcamentosService } from './orcamentos.service';
 
 @Controller('orcamentos')
@@ -53,8 +53,33 @@ export class OrcamentosController {
   }
 
   @Patch(':id')
-  atualizar(@Param('id') id: string, @Body() dto: Partial<CreateOrcamentoDto>) {
-    return this.svc.atualizar(id, dto);
+  atualizar(@Param('id') id: string, @Body() dto: Partial<CreateOrcamentoDto>, @CurrentUser() user: AuthUser) {
+    return this.svc.atualizar(id, dto, user.id);
+  }
+
+  // Troca manual de status (aprovar baixa o estoque; sair de aprovado devolve)
+  @Patch(':id/status')
+  alterarStatus(@Param('id') id: string, @Body() dto: AlterarStatusOrcamentoDto, @CurrentUser() user: AuthUser) {
+    return this.svc.alterarStatus(id, dto.status as OrcamentoStatus, user.id);
+  }
+
+  @Post(':id/anexos')
+  anexar(@Param('id') id: string, @Body() dto: AnexoOrcamentoDto) {
+    return this.svc.anexar(id, dto);
+  }
+
+  @Get(':id/anexos/:anexoId')
+  async baixarAnexo(@Param('id') id: string, @Param('anexoId') anexoId: string) {
+    const a = await this.svc.baixarAnexo(id, anexoId);
+    return new StreamableFile(Buffer.from(a.conteudo), {
+      type: a.tipo,
+      disposition: `attachment; filename*=UTF-8''${encodeURIComponent(a.nome)}`,
+    });
+  }
+
+  @Delete(':id/anexos/:anexoId')
+  removerAnexo(@Param('id') id: string, @Param('anexoId') anexoId: string) {
+    return this.svc.removerAnexo(id, anexoId);
   }
 
   // Gera (ou devolve) a O.S. de um orçamento aprovado; ambienteId só é necessário se
@@ -70,8 +95,8 @@ export class OrcamentosController {
   }
 
   @Delete(':id')
-  excluir(@Param('id') id: string) {
-    return this.svc.excluir(id);
+  excluir(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.svc.excluir(id, user.id);
   }
 }
 

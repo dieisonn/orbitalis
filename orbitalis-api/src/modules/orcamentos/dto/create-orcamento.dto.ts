@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Min, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsDateString, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 
 export class CreateOrcamentoItemDto {
   @IsString() @IsNotEmpty()
@@ -17,6 +17,21 @@ export class CreateOrcamentoItemDto {
   // 'servico' = mão de obra, 'peca' = material. Vira valorMaoObra/valorPecas da O.S. gerada.
   @IsOptional() @IsIn(['servico', 'peca'])
   categoria?: 'servico' | 'peca';
+
+  // Item escolhido do cadastro: produto (baixa estoque ao aprovar) ou serviço do catálogo
+  @IsOptional() @IsUUID()
+  produtoId?: string | null;
+
+  @IsOptional() @IsUUID()
+  servicoId?: string | null;
+}
+
+export class OrcamentoParcelaDto {
+  @IsDateString()
+  vencimento: string;
+
+  @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(9_999_999_999)
+  valor: number;
 }
 
 export class CreateOrcamentoDto {
@@ -50,8 +65,48 @@ export class CreateOrcamentoDto {
   @IsOptional() @IsUUID()
   visitaOrigemId?: string | null;
 
+  @IsOptional() @IsIn(['valor', 'percentual'])
+  descontoTipo?: 'valor' | 'percentual';
+
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(9_999_999_999)
+  desconto?: number;
+
+  // Frete / outras despesas somadas ao total
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(9_999_999_999)
+  frete?: number;
+
+  @IsOptional() @IsString() @MaxLength(60)
+  formaPagamento?: string;
+
+  // Anotações da equipe: não vão para o PDF nem para o link do cliente
+  @IsOptional() @IsString() @MaxLength(5000)
+  observacoesInternas?: string;
+
+  // Informativas: a soma precisa bater com o total do orçamento
+  @IsOptional() @IsArray() @ArrayMaxSize(60)
+  @ValidateNested({ each: true })
+  @Type(() => OrcamentoParcelaDto)
+  parcelas?: OrcamentoParcelaDto[];
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrcamentoItemDto)
   itens: CreateOrcamentoItemDto[];
+}
+
+export class AlterarStatusOrcamentoDto {
+  @IsIn(['rascunho', 'enviado', 'aprovado', 'rejeitado', 'expirado'])
+  status: 'rascunho' | 'enviado' | 'aprovado' | 'rejeitado' | 'expirado';
+}
+
+export class AnexoOrcamentoDto {
+  @IsString() @IsNotEmpty() @MaxLength(255)
+  nome: string;
+
+  @IsString() @IsNotEmpty() @MaxLength(100)
+  tipo: string;
+
+  // até 5 MB de arquivo (≈ 6,9 milhões de caracteres em base64)
+  @IsString() @IsNotEmpty() @MaxLength(7_000_000)
+  conteudoBase64: string;
 }

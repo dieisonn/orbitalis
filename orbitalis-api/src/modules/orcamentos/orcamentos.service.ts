@@ -1,34 +1,53 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { OrcamentoStatus } from '@prisma/client';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { OrcamentoStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
+import { AnexoOrcamentoDto, CreateOrcamentoDto } from './dto/create-orcamento.dto';
+import { ProdutosService } from '../produtos/produtos.service';
+import { runWithTenant } from '../../common/tenant.context';
+import { calcularTotais } from './orcamento-totais';
 import { AgendaService } from '../agenda/agenda.service';
 import { resolverChecklistItens } from '../../common/checklist-resolver';
+
+const TIPOS_ANEXO = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+const ORDEM_ITENS: Prisma.OrcamentoItemOrderByWithRelationInput[] = [{ ordem: 'asc' }, { descricao: 'asc' }];
+const MAX_ANEXO_BYTES = 5 * 1024 * 1024;
+const MAX_ANEXOS = 20;
 
 // Dados que o cliente pode ver pelo link público (sem informações internas da operação)
 const INCLUDE_PUBLICO = {
   cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true, documento: true, endereco: true, telefone: true } },
   criadoPor: { select: { id: true, nome: true, email: true } },
-  itens: { orderBy: { descricao: 'asc' as const } },
+  itens: {
+    orderBy: ORDEM_ITENS,
+    select: { id: true, descricao: true, quantidade: true, unidade: true, precoUnitario: true, categoria: true },
+  },
+  parcelas: { orderBy: { numero: 'asc' as const }, select: { id: true, numero: true, vencimento: true, valor: true } },
 } as const;
 
-// Visão do admin: inclui como a O.S. será/foi gerada
+// Visão do admin: inclui como a O.S. será/foi gerada, itens completos e anexos (sem o conteúdo do arquivo)
 const INCLUDE_FULL = {
   ...INCLUDE_PUBLICO,
+  itens: { orderBy: ORDEM_ITENS },
   ambiente: { select: { id: true, nome: true } },
   tipoServico: { select: { id: true, sigla: true, nome: true, corHex: true } },
   modeloChecklist: { select: { id: true, nome: true } },
   ordemServico: { select: { id: true, numero: true, status: true } },
+  anexos: { orderBy: { criadoEm: 'asc' as const }, select: { id: true, nome: true, tipo: true, tamanho: true, criadoEm: true } },
 } as const;
 
-// O link público mostra a proposta; ids e vínculos internos ficam de fora
+// O link público mostra a proposta; ids, vínculos e anotações internas ficam de fora
 function paraPublico<T extends Record<string, any>>(orc: T) {
   const {
-    empresaId, criadoPorId, clienteId, ambienteId, tipoServicoId, modeloChecklistId, ordemServicoId, visitaOrigemId, ...visivel
+    empresaId, criadoPorId, clienteId, ambienteId, tipoServicoId, modeloChecklistId, ordemServicoId, visitaOrigemId, observacoesInternas, ...visivel
   } = orc;
   void empresaId; void criadoPorId; void clienteId; void ambienteId;
-  void tipoServicoId; void modeloChecklistId; void ordemServicoId; void visitaOrigemId;
-  return visivel;
+  void tipoServicoId; void modeloChecklistId; void ordemServicoId; void visitaOrigemId; void observacoesInternas;
+  return comTotais(visivel);
+}
+
+/** Acrescenta `totais` (subtotal, desconto, frete, total) calculados dos itens. */
+function comTotais<T extends { itens?: { quantidade: any; precoUnitario: any }[]; descontoTipo?: string; desconto?: any; frete?: any }>(orc: T) {
+  return { ...orc, totais: calcularTotais(orc.itens ?? [], orc.descontoTipo, orc.desconto, orc.frete) };
 }
 
 @Injectable()
@@ -38,10 +57,11 @@ export class OrcamentosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agenda: AgendaService,
+    private readonly produtos: ProdutosService,
   ) {}
 
   async listar(clienteId?: string, status?: OrcamentoStatus) {
-    return this.prisma.orcamento.findMany({
+    const lista = await this.prisma.orcamento.findMany({
       where: {
         ...(clienteId ? { clienteId } : {}),
         ...(status ? { status } : {}),
@@ -49,10 +69,16 @@ export class OrcamentosService {
       include: {
         cliente: { select: { id: true, razaoSocial: true, nomeFantasia: true } },
         ordemServico: { select: { id: true, numero: true } },
-        _count: { select: { itens: true } },
+        itens: { select: { quantidade: true, precoUnitario: true } },
       },
       orderBy: { criadoEm: 'desc' },
     });
+    // a lista traz só o total (não os itens)
+    return lista.map(({ itens, ...o }) => ({
+      ...o,
+      _count: { itens: itens.length },
+      total: calcularTotais(itens, o.descontoTipo, Number(o.desconto), Number(o.frete)).total,
+    }));
   }
 
   async buscarPorId(id: string) {
@@ -67,7 +93,7 @@ export class OrcamentosService {
           select: { id: true, numero: true, dataConclusao: true, tipoServico: { select: { sigla: true } } },
         })
       : null;
-    return { ...orc, visitaOrigem };
+    return { ...comTotais(orc), visitaOrigem };
   }
 
   async buscarPorToken(token: string) {
@@ -79,13 +105,54 @@ export class OrcamentosService {
     return paraPublico(orc);
   }
 
+  /** Produtos e serviços do orçamento precisam existir na empresa (a consulta já é filtrada por tenant). */
+  private async validarItensDoCadastro(itens: { produtoId?: string | null; servicoId?: string | null }[]) {
+    const prod = [...new Set(itens.map((i) => i.produtoId).filter((x): x is string => !!x))];
+    const serv = [...new Set(itens.map((i) => i.servicoId).filter((x): x is string => !!x))];
+    if (prod.length && (await this.prisma.produto.count({ where: { id: { in: prod }, deletedAt: null } })) !== prod.length)
+      throw new BadRequestException('Um dos produtos do orçamento não foi encontrado');
+    if (serv.length && (await this.prisma.servico.count({ where: { id: { in: serv }, deletedAt: null } })) !== serv.length)
+      throw new BadRequestException('Um dos serviços do orçamento não foi encontrado');
+  }
+
+  private itensData(itens: CreateOrcamentoDto['itens']) {
+    return itens.map((item, i) => ({
+      descricao: item.descricao,
+      unidade: item.unidade ?? 'un',
+      quantidade: item.quantidade,
+      precoUnitario: item.precoUnitario,
+      categoria: item.categoria ?? (item.produtoId ? 'peca' : 'servico'),
+      produtoId: item.produtoId ?? null,
+      servicoId: item.servicoId ?? null,
+      ordem: i,
+    }));
+  }
+
+  /** A soma das parcelas precisa bater com o total (diferença de até 1 centavo é aceita). */
+  private validarParcelas(parcelas: { valor: number }[] | undefined, total: number) {
+    if (!parcelas?.length) return;
+    const soma = Math.round(parcelas.reduce((t, p) => t + Number(p.valor), 0) * 100) / 100;
+    if (Math.abs(soma - total) > 0.011)
+      throw new BadRequestException(`A soma das parcelas (R$ ${soma.toFixed(2)}) precisa ser igual ao total do orçamento (R$ ${total.toFixed(2)})`);
+  }
+
+  private parcelasData(parcelas: { vencimento: string; valor: number }[]) {
+    return [...parcelas]
+      .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
+      .map((p, i) => ({ numero: i + 1, vencimento: new Date(`${p.vencimento.slice(0, 10)}T12:00:00Z`), valor: p.valor }));
+  }
+
   async criar(dto: CreateOrcamentoDto, criadoPorId: string) {
     await this.validarAmbienteDoCliente(dto.ambienteId, dto.clienteId);
     await this.validarVisitaOrigem(dto.visitaOrigemId, dto.clienteId);
-    return this.prisma.orcamento.create({
+    await this.validarItensDoCadastro(dto.itens);
+    const totais = calcularTotais(dto.itens, dto.descontoTipo, dto.desconto, dto.frete);
+    this.validarParcelas(dto.parcelas, totais.total);
+    const criado = await this.prisma.orcamento.create({
       data: {
         titulo: dto.titulo,
         observacoes: dto.observacoes,
+        observacoesInternas: dto.observacoesInternas || null,
         validadeDias: dto.validadeDias ?? 30,
         clienteId: dto.clienteId,
         criadoPorId,
@@ -94,30 +161,42 @@ export class OrcamentosService {
         tipoServicoId: dto.tipoServicoId ?? null,
         modeloChecklistId: dto.modeloChecklistId ?? null,
         visitaOrigemId: dto.visitaOrigemId ?? null,
-        itens: {
-          create: dto.itens.map((item) => ({
-            descricao: item.descricao,
-            unidade: item.unidade ?? 'un',
-            quantidade: item.quantidade,
-            precoUnitario: item.precoUnitario,
-            categoria: item.categoria ?? 'servico',
-          })),
-        },
+        descontoTipo: dto.descontoTipo ?? 'valor',
+        desconto: dto.desconto ?? 0,
+        frete: dto.frete ?? 0,
+        formaPagamento: dto.formaPagamento || null,
+        itens: { create: this.itensData(dto.itens) },
+        ...(dto.parcelas?.length ? { parcelas: { create: this.parcelasData(dto.parcelas) } } : {}),
       },
       include: INCLUDE_FULL,
     });
+    return { ...comTotais(criado), avisos: [] as string[] };
   }
 
-  async atualizar(id: string, dto: Partial<CreateOrcamentoDto>) {
-    const orc = await this.prisma.orcamento.findUnique({ where: { id } });
+  /** Edita em qualquer status. O estoque já baixado é conciliado com os novos itens. */
+  async atualizar(id: string, dto: Partial<CreateOrcamentoDto>, usuarioId: string | null = null) {
+    const orc = await this.prisma.orcamento.findUnique({ where: { id }, include: { itens: true, parcelas: true } });
     if (!orc) throw new NotFoundException('Orçamento não encontrado');
-    if (orc.status !== 'rascunho')
-      throw new BadRequestException('Apenas orçamentos em rascunho podem ser editados');
 
     await this.validarAmbienteDoCliente(dto.ambienteId, orc.clienteId);
     await this.validarVisitaOrigem(dto.visitaOrigemId, orc.clienteId);
+    if (dto.itens) await this.validarItensDoCadastro(dto.itens);
 
-    return this.prisma.orcamento.update({
+    const itensNovos = dto.itens ?? orc.itens;
+    const tipoDesc = dto.descontoTipo ?? (orc.descontoTipo as 'valor' | 'percentual');
+    const desc = dto.desconto ?? Number(orc.desconto);
+    const frete = dto.frete ?? Number(orc.frete);
+    const totais = calcularTotais(itensNovos, tipoDesc, desc, frete);
+    this.validarParcelas(dto.parcelas, totais.total);
+    // parcelas antigas que já não fecham com o novo total saem (evita documento inconsistente)
+    const parcelasAntigasInvalidas = !dto.parcelas && orc.parcelas.length > 0
+      && Math.abs(orc.parcelas.reduce((t, p) => t + Number(p.valor), 0) - totais.total) > 0.011;
+
+    // devolve ao estoque o que este orçamento já baixou; depois de gravar, baixa de novo conforme os novos itens
+    const mexeNosItens = !!dto.itens;
+    const avisosPrevios = mexeNosItens ? await this.reconciliarEstoque(id, usuarioId, true) : [];
+
+    await this.prisma.orcamento.update({
       where: { id },
       data: {
         ...(dto.ambienteId !== undefined ? { ambienteId: dto.ambienteId } : {}),
@@ -127,22 +206,96 @@ export class OrcamentosService {
         ...(dto.modeloChecklistId !== undefined ? { modeloChecklistId: dto.modeloChecklistId } : {}),
         ...(dto.titulo    ? { titulo: dto.titulo }       : {}),
         ...(dto.observacoes !== undefined ? { observacoes: dto.observacoes } : {}),
+        ...(dto.observacoesInternas !== undefined ? { observacoesInternas: dto.observacoesInternas || null } : {}),
         ...(dto.validadeDias ? { validadeDias: dto.validadeDias } : {}),
-        ...(dto.itens ? {
-          itens: {
-            deleteMany: {},
-            create: dto.itens.map((item) => ({
-              descricao: item.descricao,
-              unidade: item.unidade ?? 'un',
-              quantidade: item.quantidade,
-              precoUnitario: item.precoUnitario,
-              categoria: item.categoria ?? 'servico',
-            })),
-          },
-        } : {}),
+        ...(dto.descontoTipo ? { descontoTipo: dto.descontoTipo } : {}),
+        ...(dto.desconto !== undefined ? { desconto: dto.desconto } : {}),
+        ...(dto.frete !== undefined ? { frete: dto.frete } : {}),
+        ...(dto.formaPagamento !== undefined ? { formaPagamento: dto.formaPagamento || null } : {}),
+        ...(dto.itens ? { itens: { deleteMany: {}, create: this.itensData(dto.itens) } } : {}),
+        ...(dto.parcelas
+          ? { parcelas: { deleteMany: {}, create: this.parcelasData(dto.parcelas) } }
+          : parcelasAntigasInvalidas ? { parcelas: { deleteMany: {} } } : {}),
       },
-      include: INCLUDE_FULL,
     });
+
+    const avisos = [...avisosPrevios, ...(mexeNosItens ? await this.reconciliarEstoque(id, usuarioId) : [])];
+    const atual = await this.prisma.orcamento.findUniqueOrThrow({ where: { id }, include: INCLUDE_FULL });
+    return { ...comTotais(atual), avisos: [...avisos, ...(parcelasAntigasInvalidas ? ['As parcelas foram removidas porque o total mudou. Gere-as novamente.'] : [])] };
+  }
+
+  /**
+   * Troca manual de status (qualquer direção). Aprovar baixa o estoque dos produtos e tenta gerar a O.S.;
+   * sair de "aprovado" devolve o estoque.
+   */
+  async alterarStatus(id: string, status: OrcamentoStatus, usuarioId: string | null) {
+    const orc = await this.prisma.orcamento.findUnique({ where: { id } });
+    if (!orc) throw new NotFoundException('Orçamento não encontrado');
+    if (orc.status === status) throw new BadRequestException('O orçamento já está com este status');
+    await this.prisma.orcamento.update({
+      where: { id },
+      data: {
+        status,
+        aprovadoEm: status === 'aprovado' ? new Date() : null,
+        rejeitadoEm: status === 'rejeitado' ? new Date() : null,
+      },
+    });
+    const avisos = await this.reconciliarEstoque(id, usuarioId);
+    if (status === 'aprovado') {
+      await this.gerarOs(id).catch((err) => {
+        avisos.push(`A O.S. não foi gerada automaticamente: ${err?.message ?? err}`);
+      });
+    }
+    const atual = await this.prisma.orcamento.findUniqueOrThrow({ where: { id }, include: INCLUDE_FULL });
+    return { ...comTotais(atual), avisos };
+  }
+
+  /**
+   * Concilia a baixa de estoque dos itens-produto com o status: aprovado → saiu a quantidade inteira; outro status → nada saiu.
+   * Cada item guarda o quanto já baixou, então repetir a chamada não baixa duas vezes. Falta de saldo vira aviso (o orçamento segue válido).
+   * `zerar` devolve tudo (usado antes de trocar os itens).
+   */
+  async reconciliarEstoque(orcamentoId: string, usuarioId: string | null, zerar = false): Promise<string[]> {
+    const orc = await this.prisma.orcamento.findUnique({ where: { id: orcamentoId }, include: { itens: true } });
+    if (!orc) return [];
+    const comProduto = orc.itens.filter((i) => i.produtoId);
+    if (!comProduto.length) return [];
+    const controlam = new Set(
+      (await this.prisma.produto.findMany({ where: { id: { in: comProduto.map((i) => i.produtoId as string) } }, select: { id: true, controlaEstoque: true } }))
+        .filter((p) => p.controlaEstoque).map((p) => p.id),
+    );
+    const aprovado = orc.status === 'aprovado' && !zerar;
+    const avisos: string[] = [];
+    const rotulo = `Orçamento #${String(orc.numero).padStart(4, '0')}`;
+
+    for (const it of comProduto) {
+      const alvo = aprovado ? Number(it.quantidade) : 0;
+      const diff = Math.round((alvo - Number(it.estoqueBaixado)) * 1000) / 1000;
+      if (Math.abs(diff) < 0.0005) continue;
+      // produto que não controla estoque não tem saldo para mexer
+      if (!controlam.has(it.produtoId as string) && diff > 0) continue;
+      for (let tentativa = 1; ; tentativa++) {
+        try {
+          await this.prisma.$transaction(async (tx) => {
+            await this.produtos.aplicarMovimentoTx(
+              tx, it.produtoId as string,
+              { tipo: diff > 0 ? 'saida' : 'entrada', quantidade: Math.abs(diff), documento: rotulo, observacao: diff > 0 ? `Baixa pelo ${rotulo}` : `Devolução do ${rotulo}` },
+              diff > 0 ? 'uso_orcamento' : 'devolucao', usuarioId, { orcamentoId },
+            );
+            await tx.orcamentoItem.update({ where: { id: it.id }, data: { estoqueBaixado: alvo } });
+          });
+          break;
+        } catch (e) {
+          if (e instanceof ConflictException && tentativa < 3) continue;
+          if (e instanceof BadRequestException || e instanceof NotFoundException || e instanceof ConflictException) {
+            avisos.push(`${it.descricao}: ${diff > 0 ? 'estoque não baixado' : 'estoque não devolvido'} (${e.message})`);
+            break;
+          }
+          throw e;
+        }
+      }
+    }
+    return avisos;
   }
 
   async enviar(id: string) {
@@ -151,11 +304,12 @@ export class OrcamentosService {
     if (orc.status !== 'rascunho')
       throw new BadRequestException('Apenas rascunhos podem ser enviados');
 
-    return this.prisma.orcamento.update({
+    const atual = await this.prisma.orcamento.update({
       where: { id },
       data: { status: OrcamentoStatus.enviado },
       include: INCLUDE_FULL,
     });
+    return comTotais(atual);
   }
 
   async aprovar(token: string) {
@@ -175,6 +329,14 @@ export class OrcamentosService {
     });
     if (count === 0)
       throw new BadRequestException('Este orçamento não está disponível para aprovação');
+
+    // Baixa o estoque dos produtos (no contexto da empresa do orçamento: o link público não tem login)
+    const baixar = () => this.reconciliarEstoque(orc.id, null).catch((err) => {
+      this.logger.warn(`Orçamento ${orc.id}: baixa de estoque falhou: ${err?.message ?? err}`);
+      return [] as string[];
+    });
+    const avisosEstoque = await (orc.empresaId ? runWithTenant(orc.empresaId, baixar) : baixar());
+    if (avisosEstoque.length) this.logger.warn(`Orçamento ${orc.id} aprovado com avisos de estoque: ${avisosEstoque.join(' | ')}`);
 
     // Gera a O.S. na hora. Se não for possível (ex.: cliente com vários ambientes e nenhum
     // escolhido no orçamento), o orçamento continua aprovado e o admin gera a O.S. depois.
@@ -230,10 +392,15 @@ export class OrcamentosService {
       tipoServicoId: orc.tipoServicoId,
     });
 
+    // O desconto do orçamento é rateado entre mão de obra e peças (o frete não entra na O.S.)
+    const t = calcularTotais(orc.itens, orc.descontoTipo, Number(orc.desconto), Number(orc.frete));
+    const fator = t.subtotal > 0 ? (t.subtotal - t.descontoValor) / t.subtotal : 1;
     const total = (cat: string) =>
-      orc.itens
-        .filter((i) => i.categoria === cat)
-        .reduce((soma, i) => soma + Number(i.quantidade) * Number(i.precoUnitario), 0);
+      Math.round(
+        orc.itens
+          .filter((i) => i.categoria === cat)
+          .reduce((soma, i) => soma + Number(i.quantidade) * Number(i.precoUnitario), 0) * fator * 100,
+      ) / 100;
     const valorMaoObra = total('servico');
     const valorPecas = total('peca');
 
@@ -333,12 +500,13 @@ export class OrcamentosService {
           where: { visitaOrigemId: { in: visitas.map((v) => v.id) } },
           select: {
             id: true, numero: true, status: true, titulo: true, visitaOrigemId: true,
+            descontoTipo: true, desconto: true, frete: true,
             itens: { select: { quantidade: true, precoUnitario: true } },
             ordemServico: { select: { id: true, numero: true, tipoServico: { select: { sigla: true } } } },
           },
         })
       : [];
-    const valorDe = (o: (typeof orcs)[number]) => o.itens.reduce((t, i) => t + Number(i.quantidade) * Number(i.precoUnitario), 0);
+    const valorDe = (o: (typeof orcs)[number]) => calcularTotais(o.itens, o.descontoTipo, Number(o.desconto), Number(o.frete)).total;
 
     const linhas = visitas.map((v) => {
       const doVisita = orcs.filter((o) => o.visitaOrigemId === v.id);
@@ -412,20 +580,58 @@ export class OrcamentosService {
       // Cliente só vê orçamentos já enviados (rascunho é interno)
       where: { clienteId: cliente.id, status: { not: 'rascunho' } },
       include: {
-        itens: true,
+        itens: { select: { id: true, descricao: true, quantidade: true, unidade: true, precoUnitario: true, categoria: true }, orderBy: ORDEM_ITENS },
+        parcelas: { orderBy: { numero: 'asc' }, select: { id: true, numero: true, vencimento: true, valor: true } },
         criadoPor: { select: { nome: true } },
       },
       orderBy: { criadoEm: 'desc' },
+    }).then((lista) => lista.map(({ observacoesInternas, ...o }) => { void observacoesInternas; return comTotais(o); }));
+  }
+
+  /** Exclui em qualquer status, exceto se já gerou O.S. Devolve ao estoque o que o orçamento tinha baixado. */
+  async excluir(id: string, usuarioId: string | null = null) {
+    const orc = await this.prisma.orcamento.findUnique({ where: { id }, include: { ordemServico: { select: { numero: true } } } });
+    if (!orc) throw new NotFoundException('Orçamento não encontrado');
+    if (orc.ordemServicoId)
+      throw new BadRequestException(`Este orçamento gerou a O.S. #${String(orc.ordemServico?.numero ?? '').padStart(4, '0')}. Exclua ou cancele a O.S. antes de excluir o orçamento.`);
+
+    const avisos = await this.reconciliarEstoque(id, usuarioId, true);
+    if (avisos.length)
+      throw new BadRequestException(`Não foi possível devolver o estoque: ${avisos.join('; ')}. Nada foi excluído.`);
+    await this.prisma.orcamento.delete({ where: { id } });
+    return { ok: true };
+  }
+
+  // ─── Anexos (guardados no banco; até 5 MB cada) ───
+  async anexar(id: string, dto: AnexoOrcamentoDto) {
+    const orc = await this.prisma.orcamento.findUnique({ where: { id }, select: { id: true } });
+    if (!orc) throw new NotFoundException('Orçamento não encontrado');
+    if (!TIPOS_ANEXO.includes(dto.tipo)) throw new BadRequestException('Tipo de arquivo não permitido (use PDF, imagem, Word ou Excel)');
+    if (!/^[A-Za-z0-9+/=\s]+$/.test(dto.conteudoBase64)) throw new BadRequestException('Arquivo inválido');
+    const conteudo = Buffer.from(dto.conteudoBase64, 'base64');
+    if (conteudo.length === 0) throw new BadRequestException('Arquivo vazio');
+    if (conteudo.length > MAX_ANEXO_BYTES) throw new BadRequestException('Arquivo maior que 5 MB');
+    if ((await this.prisma.orcamentoAnexo.count({ where: { orcamentoId: id } })) >= MAX_ANEXOS)
+      throw new BadRequestException(`Limite de ${MAX_ANEXOS} anexos por orçamento`);
+    const nome = dto.nome.replace(/[\\/\r\n"]/g, '_').slice(0, 255);
+    return this.prisma.orcamentoAnexo.create({
+      data: { orcamentoId: id, nome, tipo: dto.tipo, tamanho: conteudo.length, conteudo },
+      select: { id: true, nome: true, tipo: true, tamanho: true, criadoEm: true },
     });
   }
 
-  async excluir(id: string) {
-    const orc = await this.prisma.orcamento.findUnique({ where: { id } });
+  async baixarAnexo(id: string, anexoId: string) {
+    // o orçamento é lido pelo cliente com filtro de empresa: garante que o anexo é da empresa
+    const orc = await this.prisma.orcamento.findUnique({ where: { id }, select: { id: true } });
     if (!orc) throw new NotFoundException('Orçamento não encontrado');
-    if (!['rascunho', 'rejeitado', 'expirado'].includes(orc.status))
-      throw new BadRequestException('Não é possível excluir um orçamento enviado ou aprovado');
+    const anexo = await this.prisma.orcamentoAnexo.findFirst({ where: { id: anexoId, orcamentoId: id } });
+    if (!anexo) throw new NotFoundException('Anexo não encontrado');
+    return anexo;
+  }
 
-    await this.prisma.orcamento.delete({ where: { id } });
+  async removerAnexo(id: string, anexoId: string) {
+    await this.baixarAnexo(id, anexoId);
+    await this.prisma.orcamentoAnexo.delete({ where: { id: anexoId } });
     return { ok: true };
   }
 }
