@@ -1,5 +1,17 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { getTenantId } from '../../common/tenant.context';
+
+/** Documentos com numeração sequencial por empresa (nome = chave em contadores_empresa). */
+export const NUMERACOES = [
+  { nome: 'ordem_servico', rotulo: 'Ordens de serviço' },
+  { nome: 'orcamento', rotulo: 'Orçamentos' },
+  { nome: 'produto', rotulo: 'Produtos' },
+  { nome: 'servico', rotulo: 'Serviços' },
+  { nome: 'fornecedor', rotulo: 'Fornecedores' },
+  { nome: 'inventario', rotulo: 'Inventários' },
+];
 
 const DEFAULT_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -132,5 +144,36 @@ export class ConfiguracaoEmpresaService {
       },
       include: INCLUDE_RESPONSAVEL,
     });
+  }
+
+  private empresaAtual() {
+    const id = getTenantId();
+    if (!id) throw new BadRequestException('Empresa não identificada');
+    return id;
+  }
+
+  /** Último número usado e próximo de cada documento. */
+  async numeracao() {
+    const empresaId = this.empresaAtual();
+    const rows = await this.prisma.$queryRaw<{ nome: string; valor: number }[]>(
+      Prisma.sql`SELECT nome, valor FROM contadores_empresa WHERE empresa_id = ${empresaId}::uuid`,
+    );
+    const mapa = new Map(rows.map((r) => [r.nome, r.valor]));
+    return NUMERACOES.map((n) => ({ nome: n.nome, rotulo: n.rotulo, ultimo: mapa.get(n.nome) ?? 0, proximo: (mapa.get(n.nome) ?? 0) + 1 }));
+  }
+
+  /** Define o próximo número. Só para frente: voltar poderia repetir números já usados. */
+  async definirNumeracao(nome: string, proximo: number) {
+    const empresaId = this.empresaAtual();
+    if (!NUMERACOES.some((n) => n.nome === nome)) throw new BadRequestException('Documento inválido');
+    const alvo = proximo - 1;
+    const rows = await this.prisma.$queryRaw<{ valor: number }[]>(Prisma.sql`
+      INSERT INTO contadores_empresa (empresa_id, nome, valor) VALUES (${empresaId}::uuid, ${nome}, ${alvo})
+      ON CONFLICT (empresa_id, nome) DO UPDATE SET valor = GREATEST(contadores_empresa.valor, ${alvo})
+      RETURNING valor`);
+    if (rows[0].valor !== alvo) {
+      throw new BadRequestException(`O próximo número precisa ser maior que ${rows[0].valor}, o último já usado`);
+    }
+    return this.numeracao();
   }
 }
