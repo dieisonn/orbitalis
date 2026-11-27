@@ -15,6 +15,8 @@ export type DadosProduto = {
 export type DadosMovimento = {
   tipo: 'entrada' | 'saida' | 'ajuste'; quantidade: number; motivo: string
   custoUnitario?: number; fornecedorId?: string; documento?: string; observacao?: string
+  /** Compra a prazo: gera a(s) conta(s) a pagar no Financeiro */
+  contaPagar?: { vencimento: string; parcelas?: number }
 }
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : 'Não foi possível concluir')

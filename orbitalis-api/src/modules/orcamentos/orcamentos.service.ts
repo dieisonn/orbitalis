@@ -596,9 +596,14 @@ export class OrcamentosService {
     if (orc.ordemServicoId)
       throw new BadRequestException(`Este orçamento gerou a O.S. #${String(orc.ordemServico?.numero ?? '').padStart(4, '0')}. Exclua ou cancele a O.S. antes de excluir o orçamento.`);
 
+    // contas a receber já recebidas seguram o orçamento (o dinheiro entrou); as demais saem junto
+    if ((await this.prisma.lancamento.count({ where: { orcamentoId: id, status: 'pago' } })) > 0)
+      throw new BadRequestException('Este orçamento tem contas a receber já recebidas. Estorne os recebimentos no Financeiro antes de excluir.');
+
     const avisos = await this.reconciliarEstoque(id, usuarioId, true);
     if (avisos.length)
       throw new BadRequestException(`Não foi possível devolver o estoque: ${avisos.join('; ')}. Nada foi excluído.`);
+    await this.prisma.lancamento.deleteMany({ where: { orcamentoId: id } });
     await this.prisma.orcamento.delete({ where: { id } });
     return { ok: true };
   }

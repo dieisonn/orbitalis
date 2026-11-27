@@ -10,6 +10,7 @@ import type { Ordem } from '@/lib/ordenacao'
 import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
 import { brl, qtd, nomeForn, UNIDADES, MOTIVOS, MOTIVOS_POR_TIPO, type Fornecedor, type Produto } from '@/lib/suprimentos'
+import { hojeIso } from '@/lib/financeiro'
 import { excluirProduto, alternarProduto, movimentarProduto, executarLote, type DadosMovimento, type RegraMarkup, type AcaoLote, type SelecaoProdutos } from './actions'
 
 type Filtros = { q: string; situacao: string; categoria: string; ativo: string }
@@ -34,6 +35,7 @@ export function ProdutosClient({ produtos, total, pagina, limite, markup, catego
   const [busca, setBusca] = useState(filtros.q)
   const [erro, setErro] = useState<string | null>(null)
   const [mov, setMov] = useState<Produto | null>(null)
+  const [aPrazo, setAPrazo] = useState<{ ativo: boolean; vencimento: string; parcelas: string }>({ ativo: false, vencimento: hojeIso(), parcelas: '1' })
   const [movForm, setMovForm] = useState<DadosMovimento & { qStr: string; custoStr: string }>({ tipo: 'entrada', quantidade: 0, motivo: 'compra', qStr: '', custoStr: '' })
 
   // ---- seleção e ações em lote
@@ -105,6 +107,7 @@ export function ProdutosClient({ produtos, total, pagina, limite, markup, catego
         custoUnitario: movForm.tipo === 'entrada' && movForm.custoStr !== '' ? num(movForm.custoStr) : undefined,
         fornecedorId: movForm.tipo === 'entrada' ? movForm.fornecedorId : undefined,
         documento: movForm.documento, observacao: movForm.observacao,
+        contaPagar: movForm.tipo === 'entrada' && movForm.motivo === 'compra' && aPrazo.ativo ? { vencimento: aPrazo.vencimento, parcelas: Math.max(1, parseInt(aPrazo.parcelas) || 1) } : undefined,
       })
       if (r.ok) { setMov(null); router.refresh() } else setErro(r.erro)
     })
@@ -289,6 +292,19 @@ export function ProdutosClient({ produtos, total, pagina, limite, markup, catego
                     {fornecedores.map((f) => <option key={f.id} value={f.id}>{nomeForn(f)}</option>)}
                   </select>
                 </Campo>
+                {movForm.motivo === 'compra' && (
+                  <div className="rounded-lg border border-border p-3 space-y-3">
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <input type="checkbox" checked={aPrazo.ativo} onChange={(e) => setAPrazo({ ...aPrazo, ativo: e.target.checked })} /> Compra a prazo: lançar conta a pagar
+                    </label>
+                    {aPrazo.ativo && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <Campo rotulo="1º vencimento"><input type="date" value={aPrazo.vencimento} onChange={(e) => setAPrazo({ ...aPrazo, vencimento: e.target.value })} className={inputCls} /></Campo>
+                        <Campo rotulo="Parcelas" dica={`Valor: quantidade × custo unitário.`}><input type="number" min="1" max="60" value={aPrazo.parcelas} onChange={(e) => setAPrazo({ ...aPrazo, parcelas: e.target.value })} className={inputCls} /></Campo>
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
             <Campo rotulo="Observação"><textarea value={movForm.observacao ?? ''} onChange={(e) => setMovForm({ ...movForm, observacao: e.target.value })} rows={2} className={inputCls} /></Campo>

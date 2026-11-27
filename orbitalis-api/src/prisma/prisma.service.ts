@@ -11,6 +11,7 @@ const TENANT_MODELS = new Set([
   'ordemServicoAuxiliar', 'ordemServicoFoto', 'pushAssinatura', 'avisoUsuario',
   'jornadaSemanal', 'jornadaAjuste',
   'fornecedor', 'produto', 'movimentoEstoque', 'servico', 'inventario', 'inventarioItem', 'markupRegra',
+  'contaFinanceira', 'categoriaFinanceira', 'lancamento',
 ]);
 
 // Operações em lote que aceitam where livre
@@ -48,6 +49,7 @@ const REFERENCIAS: Record<string, Record<string, string>> = {
   movimentoEstoque:       { produtoId: 'produto', fornecedorId: 'fornecedor' },
   servico:                { tipoServicoId: 'tipoServico' },
   inventarioItem:         { inventarioId: 'inventario', produtoId: 'produto' },
+  lancamento:             { contaId: 'contaFinanceira', categoriaId: 'categoriaFinanceira', clienteId: 'cliente', fornecedorId: 'fornecedor', orcamentoId: 'orcamento' },
   orcamento: {
     clienteId: 'cliente', ambienteId: 'ambiente', tipoServicoId: 'tipoServico',
     modeloChecklistId: 'modeloChecklist', ordemServicoId: 'ordemServico', criadoPorId: 'usuario',
@@ -59,7 +61,7 @@ const WRITE_OPS = new Set(['create', 'createMany', 'createManyAndReturn', 'updat
 // Modelos com numeração sequencial por empresa → nome do contador
 const NUMERADOS: Record<string, string> = {
   ordemServico: 'ordem_servico', orcamento: 'orcamento',
-  fornecedor: 'fornecedor', produto: 'produto', servico: 'servico', inventario: 'inventario',
+  fornecedor: 'fornecedor', produto: 'produto', servico: 'servico', inventario: 'inventario', lancamento: 'lancamento',
 };
 
 type ProximoNumero = (empresaId: string, nome: string) => Promise<number>;

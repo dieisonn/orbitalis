@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { api } from '@/lib/api'
 import { FileText, ExternalLink, Printer } from 'lucide-react'
+import { ReceberPanel } from './receber-panel'
 import { OrcamentoActions, GerarOsPanel, StatusSelect, AnexosPanel } from './actions'
 import { STATUS_COLOR, STATUS_LABEL, fmtData, type OrcamentoCompleto } from '@/lib/orcamento'
 import { TIPO_OS_LABEL, type TipoOs } from '@/lib/checklist'
@@ -19,6 +20,11 @@ export default async function OrcamentoPage({ params, searchParams }: Props) {
   let orc: Orcamento
   try { orc = await api.get<Orcamento>(`/orcamentos/${id}`) }
   catch { notFound() }
+
+  // Contas a receber do orçamento (oculto se o usuário não tem o módulo financeiro)
+  const receber = orc.status === 'aprovado'
+    ? await api.get<{ itens: any[] }>(`/financeiro/lancamentos?orcamentoId=${id}&status=todos&limite=100`).catch(() => null)
+    : null
 
   // Orçamento aprovado sem O.S. (cliente com vários ambientes): admin escolhe o ambiente
   const ambientesParaGerar =
@@ -104,6 +110,8 @@ export default async function OrcamentoPage({ params, searchParams }: Props) {
           )}
         </div>
       )}
+
+      {receber && <ReceberPanel orcamentoId={orc.id} lancamentos={receber.itens} />}
 
       {orc.status === 'rejeitado' && (
         <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">

@@ -1,4 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { diaUtc, dividirValor, r2, vencimentos } from '../financeiro/datas';
 import { Prisma } from '@prisma/client';
 import { montarOrdem } from '../../common/ordenacao';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -260,7 +262,30 @@ export class ProdutosService {
           usuarioId,
         },
       });
+      if (dto.tipo === 'entrada' && dto.contaPagar) await this.gerarContaPagarDaCompra(tx, p, mov, dto, usuarioId);
       return { ...mov, delta: num(mov.delta), saldoApos: num(mov.saldoApos) };
+    }
+  }
+
+  /** Compra a prazo: lança a(s) conta(s) a pagar (fornecedor, NF e produto ficam no lançamento). */
+  private async gerarContaPagarDaCompra(tx: any, produto: { nome: string; unidade: string }, mov: { id: string }, dto: MovimentarEstoqueDto, usuarioId: string | null) {
+    const cp = dto.contaPagar!;
+    const total = cp.valor ?? r2(dto.quantidade * (dto.custoUnitario ?? 0));
+    if (!(total > 0)) throw new BadRequestException('Informe o custo unitário (ou o valor) para gerar a conta a pagar');
+    const n = cp.parcelas ?? 1;
+    const valores = dividirValor(total, n);
+    const datas = vencimentos(cp.vencimento.slice(0, 10), n, cp.intervalo);
+    const categoria = await tx.categoriaFinanceira.findFirst({ where: { tipo: 'despesa', nome: 'Compra de materiais' }, select: { id: true } });
+    const grupoId = n > 1 ? randomUUID() : null;
+    const base = `Compra: ${produto.nome} (${dto.quantidade} ${produto.unidade})${dto.documento ? ` — NF ${dto.documento}` : ''}`.slice(0, 240);
+    for (let i = 0; i < n; i++) {
+      await tx.lancamento.create({
+        data: {
+          tipo: 'pagar', descricao: n > 1 ? `${base} (${i + 1}/${n})` : base, valor: valores[i], vencimento: diaUtc(datas[i]),
+          fornecedorId: dto.fornecedorId || null, documento: vazioNulo(dto.documento) ?? null, categoriaId: categoria?.id ?? null,
+          movimentoEstoqueId: mov.id, grupoId, parcela: n > 1 ? i + 1 : null, totalParcelas: n > 1 ? n : null, criadoPorId: usuarioId,
+        },
+      });
     }
   }
 

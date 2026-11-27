@@ -1,4 +1,5 @@
-import { IsBoolean, IsInt, IsIn, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, ValidateIf } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsBoolean, IsDateString, IsInt, IsIn, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, ValidateIf, ValidateNested } from 'class-validator';
 import { MOTIVOS_POR_TIPO, TipoMovimento } from '../calculo-estoque';
 
 const TODOS_MOTIVOS = Array.from(new Set(Object.values(MOTIVOS_POR_TIPO).flat()));
@@ -43,6 +44,15 @@ export class UpdateProdutoDto extends CamposProduto {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(255) nome?: string;
 }
 
+/** Compra a prazo: gera a(s) conta(s) a pagar junto com a entrada no estoque. */
+export class ContaPagarCompraDto {
+  @IsDateString() vencimento: string;
+  @IsOptional() @IsInt() @Min(1) @Max(60) parcelas?: number;
+  @IsOptional() @IsIn(['mensal', 'quinzenal', 'semanal']) intervalo?: 'mensal' | 'quinzenal' | 'semanal';
+  /** Se omitido: quantidade × custo unitário */
+  @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0.01) @Max(999_999_999.99) valor?: number;
+}
+
 export class MovimentarEstoqueDto {
   @IsIn(['entrada', 'saida', 'ajuste']) tipo: TipoMovimento;
   // entrada/saída: quantidade movimentada · ajuste: o saldo contado (novo saldo)
@@ -52,4 +62,5 @@ export class MovimentarEstoqueDto {
   @ValidateIf((_, v) => v !== undefined && v !== null && v !== '') @IsUUID() fornecedorId?: string;
   @IsOptional() @IsString() @MaxLength(60) documento?: string;
   @IsOptional() @IsString() @MaxLength(2000) observacao?: string;
+  @IsOptional() @ValidateNested() @Type(() => ContaPagarCompraDto) contaPagar?: ContaPagarCompraDto;
 }

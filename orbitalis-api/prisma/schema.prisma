@@ -175,6 +175,7 @@ model Cliente {
   @@unique([empresaId, documento])
   @@index([empresaId])
   @@map("clientes")
+  lancamentos Lancamento[]
 }
 
 // ─────────────────────────────────────────
@@ -633,6 +634,7 @@ model Orcamento {
   @@unique([empresaId, numero])
   @@index([visitaOrigemId])
   @@map("orcamentos")
+  lancamentos Lancamento[]
 }
 
 model OrcamentoItem {
@@ -722,6 +724,7 @@ model Fornecedor {
   @@unique([empresaId, numero])
   @@index([empresaId])
   @@map("fornecedores")
+  lancamentos Lancamento[]
 }
 
 model Produto {
@@ -1116,4 +1119,84 @@ model MarkupRegra {
   @@unique([empresaId, categoria])
   @@index([empresaId])
   @@map("markup_regras")
+}
+
+// ─────────────────────────────────────────
+// Financeiro: contas (caixa/banco), categorias e lançamentos a receber/pagar
+// ─────────────────────────────────────────
+model ContaFinanceira {
+  id           String   @id @default(uuid()) @db.Uuid
+  empresaId    String?  @map("empresa_id") @db.Uuid
+  nome         String   @db.VarChar(80)
+  // 'caixa' | 'banco' | 'carteira'
+  tipo         String   @default("banco") @db.VarChar(20)
+  saldoInicial Decimal  @default(0) @map("saldo_inicial") @db.Decimal(14, 2)
+  ativa        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  lancamentos Lancamento[]
+
+  @@index([empresaId])
+  @@map("contas_financeiras")
+}
+
+model CategoriaFinanceira {
+  id           String   @id @default(uuid()) @db.Uuid
+  empresaId    String?  @map("empresa_id") @db.Uuid
+  nome         String   @db.VarChar(80)
+  // 'receita' | 'despesa'
+  tipo         String   @db.VarChar(10)
+  ativa        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+
+  lancamentos Lancamento[]
+
+  @@unique([empresaId, tipo, nome])
+  @@map("categorias_financeiras")
+}
+
+model Lancamento {
+  id            String    @id @default(uuid()) @db.Uuid
+  empresaId     String?   @map("empresa_id") @db.Uuid
+  numero        Int       @default(autoincrement())
+  // 'receber' | 'pagar'
+  tipo          String    @db.VarChar(10)
+  descricao     String    @db.VarChar(255)
+  valor         Decimal   @db.Decimal(14, 2)
+  vencimento    DateTime  @db.Date
+  // 'aberto' | 'pago' | 'cancelado' (atrasado = aberto com vencimento passado, calculado)
+  status        String    @default("aberto") @db.VarChar(10)
+  pagoEm        DateTime? @map("pago_em") @db.Date
+  valorPago     Decimal?  @map("valor_pago") @db.Decimal(14, 2)
+  documento     String?   @db.VarChar(60)
+  observacoes   String?   @db.Text
+  // parcelamento: lançamentos do mesmo grupo
+  grupoId       String?   @map("grupo_id") @db.Uuid
+  parcela       Int?
+  totalParcelas Int?       @map("total_parcelas")
+
+  contaId       String?   @map("conta_id") @db.Uuid
+  categoriaId   String?   @map("categoria_id") @db.Uuid
+  clienteId     String?   @map("cliente_id") @db.Uuid
+  fornecedorId  String?   @map("fornecedor_id") @db.Uuid
+  orcamentoId   String?   @map("orcamento_id") @db.Uuid
+  // compra de estoque que originou esta conta a pagar (referência, sem relation)
+  movimentoEstoqueId String? @map("movimento_estoque_id") @db.Uuid
+  criadoPorId   String?   @map("criado_por_id") @db.Uuid
+
+  conta      ContaFinanceira?     @relation(fields: [contaId], references: [id], onDelete: SetNull)
+  categoria  CategoriaFinanceira? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  cliente    Cliente?             @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  fornecedor Fornecedor?          @relation(fields: [fornecedorId], references: [id], onDelete: SetNull)
+  orcamento  Orcamento?           @relation(fields: [orcamentoId], references: [id], onDelete: SetNull)
+
+  criadoEm      DateTime  @default(now()) @map("criado_em")
+  atualizadoEm  DateTime  @updatedAt @map("atualizado_em")
+
+  @@unique([empresaId, numero])
+  @@index([empresaId, tipo, status, vencimento])
+  @@index([orcamentoId])
+  @@index([grupoId])
+  @@map("lancamentos_financeiros")
 }

@@ -11,6 +11,7 @@ export const NUMERACOES = [
   { nome: 'servico', rotulo: 'Serviços' },
   { nome: 'fornecedor', rotulo: 'Fornecedores' },
   { nome: 'inventario', rotulo: 'Inventários' },
+  { nome: 'lancamento', rotulo: 'Lançamentos financeiros' },
 ];
 
 const DEFAULT_ID = '00000000-0000-0000-0000-000000000001';
