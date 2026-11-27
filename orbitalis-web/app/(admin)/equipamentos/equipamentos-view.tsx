@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { QrModal } from '@/components/ui/qr-modal'
 import { DeleteButton } from '@/components/ui/delete-button'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import { ordenarLista, type Ordem } from '@/lib/ordenacao'
 
 export type EquipamentoItem = {
   id: string
@@ -68,7 +70,19 @@ function fmtBRL(v: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 }
 
+const PADRAO_ORDEM: Ordem = { ordem: '', dir: 'asc' }
+const CAMPOS_EQUIP = {
+  equipamento: (e: EquipamentoItem) => e.nome,
+  ambiente: (e: EquipamentoItem) => e.ambiente?.nome,
+  potencia: (e: EquipamentoItem) => e.potencia,
+  marca: (e: EquipamentoItem) => [e.marca, e.modelo].filter(Boolean).join(' '),
+  serie: (e: EquipamentoItem) => e.numeroSerie,
+  condicao: (e: EquipamentoItem) => e.condicao,
+}
+const CAMPOS_ORDEM = Object.keys(CAMPOS_EQUIP)
+
 export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) {
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
   const [query, setQuery]           = useState('')
   const [tipoFilter, setTipoFilter] = useState<string | null>(null)
   const [condFilter, setCondFilter] = useState<'novo' | 'usado' | null>(null)
@@ -118,10 +132,11 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
       }
       map.get(clienteId)!.items.push(eq)
     }
-    return Array.from(map.values()).sort((a, b) =>
-      compararNomes(a.clienteNome, b.clienteNome),
-    )
-  }, [filtered])
+    return Array.from(map.values())
+      .sort((a, b) => compararNomes(a.clienteNome, b.clienteNome))
+      .map((g) => ({ ...g, items: ordenarLista(g.items, ordem, CAMPOS_EQUIP) }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, ordem.ordem, ordem.dir])
 
   function toggleCollapse(clienteId: string) {
     setCollapsed((prev) => {
@@ -328,12 +343,12 @@ export function EquipamentosView({ equipamentos, stats, deletarAction }: Props) 
                             title="Selecionar grupo"
                           />
                         </th>
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipamento</th>
-                        <th className="hidden @xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Potência</th>
-                        <th className="hidden @xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Marca / Modelo</th>
-                        <th className="hidden @3xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nº Série</th>
-                        <th className="hidden @3xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Condição</th>
+                        <ThOrdenavel campo="equipamento" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipamento</ThOrdenavel>
+                        <ThOrdenavel campo="ambiente" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</ThOrdenavel>
+                        <ThOrdenavel campo="potencia" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Potência</ThOrdenavel>
+                        <ThOrdenavel campo="marca" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Marca / Modelo</ThOrdenavel>
+                        <ThOrdenavel campo="serie" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @3xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nº Série</ThOrdenavel>
+                        <ThOrdenavel campo="condicao" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @3xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Condição</ThOrdenavel>
                         <th className="hidden @5xl:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">QR</th>
                         <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide"></th>
                       </tr>

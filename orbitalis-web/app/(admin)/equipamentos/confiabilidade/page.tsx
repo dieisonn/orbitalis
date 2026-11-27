@@ -46,13 +46,18 @@ function semaforo(valor: number | null, limite: number, inverso = false) {
   }
 }
 
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
 const BADGE: Record<string, string> = {
   green:  'bg-green-100 text-green-800',
   yellow: 'bg-yellow-100 text-yellow-800',
   red:    'bg-red-100 text-red-800',
 }
 
-export default async function ConfiabilidadePage() {
+const PADRAO_ORDEM: Ordem = { ordem: 'mttr', dir: 'desc' }
+const CUSTO = (m: MetricaEquip, custoPorH: number | null) => (custoPorH !== null && m.mttrHoras !== null ? custoPorH * m.mttrHoras * m.totalCorretivas : null)
+
+export default async function ConfiabilidadePage({ searchParams }: { searchParams: Promise<{ ordem?: string; dir?: string }> }) {
   const [metricas, config] = await Promise.all([
     api.get<MetricaEquip[]>('/equipamentos/metricas-confiabilidade').catch(() => [] as MetricaEquip[]),
     api.get<Config>('/configuracao').catch(() => ({ mttrLimiteHoras: null, mtbfLimiteDias: null, custoHoraParada: null })),
@@ -62,12 +67,19 @@ export default async function ConfiabilidadePage() {
   const mtbfLimite  = config.mtbfLimiteDias  ?? 90
   const custoPorH   = config.custoHoraParada ? Number(config.custoHoraParada) : null
 
-  const ordenados = [...metricas].sort((a, b) => {
-    if (a.mttrHoras === null && b.mttrHoras === null) return 0
-    if (a.mttrHoras === null) return 1
-    if (b.mttrHoras === null) return -1
-    return b.mttrHoras - a.mttrHoras
-  })
+  const CAMPOS = {
+    equipamento: (m: MetricaEquip) => m.nome,
+    cliente: (m: MetricaEquip) => [m.cliente, m.ambiente].filter(Boolean).join(' '),
+    corretivas: (m: MetricaEquip) => m.totalCorretivas,
+    mttr: (m: MetricaEquip) => m.mttrHoras,
+    mtbf: (m: MetricaEquip) => m.mtbfDias,
+    retrabalho: (m: MetricaEquip) => m.taxaRetrabalho,
+    sla: (m: MetricaEquip) => m.slaHoras,
+    custo: (m: MetricaEquip) => CUSTO(m, custoPorH),
+    ultima: (m: MetricaEquip) => (m.ultimaCorretiva ? new Date(m.ultimaCorretiva) : null),
+  }
+  const ordem = lerOrdem(await searchParams, Object.keys(CAMPOS), PADRAO_ORDEM)
+  const ordenados = ordenarLista(metricas, ordem, CAMPOS)
 
   const comDados = ordenados.filter((m) => m.totalCorretivas > 0)
   const semDados = ordenados.filter((m) => m.totalCorretivas === 0)
@@ -150,27 +162,17 @@ export default async function ConfiabilidadePage() {
             <table className="w-full text-sm min-w-[700px]">
               <thead>
                 <tr className="border-b border-border bg-surface">
-                  <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Equipamento</th>
-                  <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Cliente / Ambiente</th>
-                  <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase">Corret.</th>
-                  <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase">
-                    <span className="flex items-center justify-center gap-1"><Clock size={10} />MTTR</span>
-                  </th>
-                  <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase">
-                    <span className="flex items-center justify-center gap-1"><RefreshCw size={10} />MTBF</span>
-                  </th>
-                  <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase">
-                    <span className="flex items-center justify-center gap-1"><AlertTriangle size={10} />Retrab.</span>
-                  </th>
-                  <th className="hidden lg:table-cell text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase">
-                    <span className="flex items-center justify-center gap-1"><Timer size={10} />SLA</span>
-                  </th>
+                  <ThOrdenavel campo="equipamento" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Equipamento</ThOrdenavel>
+                  <ThOrdenavel campo="cliente" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Cliente / Ambiente</ThOrdenavel>
+                  <ThOrdenavel campo="corretivas" atual={ordem} padrao={PADRAO_ORDEM} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase">Corret.</ThOrdenavel>
+                  <ThOrdenavel campo="mttr" atual={ordem} padrao={PADRAO_ORDEM} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase"><span className="flex items-center justify-center gap-1"><Clock size={10} />MTTR</span></ThOrdenavel>
+                  <ThOrdenavel campo="mtbf" atual={ordem} padrao={PADRAO_ORDEM} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase"><span className="flex items-center justify-center gap-1"><RefreshCw size={10} />MTBF</span></ThOrdenavel>
+                  <ThOrdenavel campo="retrabalho" atual={ordem} padrao={PADRAO_ORDEM} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase"><span className="flex items-center justify-center gap-1"><AlertTriangle size={10} />Retrab.</span></ThOrdenavel>
+                  <ThOrdenavel campo="sla" atual={ordem} padrao={PADRAO_ORDEM} className="hidden lg:table-cell text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase"><span className="flex items-center justify-center gap-1"><Timer size={10} />SLA</span></ThOrdenavel>
                   {custoPorH !== null && (
-                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase">
-                      <span className="flex items-center justify-center gap-1"><DollarSign size={10} />Custo</span>
-                    </th>
+                    <ThOrdenavel campo="custo" atual={ordem} padrao={PADRAO_ORDEM} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-400 uppercase"><span className="flex items-center justify-center gap-1"><DollarSign size={10} />Custo</span></ThOrdenavel>
                   )}
-                  <th className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Última</th>
+                  <ThOrdenavel campo="ultima" atual={ordem} padrao={PADRAO_ORDEM} className="hidden md:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Última</ThOrdenavel>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">

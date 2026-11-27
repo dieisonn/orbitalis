@@ -1,8 +1,12 @@
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '@/lib/api'
-import { CapacidadeChart, fmtHoras, type DiaCap } from '@/components/ui/capacidade-chart'
+import { CapacidadeChart, type DiaCap } from '@/components/ui/capacidade-chart'
+import { fmtHoras } from '@/lib/horas'
 import { JornadaConfig, type Jornada } from './jornada-config'
+
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
 
 type Cap = {
   periodo: { de: string; ate: string }
@@ -21,10 +25,23 @@ const hojeBR = () => iso(new Date(Date.now() - 3 * 3600_000))
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 const br = (s: string) => s.split('-').reverse().slice(0, 2).join('/')
 
-type Props = { searchParams: Promise<{ p?: string; d?: string }> }
+type Props = { searchParams: Promise<{ p?: string; d?: string; ordem?: string; dir?: string }> }
+
+const PADRAO_ORDEM: Ordem = { ordem: '', dir: 'asc' }
+type TecCap = Cap['tecnicos'][number]
+const CAMPOS_TEC = {
+  tecnico: (x: TecCap) => x.nome,
+  disponivel: (x: TecCap) => x.capacidadeMin,
+  programado: (x: TecCap) => x.programadoMin,
+  realizado: (x: TecCap) => x.realizadoMin,
+  ocupacao: (x: TecCap) => x.ocupacao,
+  aproveitamento: (x: TecCap) => x.aproveitamento,
+}
 
 export default async function CapacidadePage({ searchParams }: Props) {
-  const { p, d } = await searchParams
+  const sp = await searchParams
+  const { p, d } = sp
+  const ordem = lerOrdem(sp, Object.keys(CAMPOS_TEC), PADRAO_ORDEM)
   const modo = p === 'semana' ? 'semana' : 'mes'
   const ref = d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : hojeBR()
 
@@ -106,17 +123,17 @@ export default async function CapacidadePage({ searchParams }: Props) {
             <table className="w-full text-sm mt-2">
               <thead>
                 <tr className="text-left text-xs text-gray-500 border-b border-border">
-                  <th className="px-4 py-2.5 font-medium">Técnico</th>
-                  <th className="px-4 py-2.5 font-medium text-right">Disponível</th>
-                  <th className="px-4 py-2.5 font-medium text-right">Programado</th>
-                  <th className="px-4 py-2.5 font-medium text-right">Realizado</th>
-                  <th className="px-4 py-2.5 font-medium text-right">Ocupação</th>
-                  <th className="px-4 py-2.5 font-medium text-right">Aproveitamento</th>
+                  <ThOrdenavel campo="tecnico" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium">Técnico</ThOrdenavel>
+                  <ThOrdenavel campo="disponivel" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium text-right">Disponível</ThOrdenavel>
+                  <ThOrdenavel campo="programado" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium text-right">Programado</ThOrdenavel>
+                  <ThOrdenavel campo="realizado" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium text-right">Realizado</ThOrdenavel>
+                  <ThOrdenavel campo="ocupacao" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium text-right">Ocupação</ThOrdenavel>
+                  <ThOrdenavel campo="aproveitamento" atual={ordem} padrao={PADRAO_ORDEM} className="px-4 py-2.5 font-medium text-right">Aproveitamento</ThOrdenavel>
                 </tr>
               </thead>
               <tbody>
                 {cap.tecnicos.length === 0 && <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">Sem técnicos com jornada no período.</td></tr>}
-                {cap.tecnicos.map((x) => (
+                {ordenarLista(cap.tecnicos, ordem, CAMPOS_TEC).map((x) => (
                   <tr key={x.id} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5 text-gray-800">{x.nome}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums">{fmtHoras(x.capacidadeMin)}</td>

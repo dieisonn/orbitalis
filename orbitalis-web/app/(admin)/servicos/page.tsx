@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { api } from '@/lib/api'
 import { ServicosClient } from './servicos-client'
 
@@ -27,7 +28,7 @@ export default async function ServicosPage() {
           </p>
         </div>
       </div>
-      <ServicosClient tipos={tipos} />
+      <Suspense><ServicosClient tipos={tipos} /></Suspense>
     </div>
   )
 }

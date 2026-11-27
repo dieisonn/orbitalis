@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Printer } from 'lucide-react'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import { ordenarLista, type Ordem } from '@/lib/ordenacao'
 import { DocumentoOS, PRINT_CSS, type OS, type Config } from '../[id]/pdf/print-os'
 
 export type ResumoOS = {
@@ -16,9 +18,20 @@ const STATUS: Record<string, string> = {
 
 const rotulo = (n: number | null, id: string) => n != null ? `OS-${String(n).padStart(4, '0')}` : `OS-${id.slice(0, 6).toUpperCase()}`
 
+const PADRAO_ORDEM: Ordem = { ordem: '', dir: 'asc' }
+const CAMPOS_DIA = {
+  hora: (r: ResumoOS) => r.hora,
+  os: (r: ResumoOS) => r.numero,
+  cliente: (r: ResumoOS) => `${r.cliente} ${r.ambiente}`,
+  tecnico: (r: ResumoOS) => r.tecnico,
+  status: (r: ResumoOS) => STATUS[r.status] ?? r.status,
+}
+const CAMPOS_ORDEM = Object.keys(CAMPOS_DIA)
+
 export function DiaClient({ resumos, completas, config, diaLongo }: {
   resumos: ResumoOS[]; completas: OS[]; config: Config | null; diaLongo: string
 }) {
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
   const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set(resumos.map((r) => r.id)))
 
   const alternar = (id: string) => setMarcadas((a) => {
@@ -68,15 +81,15 @@ export function DiaClient({ resumos, completas, config, diaLongo }: {
                         onChange={() => setMarcadas(todasMarcadas ? new Set() : new Set(resumos.map((r) => r.id)))}
                       />
                     </th>
-                    <th className="px-3 py-2.5">Hora</th>
-                    <th className="px-3 py-2.5">O.S.</th>
-                    <th className="px-3 py-2.5">Cliente / ambiente</th>
-                    <th className="px-3 py-2.5 hidden md:table-cell">Técnico</th>
-                    <th className="px-3 py-2.5 hidden sm:table-cell">Status</th>
+                    <ThOrdenavel campo="hora" atual={ordem} padrao={PADRAO_ORDEM} className="px-3 py-2.5">Hora</ThOrdenavel>
+                    <ThOrdenavel campo="os" atual={ordem} padrao={PADRAO_ORDEM} className="px-3 py-2.5">O.S.</ThOrdenavel>
+                    <ThOrdenavel campo="cliente" atual={ordem} padrao={PADRAO_ORDEM} className="px-3 py-2.5">Cliente / ambiente</ThOrdenavel>
+                    <ThOrdenavel campo="tecnico" atual={ordem} padrao={PADRAO_ORDEM} className="px-3 py-2.5 hidden md:table-cell">Técnico</ThOrdenavel>
+                    <ThOrdenavel campo="status" atual={ordem} padrao={PADRAO_ORDEM} className="px-3 py-2.5 hidden sm:table-cell">Status</ThOrdenavel>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {resumos.map((r) => (
+                  {ordenarLista(resumos, ordem, CAMPOS_DIA).map((r) => (
                     <tr key={r.id} className={marcadas.has(r.id) ? '' : 'opacity-50'}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" aria-label={`Selecionar ${rotulo(r.numero, r.id)}`} checked={marcadas.has(r.id)} onChange={() => alternar(r.id)} />

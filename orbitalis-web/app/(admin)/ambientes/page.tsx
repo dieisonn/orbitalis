@@ -74,7 +74,7 @@ export default async function AmbientesPage({ searchParams }: Props) {
         </a>
       </div>
 
-      <AmbientesList grupos={grupos} />
+      <Suspense><AmbientesList grupos={grupos} /></Suspense>
 
       {result.total > result.perPage && (
         <div className="mt-4 bg-white rounded-xl border border-border overflow-hidden">

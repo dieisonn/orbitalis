@@ -2,6 +2,8 @@ import { api } from '@/lib/api'
 import { FileText, Plus, AlertTriangle } from 'lucide-react'
 import { DeleteButton } from '@/components/ui/delete-button'
 import { excluirContrato } from './actions'
+import { ThOrdenavel } from '@/components/ui/th-ordenavel'
+import { lerOrdem, ordenarLista, type Ordem } from '@/lib/ordenacao'
 
 type Consumo = {
   planos: number; osGeradas: number; osConcluidas: number; osEmAberto: number; osNoMes: number
@@ -26,8 +28,21 @@ function fmtBRL(v: number | null) {
   return Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export default async function ContratosPage() {
-  const contratos = await api.get<Contrato[]>('/contratos').catch(() => [] as Contrato[])
+const PADRAO_ORDEM: Ordem = { ordem: 'cliente', dir: 'asc' }
+const meses = (c: Contrato) => Math.max(1, Math.round((new Date(c.vigenciaFim).getTime() - new Date(c.vigenciaInicio).getTime()) / (30 * 86_400_000)))
+const situacao = (c: Contrato) => (c.renovado ?? c.renovacoes?.length ? 'Renovado' : new Date(c.vigenciaFim).getTime() < Date.now() ? 'Vencido' : !c.ativo ? 'Inativo' : 'Ativo')
+const CAMPOS = {
+  cliente: (c: Contrato) => c.cliente.nomeFantasia ?? c.cliente.razaoSocial,
+  descricao: (c: Contrato) => c.descricao,
+  vigencia: (c: Contrato) => new Date(c.vigenciaFim),
+  valor: (c: Contrato) => (c.valorMensal != null ? c.valorMensal * meses(c) : null),
+  consumo: (c: Contrato) => c.consumo?.osGeradas ?? null,
+  status: situacao,
+}
+
+export default async function ContratosPage({ searchParams }: { searchParams: Promise<{ ordem?: string; dir?: string }> }) {
+  const ordem = lerOrdem(await searchParams, Object.keys(CAMPOS), PADRAO_ORDEM)
+  const contratos = ordenarLista(await api.get<Contrato[]>('/contratos').catch(() => [] as Contrato[]), ordem, CAMPOS)
   const agora = Date.now()
 
   return (
@@ -53,12 +68,12 @@ export default async function ContratosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface">
-                <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
-                <th className="hidden @lg:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Descrição</th>
-                <th className="hidden @xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</th>
-                <th className="hidden @3xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor Total</th>
-                <th className="hidden @5xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase" title="O.S. dos planos preventivos vinculados: concluídas / geradas">Consumo</th>
-                <th className="hidden @xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</th>
+                <ThOrdenavel campo="cliente" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Cliente</ThOrdenavel>
+                <ThOrdenavel campo="descricao" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @lg:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Descrição</ThOrdenavel>
+                <ThOrdenavel campo="vigencia" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Vigência</ThOrdenavel>
+                <ThOrdenavel campo="valor" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @3xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Valor Total</ThOrdenavel>
+                <ThOrdenavel campo="consumo" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @5xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Consumo</ThOrdenavel>
+                <ThOrdenavel campo="status" atual={ordem} padrao={PADRAO_ORDEM} className="hidden @xl:table-cell text-left px-4 py-3 text-[10px] font-semibold text-gray-400 uppercase">Status</ThOrdenavel>
                 <th className="px-4 py-3"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>

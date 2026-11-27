@@ -6,6 +6,8 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Building2, Cpu, ChevronDown, Plus, Search, X } from 'lucide-react'
 import { DeleteButton } from '@/components/ui/delete-button'
+import { ThOrdenavel, useOrdemUrl } from '@/components/ui/th-ordenavel'
+import { ordenarLista, type Ordem } from '@/lib/ordenacao'
 import { deletarAmbiente } from './actions'
 
 type Equipamento = {
@@ -28,7 +30,18 @@ type Grupo = {
   ambientes: Ambiente[]
 }
 
+const PADRAO_ORDEM: Ordem = { ordem: '', dir: 'asc' }
+const CAMPOS_AMB = {
+  ambiente: (a: Ambiente) => a.nome,
+  localizacao: (a: Ambiente) => a.localizacaoInterna,
+  area: (a: Ambiente) => Number(a.metrosQuadrados),
+  capacidade: (a: Ambiente) => a.capacidadeTermica,
+  equipamentos: (a: Ambiente) => a.equipamentos?.length ?? 0,
+}
+const CAMPOS_ORDEM = Object.keys(CAMPOS_AMB)
+
 export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
+  const ordem = useOrdemUrl(CAMPOS_ORDEM, PADRAO_ORDEM)
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(
     () => new Set(grupos.map((g) => g.cliente.id)),
@@ -147,16 +160,16 @@ export function AmbientesList({ grupos }: { grupos: Grupo[] }) {
                   <table className="w-full text-sm table-fixed">
                     <thead>
                       <tr className="border-b border-border bg-surface">
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Localização</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Área</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Cap. Térmica</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Equip.</th>
+                        <ThOrdenavel campo="ambiente" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ambiente</ThOrdenavel>
+                        <ThOrdenavel campo="localizacao" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">Localização</ThOrdenavel>
+                        <ThOrdenavel campo="area" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Área</ThOrdenavel>
+                        <ThOrdenavel campo="capacidade" atual={ordem} padrao={PADRAO_ORDEM} className="hidden sm:table-cell text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Cap. Térmica</ThOrdenavel>
+                        <ThOrdenavel campo="equipamentos" atual={ordem} padrao={PADRAO_ORDEM} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide w-16">Equip.</ThOrdenavel>
                         <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide w-44"><span className="sr-only">Ações</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {ambs.map((a) => (
+                      {ordenarLista(ambs, ordem, CAMPOS_AMB).map((a) => (
                         <tr key={a.id} className="hover:bg-surface/50 transition-colors">
                           <td className="px-4 py-3 overflow-hidden">
                             <div className="font-semibold text-gray-900 truncate">{a.nome}</div>
