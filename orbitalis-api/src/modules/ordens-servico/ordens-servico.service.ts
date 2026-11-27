@@ -875,13 +875,19 @@ export class OrdensServicoService {
     }));
   }
 
-  private resolveOrderBy(orderBy: string): object {
-    switch (orderBy) {
-      case 'numero_asc':  return { numero: 'asc' };
-      case 'data_asc':    return { dataAgendamento: 'asc' };
-      case 'data_desc':   return { dataAgendamento: 'desc' };
-      default:            return { numero: 'desc' };
-    }
+  /** `orderBy` no formato campo_asc|campo_desc (numero, cliente, status, tecnico, data, itens). Desempate sempre por número. */
+  private resolveOrderBy(orderBy: string): object[] {
+    const [campo, d] = orderBy.split('_');
+    const dir: 'asc' | 'desc' = d === 'asc' ? 'asc' : 'desc';
+    const mapa: Record<string, object> = {
+      numero: { numero: dir },
+      cliente: { ambiente: { cliente: { razaoSocial: dir } } },
+      status: { status: dir },
+      tecnico: { tecnico: { nome: dir } },
+      data: { dataAgendamento: dir },
+      itens: { itens: { _count: dir } },
+    };
+    return [mapa[campo] ?? { numero: 'desc' }, { numero: 'desc' }];
   }
 
   async findOne(id: string, user?: { id: string; role: string }) {

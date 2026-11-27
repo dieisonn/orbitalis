@@ -23,8 +23,8 @@ export class PlanosManutencaoController {
 
   // GET /api/v1/planos-manutencao
   @Get()
-  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string) {
-    return this.planosService.findAll(Number(page) || 1, Number(perPage) || 20);
+  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string, @Query('orderBy') orderBy?: string) {
+    return this.planosService.findAll(Number(page) || 1, Number(perPage) || 20, orderBy);
   }
 
   // GET /api/v1/planos-manutencao/:id

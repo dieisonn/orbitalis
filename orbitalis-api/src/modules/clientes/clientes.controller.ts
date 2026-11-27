@@ -53,8 +53,8 @@ export class ClientesController {
   // GET /api/v1/clientes
   @Get()
   @Roles(UsuarioTipo.admin)
-  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string, @Query('q') q?: string) {
-    return this.clientesService.findAll(Number(page) || 1, Number(perPage) || 20, q);
+  findAll(@Query('page') page?: string, @Query('perPage') perPage?: string, @Query('q') q?: string, @Query('orderBy') orderBy?: string) {
+    return this.clientesService.findAll(Number(page) || 1, Number(perPage) || 20, q, orderBy);
   }
 
   // GET /api/v1/clientes/:id

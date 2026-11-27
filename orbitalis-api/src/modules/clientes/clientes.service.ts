@@ -148,7 +148,21 @@ export class ClientesService {
     return res.json();
   }
 
-  async findAll(page = 1, perPage = 20, q?: string) {
+  /** orderBy = campo_asc|campo_desc (razao, documento, telefone, endereco, ambientes). */
+  private ordemListagem(orderBy?: string): object[] {
+    const [campo, d] = (orderBy ?? '').split('_');
+    const dir: 'asc' | 'desc' = d === 'desc' ? 'desc' : 'asc';
+    const mapa: Record<string, object> = {
+      razao: { razaoSocial: dir },
+      documento: { documento: dir },
+      telefone: { telefone: dir },
+      endereco: { endereco: dir },
+      ambientes: { ambientes: { _count: dir } },
+    };
+    return [mapa[campo] ?? { razaoSocial: 'asc' }, { id: 'asc' }];
+  }
+
+  async findAll(page = 1, perPage = 20, q?: string, orderBy?: string) {
     const skip = (page - 1) * perPage;
     const termo = q?.trim();
     const digitos = termo ? soDigitos(termo) : '';
@@ -170,7 +184,7 @@ export class ClientesService {
       this.prisma.cliente.findMany({
         where,
         include: { ambientes: { where: { deletedAt: null } } },
-        orderBy: { razaoSocial: 'asc' },
+        orderBy: this.ordemListagem(orderBy),
         skip,
         take: perPage,
       }),
