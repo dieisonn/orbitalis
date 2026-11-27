@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ClipboardList, Ruler, CircleDollarSign, Boxes, FileText, Building2, Loader2, RefreshCw } from 'lucide-react'
 import { Campo, inputCls } from '@/components/ui/modal'
 import { brl, nomeForn, UNIDADES, type Fornecedor, type Produto } from '@/lib/suprimentos'
-import { salvarProduto, type DadosProduto } from './actions'
+import { salvarProduto, type DadosProduto, type RegraMarkup } from './actions'
 
 const ABAS = [
   { id: 'dados', rotulo: 'Dados', dica: 'Nome, códigos e configurações', Icone: ClipboardList },
@@ -51,7 +51,7 @@ function Cartao({ titulo, destaque, dica, children }: { titulo: string; destaque
   )
 }
 
-export function ProdutoForm({ produto, categorias, fornecedores }: { produto?: Produto; categorias: string[]; fornecedores: Fornecedor[] }) {
+export function ProdutoForm({ produto, categorias, fornecedores, markup }: { produto?: Produto; categorias: string[]; fornecedores: Fornecedor[]; markup?: RegraMarkup }) {
   const router = useRouter()
   const [pendente, iniciar] = useTransition()
   const [aba, setAba] = useState<AbaId>('dados')
@@ -63,6 +63,8 @@ export function ProdutoForm({ produto, categorias, fornecedores }: { produto?: P
   )
 
   const custoFinal = arred(n(form.precoCusto) + n(form.despesasAcessorias) + n(form.outrasDespesas))
+  const markupDoGrupo = markup?.categorias.find((c) => c.categoria.toLowerCase() === form.categoria.trim().toLowerCase())?.percentual
+  const markupAplicavel = markupDoGrupo ?? (markup && markup.padrao > 0 ? markup.padrao : undefined)
   const lucro = custoFinal > 0 ? arred(((n(form.precoVenda) - custoFinal) / custoFinal) * 100) : 0
 
   function salvar() {
@@ -161,6 +163,12 @@ export function ProdutoForm({ produto, categorias, fornecedores }: { produto?: P
                     onChange={(e) => set('precoVenda', arred(custoFinal * (1 + num(e.target.value) / 100)))} className={inputCls} />
                 </Campo>
                 {custoFinal <= 0 && <p className="text-xs text-gray-500">Informe o custo para calcular o lucro.</p>}
+                {markupAplicavel !== undefined && (
+                  <button type="button" disabled={custoFinal <= 0} onClick={() => set('precoVenda', arred(custoFinal * (1 + markupAplicavel / 100)))}
+                    className="inline-flex items-center px-3 py-2 text-sm font-semibold text-primary border border-primary/30 rounded-lg hover:bg-primary/5 disabled:opacity-50">
+                    Aplicar markup padrão ({markupAplicavel}%{markupDoGrupo !== undefined ? ` · grupo ${form.categoria.trim()}` : ''})
+                  </button>
+                )}
               </div>
             </Cartao>
           </div>

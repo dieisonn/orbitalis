@@ -4,28 +4,45 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
+import { Paginacao } from '@/components/ui/paginacao'
+import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
+import { AvisoLote, BarraSelecao, CheckSelecao, ModalLote, botaoLote, botaoLotePerigo, useSelecao } from '@/components/ui/lote'
 import { formatarDocumento, type Fornecedor } from '@/lib/suprimentos'
-import { salvarFornecedor, excluirFornecedor, alternarFornecedor, type DadosFornecedor } from './actions'
+import { salvarFornecedor, excluirFornecedor, alternarFornecedor, executarLoteFornecedores, type DadosFornecedor } from './actions'
 
 const VAZIO: DadosFornecedor = {
-  tipoPessoa: 'J', razaoSocial: '', nomeFantasia: '', cpfCnpj: '', inscricaoEstadual: '', email: '', telefone: '', celular: '',
+  tipoPessoa: 'J', razaoSocial: '', nomeFantasia: '', cpfCnpj: '', inscricaoEstadual: '', inscricaoMunicipal: '', rg: '', dataNascimento: '', email: '', telefone: '', celular: '',
   contato: '', cep: '', logradouro: '', numeroEndereco: '', complemento: '', bairro: '', cidade: '', uf: '', observacoes: '',
 }
 
 const doForn = (f: Fornecedor): DadosFornecedor => ({
   tipoPessoa: f.tipoPessoa, razaoSocial: f.razaoSocial, nomeFantasia: f.nomeFantasia ?? '', cpfCnpj: formatarDocumento(f.cpfCnpj),
-  inscricaoEstadual: f.inscricaoEstadual ?? '', email: f.email ?? '', telefone: f.telefone ?? '', celular: f.celular ?? '',
+  inscricaoEstadual: f.inscricaoEstadual ?? '', inscricaoMunicipal: f.inscricaoMunicipal ?? '', rg: f.rg ?? '', dataNascimento: f.dataNascimento?.slice(0, 10) ?? '', email: f.email ?? '', telefone: f.telefone ?? '', celular: f.celular ?? '',
   contato: f.contato ?? '', cep: f.cep ?? '', logradouro: f.logradouro ?? '', numeroEndereco: f.numeroEndereco ?? '',
   complemento: f.complemento ?? '', bairro: f.bairro ?? '', cidade: f.cidade ?? '', uf: f.uf ?? '', observacoes: f.observacoes ?? '',
 })
 
-export function FornecedoresClient({ fornecedores, q, ativo }: { fornecedores: Fornecedor[]; q: string; ativo: string }) {
+export function FornecedoresClient({ fornecedores, total, pagina, limite, q, ativo }: { fornecedores: Fornecedor[]; total: number; pagina: number; limite: number; q: string; ativo: string }) {
   const router = useRouter()
   const [pendente, iniciar] = useTransition()
   const [busca, setBusca] = useState(q)
   const [modal, setModal] = useState<{ id: string | null } | null>(null)
   const [form, setForm] = useState<DadosFornecedor>(VAZIO)
   const [erro, setErro] = useState<string | null>(null)
+  const sel = useSelecao(fornecedores.map((f) => f.id), total)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [excluindoLote, setExcluindoLote] = useState(false)
+  const selecao = () => (sel.todosFiltro ? { filtro: { q, ativo } } : { ids: Array.from(sel.marcados) })
+  function lote(acao: 'ativar' | 'inativar' | 'excluir') {
+    setErro(null)
+    iniciar(async () => {
+      const r = await executarLoteFornecedores(selecao(), acao)
+      if (!r.ok) { setErro(r.erro); return }
+      setExcluindoLote(false); sel.limpar()
+      setAviso(`${r.afetados} fornecedor(es) ${acao === 'ativar' ? 'ativados' : acao === 'inativar' ? 'inativados' : 'excluídos'}.`)
+      router.refresh()
+    })
+  }
   const set = <K extends keyof DadosFornecedor>(k: K, v: DadosFornecedor[K]) => setForm((f) => ({ ...f, [k]: v }))
 
   function filtrar(novoQ: string, novoAtivo: string) {
@@ -62,10 +79,19 @@ export function FornecedoresClient({ fornecedores, q, ativo }: { fornecedores: F
           <select value={ativo} onChange={(e) => filtrar(busca.trim(), e.target.value)} className={`${inputCls} !w-auto`} aria-label="Situação">
             <option value="">Todos</option><option value="true">Ativos</option><option value="false">Inativos</option>
           </select>
-          <button onClick={() => abrir()} className="ml-auto inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
+          <div className="ml-auto flex flex-wrap items-center gap-2"><PlanilhaBotoes recurso="fornecedores" nome="fornecedores" /></div>
+          <button onClick={() => abrir()} className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
             <Plus size={14} /> Novo fornecedor
           </button>
         </div>
+
+        <AvisoLote texto={aviso} onFechar={() => setAviso(null)} />
+        <BarraSelecao sel={sel} total={total} itensNaPagina={fornecedores.length}>
+          <button type="button" onClick={() => lote('ativar')} disabled={pendente} className={botaoLote}>Ativar</button>
+          <button type="button" onClick={() => lote('inativar')} disabled={pendente} className={botaoLote}>Inativar</button>
+          <button type="button" onClick={() => { setErro(null); setExcluindoLote(true) }} className={botaoLotePerigo}><Trash2 size={13} /> Excluir</button>
+          {erro && !excluindoLote && <span role="alert" className="text-xs text-destructive">{erro}</span>}
+        </BarraSelecao>
 
         {fornecedores.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-gray-500">{q || ativo ? 'Nenhum fornecedor encontrado.' : 'Nenhum fornecedor cadastrado ainda.'}</p>
@@ -74,6 +100,7 @@ export function FornecedoresClient({ fornecedores, q, ativo }: { fornecedores: F
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <th className="w-10 px-4 py-3"><CheckSelecao marcado={sel.todosDaPagina || sel.todosFiltro} onChange={sel.alternarTodos} rotulo="Selecionar todos desta página" /></th>
                   <th className="text-left px-4 py-3">Nome</th>
                   <th className="hidden md:table-cell text-left px-4 py-3">CPF/CNPJ</th>
                   <th className="hidden lg:table-cell text-left px-4 py-3">Contato</th>
@@ -84,7 +111,8 @@ export function FornecedoresClient({ fornecedores, q, ativo }: { fornecedores: F
               </thead>
               <tbody className="divide-y divide-border">
                 {fornecedores.map((f) => (
-                  <tr key={f.id} className={f.ativo ? '' : 'opacity-60'}>
+                  <tr key={f.id} className={`${f.ativo ? '' : 'opacity-60'} ${sel.marcado(f.id) ? 'bg-primary/5' : ''}`}>
+                    <td className="w-10 px-4 py-3"><CheckSelecao marcado={sel.marcado(f.id)} onChange={() => sel.alternar(f.id)} rotulo={`Selecionar ${f.razaoSocial}`} /></td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{f.razaoSocial}{!f.ativo && <span className="ml-2 text-xs text-gray-500">(inativo)</span>}</p>
                       {f.nomeFantasia && <p className="text-xs text-gray-500">{f.nomeFantasia}</p>}
@@ -109,7 +137,14 @@ export function FornecedoresClient({ fornecedores, q, ativo }: { fornecedores: F
             </table>
           </div>
         )}
+        <Paginacao total={total} pagina={pagina} limite={limite} />
       </div>
+
+      {excluindoLote && (
+        <ModalLote titulo="Excluir fornecedores" qtd={sel.qtd} destrutivo pendente={pendente} erro={erro} onFechar={() => setExcluindoLote(false)} onConfirmar={() => lote('excluir')}>
+          <p className="text-destructive">Eles saem da lista e das novas compras. Produtos e histórico de estoque continuam guardados.</p>
+        </ModalLote>
+      )}
 
       {modal && (
         <Modal titulo={modal.id ? 'Editar fornecedor' : 'Novo fornecedor'} onFechar={() => setModal(null)} largura="max-w-2xl">
@@ -127,6 +162,13 @@ export function FornecedoresClient({ fornecedores, q, ativo }: { fornecedores: F
             </Campo>
             <Campo rotulo="Nome fantasia" className="sm:col-span-4"><input value={form.nomeFantasia} onChange={(e) => set('nomeFantasia', e.target.value)} className={inputCls} /></Campo>
             <Campo rotulo="Inscrição estadual" className="sm:col-span-2"><input value={form.inscricaoEstadual} onChange={(e) => set('inscricaoEstadual', e.target.value)} className={inputCls} /></Campo>
+            <Campo rotulo="Inscrição municipal" className="sm:col-span-2"><input value={form.inscricaoMunicipal} onChange={(e) => set('inscricaoMunicipal', e.target.value)} className={inputCls} /></Campo>
+            {form.tipoPessoa === 'F' && (
+              <>
+                <Campo rotulo="RG" className="sm:col-span-2"><input value={form.rg} onChange={(e) => set('rg', e.target.value)} className={inputCls} /></Campo>
+                <Campo rotulo="Data de nascimento" className="sm:col-span-2"><input type="date" value={form.dataNascimento} onChange={(e) => set('dataNascimento', e.target.value)} className={inputCls} /></Campo>
+              </>
+            )}
             <Campo rotulo="Pessoa de contato" className="sm:col-span-2"><input value={form.contato} onChange={(e) => set('contato', e.target.value)} className={inputCls} /></Campo>
             <Campo rotulo="Telefone" className="sm:col-span-2"><input value={form.telefone} onChange={(e) => set('telefone', e.target.value)} className={inputCls} /></Campo>
             <Campo rotulo="Celular / WhatsApp" className="sm:col-span-2"><input value={form.celular} onChange={(e) => set('celular', e.target.value)} className={inputCls} /></Campo>

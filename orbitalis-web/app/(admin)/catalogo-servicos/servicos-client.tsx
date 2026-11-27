@@ -3,21 +3,44 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
+import { Paginacao } from '@/components/ui/paginacao'
 import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
+import { AvisoLote, BarraSelecao, CheckSelecao, ModalLote, botaoLote, botaoLotePerigo, useSelecao } from '@/components/ui/lote'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
 import { brl, UNIDADES, type ServicoCatalogo } from '@/lib/suprimentos'
-import { salvarServico, excluirServico, alternarServico, type DadosServico } from './actions'
+import { salvarServico, excluirServico, alternarServico, executarLoteServicos, type AcaoLoteServico, type DadosServico } from './actions'
 
 type Tipo = { id: string; sigla: string; nome: string }
 const VAZIO: DadosServico = { nome: '', descricao: '', unidade: 'un', valor: 0, tipoServicoId: '', codigo: '', valorCusto: 0, comissaoPercentual: 0, atividadeServico: '', nbs: '' }
 
-export function ServicosCatalogoClient({ servicos, tipos, q, ativo }: { servicos: ServicoCatalogo[]; tipos: Tipo[]; q: string; ativo: string }) {
+export function ServicosCatalogoClient({ servicos, total, pagina, limite, tipos, q, ativo }: { servicos: ServicoCatalogo[]; total: number; pagina: number; limite: number; tipos: Tipo[]; q: string; ativo: string }) {
   const router = useRouter()
   const [pendente, iniciar] = useTransition()
   const [busca, setBusca] = useState(q)
   const [modal, setModal] = useState<{ id: string | null } | null>(null)
   const [form, setForm] = useState<DadosServico>(VAZIO)
   const [erro, setErro] = useState<string | null>(null)
+
+  const sel = useSelecao(servicos.map((x) => x.id), total)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [lote, setLote] = useState<'markup' | 'ajuste_preco' | 'atividade' | 'excluir' | null>(null)
+  const [loteForm, setLoteForm] = useState({ percentual: '', atividade: '' })
+  const selecao = () => (sel.todosFiltro ? { filtro: { q, ativo } } : { ids: Array.from(sel.marcados) })
+  function executar(acao: AcaoLoteServico) {
+    const pct = loteForm.percentual.trim() === '' ? undefined : Number(loteForm.percentual.replace(',', '.'))
+    if (acao === 'ajuste_preco' && (pct === undefined || Number.isNaN(pct) || pct === 0)) { setErro('Informe o percentual (use sinal negativo para reduzir)'); return }
+    if (acao === 'markup' && pct !== undefined && (Number.isNaN(pct) || pct < 0)) { setErro('Markup inválido'); return }
+    setErro(null)
+    iniciar(async () => {
+      const r = await executarLoteServicos(selecao(), acao, { percentual: pct, atividade_nova: acao === 'atividade' ? loteForm.atividade : undefined })
+      if (!r.ok) { setErro(r.erro); return }
+      setLote(null); sel.limpar()
+      const rot: Record<AcaoLoteServico, string> = { markup: 'preços recalculados', ajuste_preco: 'preços ajustados', ativar: 'ativados', inativar: 'inativados', atividade: 'atividade alterada', excluir: 'excluídos' }
+      setAviso(`${r.afetados} serviço(s): ${rot[acao]}.${r.ignorados ? ` ${r.ignorados} ignorado(s)${r.motivoIgnorados ? ` (${r.motivoIgnorados})` : ''}.` : ''}`)
+      router.refresh()
+    })
+  }
+  const abrirLote = (a: 'markup' | 'ajuste_preco' | 'atividade' | 'excluir') => { setErro(null); setLoteForm({ percentual: '', atividade: '' }); setLote(a) }
 
   function filtrar(novoQ: string, novoAtivo: string) {
     const p = new URLSearchParams()
@@ -59,6 +82,17 @@ export function ServicosCatalogoClient({ servicos, tipos, q, ativo }: { servicos
           </button>
         </div>
 
+        <AvisoLote texto={aviso} onFechar={() => setAviso(null)} />
+        <BarraSelecao sel={sel} total={total} itensNaPagina={servicos.length}>
+          <button type="button" onClick={() => abrirLote('markup')} className={botaoLote}>Aplicar markup sobre o custo</button>
+          <button type="button" onClick={() => abrirLote('ajuste_preco')} className={botaoLote}>Ajustar preço (%)</button>
+          <button type="button" onClick={() => abrirLote('atividade')} className={botaoLote}>Alterar atividade</button>
+          <button type="button" onClick={() => executar('ativar')} disabled={pendente} className={botaoLote}>Ativar</button>
+          <button type="button" onClick={() => executar('inativar')} disabled={pendente} className={botaoLote}>Inativar</button>
+          <button type="button" onClick={() => abrirLote('excluir')} className={botaoLotePerigo}><Trash2 size={13} /> Excluir</button>
+          {erro && !lote && !modal && <span role="alert" className="text-xs text-destructive">{erro}</span>}
+        </BarraSelecao>
+
         {servicos.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-gray-500">{q || ativo ? 'Nenhum serviço encontrado.' : 'Nenhum serviço cadastrado ainda.'}</p>
         ) : (
@@ -66,6 +100,7 @@ export function ServicosCatalogoClient({ servicos, tipos, q, ativo }: { servicos
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <th className="w-10 px-4 py-3"><CheckSelecao marcado={sel.todosDaPagina || sel.todosFiltro} onChange={sel.alternarTodos} rotulo="Selecionar todos desta página" /></th>
                   <th className="text-left px-4 py-3">Serviço</th>
                   <th className="hidden md:table-cell text-left px-4 py-3">Tipo na agenda</th>
                   <th className="text-right px-4 py-3">Valor</th>
@@ -76,7 +111,8 @@ export function ServicosCatalogoClient({ servicos, tipos, q, ativo }: { servicos
                 {servicos.map((s) => {
                   const tipo = tipos.find((t) => t.id === s.tipoServicoId)
                   return (
-                    <tr key={s.id} className={s.ativo ? '' : 'opacity-60'}>
+                    <tr key={s.id} className={`${s.ativo ? '' : 'opacity-60'} ${sel.marcado(s.id) ? 'bg-primary/5' : ''}`}>
+                      <td className="w-10 px-4 py-3"><CheckSelecao marcado={sel.marcado(s.id)} onChange={() => sel.alternar(s.id)} rotulo={`Selecionar ${s.nome}`} /></td>
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{s.nome}{!s.ativo && <span className="ml-2 text-xs text-gray-500">(inativo)</span>}</p>
                         <p className="text-xs text-gray-500">{s.codigo ? `Cód. ${s.codigo}` : `#${s.numero}`}{s.descricao ? ` · ${s.descricao.slice(0, 80)}` : ''}</p>
@@ -98,7 +134,24 @@ export function ServicosCatalogoClient({ servicos, tipos, q, ativo }: { servicos
             </table>
           </div>
         )}
+        <Paginacao total={total} pagina={pagina} limite={limite} />
       </div>
+
+      {lote && (
+        <ModalLote
+          titulo={{ markup: 'Aplicar markup sobre o custo', ajuste_preco: 'Ajustar valor de venda', atividade: 'Alterar atividade de serviço', excluir: 'Excluir serviços' }[lote]}
+          qtd={sel.qtd} destrutivo={lote === 'excluir'} pendente={pendente} erro={erro} onFechar={() => setLote(null)} onConfirmar={() => executar(lote)}>
+          {lote === 'markup' && (
+            <>
+              <p className="text-gray-600">O valor de venda vira <em>valor de custo × (1 + markup)</em>. Sem percentual abaixo, usa o markup padrão geral (tela “Markup padrão”, em Produtos). Serviços sem custo são ignorados.</p>
+              <Campo rotulo="Markup só desta vez (%)" dica="Deixe vazio para usar o markup padrão."><input value={loteForm.percentual} onChange={(e) => setLoteForm({ ...loteForm, percentual: e.target.value })} className={inputCls} inputMode="decimal" /></Campo>
+            </>
+          )}
+          {lote === 'ajuste_preco' && <Campo rotulo="Percentual (%)" dica="Ex.: 10 aumenta 10%; -5 reduz 5%."><input value={loteForm.percentual} onChange={(e) => setLoteForm({ ...loteForm, percentual: e.target.value })} className={inputCls} inputMode="decimal" autoFocus /></Campo>}
+          {lote === 'atividade' && <Campo rotulo="Atividade de serviço" dica="Deixe vazio para limpar."><input value={loteForm.atividade} onChange={(e) => setLoteForm({ ...loteForm, atividade: e.target.value })} className={inputCls} maxLength={120} autoFocus /></Campo>}
+          {lote === 'excluir' && <p className="text-destructive">Os serviços saem do catálogo e dos novos orçamentos. Orçamentos já feitos continuam intactos.</p>}
+        </ModalLote>
+      )}
 
       {modal && (
         <Modal titulo={modal.id ? 'Editar serviço' : 'Novo serviço'} onFechar={() => setModal(null)} largura="max-w-lg">

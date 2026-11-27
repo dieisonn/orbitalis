@@ -6,6 +6,7 @@ import type { Resultado } from '@/lib/suprimentos'
 
 export type DadosFornecedor = {
   tipoPessoa: 'F' | 'J'; razaoSocial: string; nomeFantasia: string; cpfCnpj: string; inscricaoEstadual: string
+  inscricaoMunicipal: string; rg: string; dataNascimento: string
   email: string; telefone: string; celular: string; contato: string; cep: string; logradouro: string
   numeroEndereco: string; complemento: string; bairro: string; cidade: string; uf: string; observacoes: string
 }
@@ -29,4 +30,15 @@ export async function alternarFornecedor(id: string, ativo: boolean): Promise<Re
 export async function excluirFornecedor(id: string): Promise<Resultado> {
   try { await api.delete(`/fornecedores/${id}`); revalidatePath('/fornecedores'); return { ok: true } }
   catch (e) { return { ok: false, erro: msg(e) } }
+}
+
+export type SelecaoSimples = { ids?: string[]; filtro?: { q?: string; ativo?: string } }
+export type ResultadoLote = { ok: true; afetados: number; ignorados: number; motivoIgnorados?: string } | { ok: false; erro: string }
+
+export async function executarLoteFornecedores(sel: SelecaoSimples, acao: 'ativar' | 'inativar' | 'excluir'): Promise<ResultadoLote> {
+  try {
+    const r = await api.post<{ afetados: number; ignorados: number }>('/fornecedores/lote', { ...sel, acao })
+    revalidatePath('/fornecedores'); revalidatePath('/produtos')
+    return { ok: true, afetados: r.afetados, ignorados: r.ignorados }
+  } catch (e) { return { ok: false, erro: msg(e) } }
 }

@@ -2,7 +2,7 @@
 
 export type Fornecedor = {
   id: string; numero: number; tipoPessoa: 'F' | 'J'; razaoSocial: string; nomeFantasia: string | null
-  cpfCnpj: string | null; inscricaoEstadual: string | null; email: string | null; telefone: string | null
+  cpfCnpj: string | null; inscricaoEstadual: string | null; inscricaoMunicipal?: string | null; rg?: string | null; dataNascimento?: string | null; email: string | null; telefone: string | null
   celular: string | null; contato: string | null; cep: string | null; logradouro: string | null
   numeroEndereco: string | null; complemento: string | null; bairro: string | null; cidade: string | null
   uf: string | null; observacoes: string | null; ativo: boolean; _count?: { produtos: number }

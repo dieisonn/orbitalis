@@ -27,3 +27,16 @@ export async function excluirServico(id: string): Promise<Resultado> {
   try { await api.delete(`/catalogo-servicos/${id}`); revalidatePath('/catalogo-servicos'); return { ok: true } }
   catch (e) { return { ok: false, erro: msg(e) } }
 }
+
+export type SelecaoSimples = { ids?: string[]; filtro?: { q?: string; ativo?: string } }
+export type AcaoLoteServico = 'ativar' | 'inativar' | 'excluir' | 'ajuste_preco' | 'markup' | 'atividade'
+export type ResultadoLote = { ok: true; afetados: number; ignorados: number; motivoIgnorados?: string } | { ok: false; erro: string }
+
+export async function executarLoteServicos(sel: SelecaoSimples, acao: AcaoLoteServico, extra: { percentual?: number; atividade_nova?: string } = {}): Promise<ResultadoLote> {
+  try {
+    const corpo = Object.fromEntries(Object.entries({ ...sel, acao, ...extra }).filter(([, v]) => v !== undefined))
+    const r = await api.post<{ afetados: number; ignorados: number; motivoIgnorados?: string }>('/catalogo-servicos/lote', corpo)
+    revalidatePath('/catalogo-servicos')
+    return { ok: true, afetados: r.afetados, ignorados: r.ignorados, motivoIgnorados: r.motivoIgnorados }
+  } catch (e) { return { ok: false, erro: msg(e) } }
+}

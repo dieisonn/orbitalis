@@ -3,11 +3,12 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2, Search, Loader2, ArrowDownUp, History } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Loader2, ArrowDownUp, History, Percent, Tags, Printer, X } from 'lucide-react'
+import { Paginacao } from '@/components/ui/paginacao'
 import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
 import { brl, qtd, nomeForn, UNIDADES, MOTIVOS, MOTIVOS_POR_TIPO, type Fornecedor, type Produto } from '@/lib/suprimentos'
-import { excluirProduto, alternarProduto, movimentarProduto, type DadosMovimento } from './actions'
+import { excluirProduto, alternarProduto, movimentarProduto, executarLote, type DadosMovimento, type RegraMarkup, type AcaoLote, type SelecaoProdutos } from './actions'
 
 type Filtros = { q: string; situacao: string; categoria: string; ativo: string }
 
@@ -20,13 +21,51 @@ function SaldoBadge({ p }: { p: Produto }) {
   return <span className={`inline-block px-2 py-0.5 rounded-full border text-xs font-semibold ${cls}`}>{qtd(s)} {p.unidade}</span>
 }
 
-export function ProdutosClient({ produtos, categorias, fornecedores, filtros }: { produtos: Produto[]; categorias: string[]; fornecedores: Fornecedor[]; filtros: Filtros }) {
+export function ProdutosClient({ produtos, total, pagina, limite, markup, categorias, fornecedores, filtros }: { produtos: Produto[]; total: number; pagina: number; limite: number; markup: RegraMarkup; categorias: string[]; fornecedores: Fornecedor[]; filtros: Filtros }) {
   const router = useRouter()
   const [pendente, iniciar] = useTransition()
   const [busca, setBusca] = useState(filtros.q)
   const [erro, setErro] = useState<string | null>(null)
   const [mov, setMov] = useState<Produto | null>(null)
   const [movForm, setMovForm] = useState<DadosMovimento & { qStr: string; custoStr: string }>({ tipo: 'entrada', quantidade: 0, motivo: 'compra', qStr: '', custoStr: '' })
+
+  // ---- seleção e ações em lote
+  const [marcados, setMarcados] = useState<Set<string>>(new Set())
+  const [todosFiltro, setTodosFiltro] = useState(false)
+  const [lote, setLote] = useState<null | { acao: AcaoLote | 'etiquetas' }>(null)
+  const [loteForm, setLoteForm] = useState({ percentual: '', categoria: '' })
+  const [aviso, setAviso] = useState<string | null>(null)
+  const idsPagina = produtos.map((p) => p.id)
+  const todosDaPagina = idsPagina.length > 0 && idsPagina.every((id) => marcados.has(id))
+  const qtdSel = todosFiltro ? total : marcados.size
+  const selecao = (): SelecaoProdutos => (todosFiltro ? { filtro: { q: filtros.q, categoria: filtros.categoria, ativo: filtros.ativo, situacao: filtros.situacao } } : { ids: Array.from(marcados) })
+  const alternarTodos = () => { setTodosFiltro(false); setMarcados(todosDaPagina ? new Set() : new Set(idsPagina)) }
+  const alternar = (id: string) => { setTodosFiltro(false); setMarcados((m) => { const n = new Set(m); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
+  const limparSel = () => { setMarcados(new Set()); setTodosFiltro(false) }
+
+  function abrirLote(acao: AcaoLote | 'etiquetas') {
+    setErro(null); setLoteForm({ percentual: '', categoria: '' })
+    if (acao === 'etiquetas') {
+      try { sessionStorage.setItem('orbitalis_etiquetas_sel', JSON.stringify(selecao())) } catch { /* segue sem armazenar */ }
+      router.push('/produtos/etiquetas'); return
+    }
+    if (acao === 'ativar' || acao === 'inativar') { confirmarLote(acao); return }
+    setLote({ acao })
+  }
+  function confirmarLote(acao: AcaoLote) {
+    const pct = loteForm.percentual.trim() === '' ? undefined : Number(loteForm.percentual.replace(',', '.'))
+    if (acao === 'ajuste_preco' && (pct === undefined || Number.isNaN(pct) || pct === 0)) { setErro('Informe o percentual (use sinal negativo para reduzir)'); return }
+    if (acao === 'markup' && pct !== undefined && (Number.isNaN(pct) || pct < 0)) { setErro('Markup inválido'); return }
+    setErro(null)
+    iniciar(async () => {
+      const r = await executarLote(selecao(), acao, { percentual: pct, categoria_nova: acao === 'categoria' ? loteForm.categoria : undefined })
+      if (!r.ok) { setErro(r.erro); return }
+      setLote(null); limparSel()
+      const rot: Record<AcaoLote, string> = { markup: 'preços recalculados', ajuste_preco: 'preços ajustados', ativar: 'ativados', inativar: 'inativados', categoria: 'grupo alterado', excluir: 'excluídos' }
+      setAviso(`${r.afetados} produto(s): ${rot[acao]}.${r.ignorados ? ` ${r.ignorados} ignorado(s)${r.motivoIgnorados ? ` (${r.motivoIgnorados})` : ''}.` : ''}`)
+      router.refresh()
+    })
+  }
 
   function filtrar(patch: Partial<Filtros>) {
     const f = { ...filtros, q: busca.trim(), ...patch }
@@ -84,11 +123,38 @@ export function ProdutosClient({ produtos, categorias, fornecedores, filtros }: 
             <option value="">Ativos e inativos</option><option value="true">Ativos</option><option value="false">Inativos</option>
           </select>
           <Link href="/estoque" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface"><History size={14} /> Movimentações</Link>
+          <Link href="/produtos/markup" className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface"><Percent size={14} /> Markup padrão</Link>
           <PlanilhaBotoes recurso="produtos" nome="produtos" estoque />
           <Link href="/produtos/novo" className="inline-flex items-center gap-2 px-4 py-2 bg-action text-white text-sm font-semibold rounded-lg hover:bg-action/90">
             <Plus size={14} /> Novo produto
           </Link>
         </div>
+
+        {aviso && (
+          <div role="status" className="flex items-center justify-between gap-3 px-4 py-2 bg-green-50 border-b border-green-200 text-sm text-green-800">
+            <span>{aviso}</span><button type="button" onClick={() => setAviso(null)} aria-label="Fechar aviso"><X size={14} /></button>
+          </div>
+        )}
+        {qtdSel > 0 && (
+          <div className="px-4 py-3 bg-primary/5 border-b border-border space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-primary">{qtdSel} selecionado(s)</span>
+              <button type="button" onClick={() => abrirLote('markup')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-white border border-border rounded-lg hover:bg-surface"><Percent size={13} /> Aplicar markup padrão</button>
+              <button type="button" onClick={() => abrirLote('ajuste_preco')} className="px-3 py-1.5 text-xs font-semibold bg-white border border-border rounded-lg hover:bg-surface">Ajustar preço (%)</button>
+              <button type="button" onClick={() => abrirLote('categoria')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-white border border-border rounded-lg hover:bg-surface"><Tags size={13} /> Alterar grupo</button>
+              <button type="button" onClick={() => abrirLote('etiquetas')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-white border border-border rounded-lg hover:bg-surface"><Printer size={13} /> Etiquetas</button>
+              <button type="button" onClick={() => abrirLote('ativar')} disabled={pendente} className="px-3 py-1.5 text-xs font-semibold bg-white border border-border rounded-lg hover:bg-surface">Ativar</button>
+              <button type="button" onClick={() => abrirLote('inativar')} disabled={pendente} className="px-3 py-1.5 text-xs font-semibold bg-white border border-border rounded-lg hover:bg-surface">Inativar</button>
+              <button type="button" onClick={() => abrirLote('excluir')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-destructive bg-white border border-destructive/30 rounded-lg hover:bg-red-50"><Trash2 size={13} /> Excluir</button>
+              <button type="button" onClick={limparSel} className="ml-auto text-xs text-gray-600 hover:underline">Limpar seleção</button>
+            </div>
+            {!todosFiltro && todosDaPagina && total > produtos.length && (
+              <p className="text-xs text-gray-700">Os {produtos.length} desta página estão marcados. <button type="button" onClick={() => setTodosFiltro(true)} className="font-semibold text-primary hover:underline">Selecionar todos os {total} resultados</button></p>
+            )}
+            {todosFiltro && <p className="text-xs text-gray-700">Todos os {total} resultados da busca estão selecionados.</p>}
+            {erro && !lote && <p role="alert" className="text-xs text-destructive">{erro}</p>}
+          </div>
+        )}
 
         {produtos.length === 0 ? (
           <p className="px-5 py-10 text-center text-sm text-gray-500">{Object.values(filtros).some(Boolean) ? 'Nenhum produto encontrado.' : 'Nenhum produto cadastrado ainda.'}</p>
@@ -97,6 +163,7 @@ export function ProdutosClient({ produtos, categorias, fornecedores, filtros }: 
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <th className="w-10 px-4 py-3"><input type="checkbox" checked={todosDaPagina || todosFiltro} onChange={alternarTodos} aria-label="Selecionar todos desta página" className="h-4 w-4 accent-[var(--color-action)]" /></th>
                   <th className="text-left px-4 py-3">Produto</th>
                   <th className="hidden md:table-cell text-left px-4 py-3">Categoria</th>
                   <th className="hidden sm:table-cell text-right px-4 py-3">Custo</th>
@@ -107,7 +174,8 @@ export function ProdutosClient({ produtos, categorias, fornecedores, filtros }: 
               </thead>
               <tbody className="divide-y divide-border">
                 {produtos.map((p) => (
-                  <tr key={p.id} className={p.ativo ? '' : 'opacity-60'}>
+                  <tr key={p.id} className={`${p.ativo ? '' : 'opacity-60'} ${marcados.has(p.id) || todosFiltro ? 'bg-primary/5' : ''}`}>
+                    <td className="w-10 px-4 py-3"><input type="checkbox" checked={marcados.has(p.id) || todosFiltro} onChange={() => alternar(p.id)} aria-label={`Selecionar ${p.nome}`} className="h-4 w-4 accent-[var(--color-action)]" /></td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900">{p.nome}{!p.ativo && <span className="ml-2 text-xs text-gray-500">(inativo)</span>}</p>
                       <p className="text-xs text-gray-500">
@@ -138,7 +206,46 @@ export function ProdutosClient({ produtos, categorias, fornecedores, filtros }: 
             </table>
           </div>
         )}
+        <Paginacao total={total} pagina={pagina} limite={limite} />
       </div>
+
+      {lote && (
+        <Modal
+          titulo={{ markup: 'Aplicar markup padrão', ajuste_preco: 'Ajustar preço de venda', categoria: 'Alterar grupo', excluir: 'Excluir produtos' }[lote.acao as 'markup' | 'ajuste_preco' | 'categoria' | 'excluir']}
+          onFechar={() => setLote(null)} largura="max-w-md">
+          <div className="space-y-3 text-sm">
+            <p className="text-gray-700">Vale para <strong>{qtdSel}</strong> produto(s) selecionado(s).</p>
+            {lote.acao === 'markup' && (
+              <>
+                <p className="text-gray-600">O preço de venda de cada produto vira <em>custo final × (1 + markup)</em>. Markup padrão: <strong>{markup.padrao}%</strong>
+                  {markup.categorias.length > 0 && <> · por grupo: {markup.categorias.map((c) => `${c.categoria} ${c.percentual}%`).join(', ')}</>}.
+                  {markup.padrao <= 0 && markup.categorias.length === 0 && <span className="text-amber-700"> Nenhum markup configurado ainda — defina em “Markup padrão” ou informe um valor abaixo.</span>}
+                </p>
+                <Campo rotulo="Usar outro markup só desta vez (%)" dica="Deixe vazio para seguir as regras acima."><input value={loteForm.percentual} onChange={(e) => setLoteForm({ ...loteForm, percentual: e.target.value })} className={inputCls} inputMode="decimal" /></Campo>
+                <p className="text-xs text-gray-500">Produtos sem custo informado são ignorados.</p>
+              </>
+            )}
+            {lote.acao === 'ajuste_preco' && (
+              <Campo rotulo="Percentual (%)" dica="Ex.: 10 aumenta 10%; -5 reduz 5%."><input value={loteForm.percentual} onChange={(e) => setLoteForm({ ...loteForm, percentual: e.target.value })} className={inputCls} inputMode="decimal" autoFocus /></Campo>
+            )}
+            {lote.acao === 'categoria' && (
+              <Campo rotulo="Novo grupo" dica="Deixe vazio para remover o grupo.">
+                <input value={loteForm.categoria} onChange={(e) => setLoteForm({ ...loteForm, categoria: e.target.value })} list="categorias-lote" className={inputCls} autoFocus />
+                <datalist id="categorias-lote">{categorias.map((c) => <option key={c} value={c} />)}</datalist>
+              </Campo>
+            )}
+            {lote.acao === 'excluir' && <p className="text-destructive">Os produtos saem das listas e dos orçamentos novos. O histórico de estoque é mantido. Esta ação não pode ser desfeita pela tela.</p>}
+            {erro && <p role="alert" className="text-destructive">{erro}</p>}
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setLote(null)} className="px-4 py-2 text-sm font-semibold text-gray-700 border border-border rounded-lg hover:bg-surface">Cancelar</button>
+              <button onClick={() => confirmarLote(lote.acao as AcaoLote)} disabled={pendente}
+                className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-lg disabled:opacity-60 ${lote.acao === 'excluir' ? 'bg-destructive hover:bg-destructive/90' : 'bg-action hover:bg-action/90'}`}>
+                {pendente && <Loader2 size={14} className="animate-spin" />} {lote.acao === 'excluir' ? `Excluir ${qtdSel}` : 'Aplicar'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {mov && (
         <Modal titulo={`Movimentar — ${mov.nome}`} onFechar={() => setMov(null)} largura="max-w-md">
