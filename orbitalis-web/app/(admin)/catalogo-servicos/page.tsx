@@ -1,16 +1,19 @@
 import { api } from '@/lib/api'
 import type { ServicoCatalogo } from '@/lib/suprimentos'
+import { lerPaginacao } from '@/lib/paginacao'
 import { ServicosCatalogoClient } from './servicos-client'
 
 type TipoServico = { id: string; sigla: string; nome: string; ativo: boolean }
 
-export default async function CatalogoServicosPage({ searchParams }: { searchParams: Promise<{ q?: string; ativo?: string }> }) {
-  const { q = '', ativo = '' } = await searchParams
+export default async function CatalogoServicosPage({ searchParams }: { searchParams: Promise<{ q?: string; ativo?: string; pagina?: string; limite?: string }> }) {
+  const { q = '', ativo = '', ...pg } = await searchParams
+  const { pagina, limite } = lerPaginacao(pg.pagina, pg.limite)
   const qs = new URLSearchParams()
   if (q) qs.set('q', q)
   if (ativo) qs.set('ativo', ativo)
-  const [servicos, tipos] = await Promise.all([
-    api.get<ServicoCatalogo[]>(`/catalogo-servicos?${qs}`).catch(() => [] as ServicoCatalogo[]),
+  qs.set('pagina', String(pagina)); qs.set('limite', String(limite))
+  const [resp, tipos] = await Promise.all([
+    api.get<{ itens: ServicoCatalogo[]; total: number }>(`/catalogo-servicos?${qs}`).catch(() => ({ itens: [] as ServicoCatalogo[], total: 0 })),
     api.get<TipoServico[]>('/tipos-servico').catch(() => [] as TipoServico[]),
   ])
   return (
@@ -19,7 +22,7 @@ export default async function CatalogoServicosPage({ searchParams }: { searchPar
         <h1 className="text-xl font-semibold text-gray-900">Catálogo de serviços</h1>
         <p className="text-gray-500 text-sm mt-1">Serviços com valor padrão para montar orçamentos (ex.: Limpeza de split 12.000 BTUs). Diferente dos “Tipos de serviço”, que definem cor e duração na agenda.</p>
       </div>
-      <ServicosCatalogoClient servicos={servicos} tipos={tipos.filter((t) => t.ativo)} q={q} ativo={ativo} />
+      <ServicosCatalogoClient servicos={resp.itens} total={resp.total} pagina={pagina} limite={limite} tipos={tipos.filter((t) => t.ativo)} q={q} ativo={ativo} />
     </div>
   )
 }

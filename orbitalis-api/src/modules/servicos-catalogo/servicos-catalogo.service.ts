@@ -15,16 +15,31 @@ const vazioNulo = (v: string | undefined) => (v === undefined ? undefined : v.tr
 export class ServicosCatalogoService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listar(q?: string, ativo?: string) {
+  private filtro(q?: string, ativo?: string): Prisma.ServicoWhereInput {
     const termo = q?.trim();
-    const where: Prisma.ServicoWhereInput = {
+    return {
       deletedAt: null,
       ...(ativo === 'true' ? { ativo: true } : ativo === 'false' ? { ativo: false } : {}),
       ...(termo
         ? { OR: [{ nome: { contains: termo, mode: 'insensitive' } }, { codigo: { contains: termo, mode: 'insensitive' } }, { descricao: { contains: termo, mode: 'insensitive' } }, ...(Number.isInteger(Number(termo)) ? [{ numero: Number(termo) }] : [])] }
         : {}),
     };
-    return this.prisma.servico.findMany({ where, orderBy: { nome: 'asc' }, take: 1000 });
+  }
+
+  listar(q?: string, ativo?: string) {
+    return this.prisma.servico.findMany({ where: this.filtro(q, ativo), orderBy: { nome: 'asc' }, take: 5000 });
+  }
+
+  /** Página de resultados (limite 10–200). */
+  async listarPaginado(q: string | undefined, ativo: string | undefined, pagina: number, limite: number) {
+    const lim = Math.min(Math.max(Math.floor(limite) || 50, 10), 200);
+    const pag = Math.max(Math.floor(pagina) || 1, 1);
+    const where = this.filtro(q, ativo);
+    const [total, itens] = await Promise.all([
+      this.prisma.servico.count({ where }),
+      this.prisma.servico.findMany({ where, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pag - 1) * lim, take: lim }),
+    ]);
+    return { itens, total, pagina: pag, limite: lim };
   }
 
   async buscar(id: string) {

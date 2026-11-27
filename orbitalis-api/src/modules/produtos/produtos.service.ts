@@ -21,9 +21,9 @@ export type FiltroProdutos = { q?: string; categoria?: string; ativo?: string; s
 export class ProdutosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listar(f: FiltroProdutos) {
+  private filtroListagem(f: FiltroProdutos): Prisma.ProdutoWhereInput {
     const termo = f.q?.trim();
-    const where: Prisma.ProdutoWhereInput = {
+    return {
       deletedAt: null,
       ...(f.ativo === 'true' ? { ativo: true } : f.ativo === 'false' ? { ativo: false } : {}),
       ...(f.categoria ? { categoria: f.categoria } : {}),
@@ -39,16 +39,38 @@ export class ProdutosService {
           }
         : {}),
     };
-    const lista = await this.prisma.produto.findMany({
-      where,
-      orderBy: { nome: 'asc' },
-      take: 2000,
-      include: { fornecedorPadrao: { select: { id: true, razaoSocial: true, nomeFantasia: true } } },
-    });
-    // comparar saldo × mínimo é coluna com coluna: feito aqui
-    if (f.situacao === 'abaixo_minimo') return lista.filter((p) => p.controlaEstoque && num(p.estoqueMinimo) > 0 && num(p.saldo) <= num(p.estoqueMinimo));
-    if (f.situacao === 'zerado') return lista.filter((p) => p.controlaEstoque && num(p.saldo) <= 0);
+  }
+
+  private static readonly INCLUDE_FORN = { fornecedorPadrao: { select: { id: true, razaoSocial: true, nomeFantasia: true } } } as const;
+
+  // comparar saldo × mínimo é coluna com coluna: feito em memória
+  private filtrarSituacao<T extends { controlaEstoque: boolean; saldo: Prisma.Decimal; estoqueMinimo: Prisma.Decimal }>(lista: T[], situacao?: string): T[] {
+    if (situacao === 'abaixo_minimo') return lista.filter((p) => p.controlaEstoque && num(p.estoqueMinimo) > 0 && num(p.saldo) <= num(p.estoqueMinimo));
+    if (situacao === 'zerado') return lista.filter((p) => p.controlaEstoque && num(p.saldo) <= 0);
     return lista;
+  }
+
+  async listar(f: FiltroProdutos) {
+    const lista = await this.prisma.produto.findMany({
+      where: this.filtroListagem(f), orderBy: { nome: 'asc' }, take: 5000, include: ProdutosService.INCLUDE_FORN,
+    });
+    return this.filtrarSituacao(lista, f.situacao);
+  }
+
+  /** Página de resultados (limite 10–200). Sem filtro de situação o banco pagina; com ele filtra em memória. */
+  async listarPaginado(f: FiltroProdutos, pagina: number, limite: number) {
+    const lim = Math.min(Math.max(Math.floor(limite) || 50, 10), 200);
+    const pag = Math.max(Math.floor(pagina) || 1, 1);
+    const where = this.filtroListagem(f);
+    if (f.situacao === 'abaixo_minimo' || f.situacao === 'zerado') {
+      const todos = this.filtrarSituacao(await this.prisma.produto.findMany({ where, orderBy: { nome: 'asc' }, take: 5000, include: ProdutosService.INCLUDE_FORN }), f.situacao);
+      return { itens: todos.slice((pag - 1) * lim, pag * lim), total: todos.length, pagina: pag, limite: lim };
+    }
+    const [total, itens] = await Promise.all([
+      this.prisma.produto.count({ where }),
+      this.prisma.produto.findMany({ where, orderBy: [{ nome: 'asc' }, { id: 'asc' }], skip: (pag - 1) * lim, take: lim, include: ProdutosService.INCLUDE_FORN }),
+    ]);
+    return { itens, total, pagina: pag, limite: lim };
   }
 
   async categorias() {

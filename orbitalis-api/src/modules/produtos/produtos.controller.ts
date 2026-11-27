@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, StreamableFile, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, StreamableFile, UseGuards } from '@nestjs/common';
 import { UsuarioTipo } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Modulo } from '../../common/decorators/modulo.decorator';
@@ -8,17 +8,44 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { ImportarPlanilhaDto } from '../../common/dto/importar-planilha.dto';
 import { CreateProdutoDto, MovimentarEstoqueDto, UpdateProdutoDto } from './dto/produto.dto';
 import { ProdutosService } from './produtos.service';
+import { ProdutosLoteService } from './produtos-lote.service';
+import { LoteDto, SalvarMarkupDto, SelecaoDto } from './dto/lote.dto';
 
 @Controller('produtos')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UsuarioTipo.admin)
 @Modulo('orcamentos')
 export class ProdutosController {
-  constructor(private readonly svc: ProdutosService) {}
+  constructor(private readonly svc: ProdutosService, private readonly lote: ProdutosLoteService) {}
 
   @Get()
-  listar(@Query('q') q?: string, @Query('categoria') categoria?: string, @Query('ativo') ativo?: string, @Query('situacao') situacao?: string) {
+  listar(
+    @Query('q') q?: string, @Query('categoria') categoria?: string, @Query('ativo') ativo?: string, @Query('situacao') situacao?: string,
+    @Query('pagina') pagina?: string, @Query('limite') limite?: string,
+  ) {
+    // com `limite` devolve { itens, total, pagina, limite }; sem ele, a lista inteira (uso interno)
+    if (limite) return this.svc.listarPaginado({ q, categoria, ativo, situacao }, Number(pagina) || 1, Number(limite));
     return this.svc.listar({ q, categoria, ativo, situacao });
+  }
+
+  @Get('markup')
+  markup() {
+    return this.lote.obterMarkup();
+  }
+
+  @Put('markup')
+  salvarMarkup(@Body() dto: SalvarMarkupDto) {
+    return this.lote.salvarMarkup(dto);
+  }
+
+  @Post('lote')
+  executarLote(@Body() dto: LoteDto) {
+    return this.lote.executar(dto);
+  }
+
+  @Post('por-selecao')
+  porSelecao(@Body() dto: SelecaoDto) {
+    return this.lote.porSelecao(dto);
   }
 
   // Rotas fixas antes de ':id'

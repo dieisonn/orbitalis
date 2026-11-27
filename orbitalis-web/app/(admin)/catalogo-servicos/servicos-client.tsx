@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Pencil, Trash2, Search, Loader2 } from 'lucide-react'
+import { Paginacao } from '@/components/ui/paginacao'
 import { PlanilhaBotoes } from '@/components/ui/planilha-botoes'
 import { Modal, Campo, inputCls } from '@/components/ui/modal'
 import { brl, UNIDADES, type ServicoCatalogo } from '@/lib/suprimentos'
@@ -11,7 +12,7 @@ import { salvarServico, excluirServico, alternarServico, type DadosServico } fro
 type Tipo = { id: string; sigla: string; nome: string }
 const VAZIO: DadosServico = { nome: '', descricao: '', unidade: 'un', valor: 0, tipoServicoId: '', codigo: '', valorCusto: 0, comissaoPercentual: 0, atividadeServico: '', nbs: '' }
 
-export function ServicosCatalogoClient({ servicos, tipos, q, ativo }: { servicos: ServicoCatalogo[]; tipos: Tipo[]; q: string; ativo: string }) {
+export function ServicosCatalogoClient({ servicos, total, pagina, limite, tipos, q, ativo }: { servicos: ServicoCatalogo[]; total: number; pagina: number; limite: number; tipos: Tipo[]; q: string; ativo: string }) {
   const router = useRouter()
   const [pendente, iniciar] = useTransition()
   const [busca, setBusca] = useState(q)
@@ -98,6 +99,7 @@ export function ServicosCatalogoClient({ servicos, tipos, q, ativo }: { servicos
             </table>
           </div>
         )}
+        <Paginacao total={total} pagina={pagina} limite={limite} />
       </div>
 
       {modal && (

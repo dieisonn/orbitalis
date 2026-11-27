@@ -49,3 +49,28 @@ export async function movimentarProduto(id: string, dados: DadosMovimento): Prom
     return { ok: true }
   } catch (e) { return { ok: false, erro: msg(e) } }
 }
+
+export type SelecaoProdutos = { ids?: string[]; filtro?: { q?: string; categoria?: string; ativo?: string; situacao?: string } }
+export type AcaoLote = 'markup' | 'ajuste_preco' | 'ativar' | 'inativar' | 'categoria' | 'excluir'
+export type ResultadoLote = { ok: true; afetados: number; ignorados: number; motivoIgnorados?: string } | { ok: false; erro: string }
+
+export async function executarLote(sel: SelecaoProdutos, acao: AcaoLote, extra: { percentual?: number; categoria_nova?: string } = {}): Promise<ResultadoLote> {
+  try {
+    const corpo = limpar({ ...sel, acao, ...extra })
+    const r = await api.post<{ afetados: number; ignorados: number; motivoIgnorados?: string }>('/produtos/lote', corpo)
+    revalidatePath('/produtos'); revalidatePath('/estoque')
+    return { ok: true, afetados: r.afetados, ignorados: r.ignorados, motivoIgnorados: r.motivoIgnorados }
+  } catch (e) { return { ok: false, erro: msg(e) } }
+}
+
+export type RegraMarkup = { padrao: number; categorias: { categoria: string; percentual: number }[] }
+
+export async function salvarMarkup(regra: RegraMarkup): Promise<Resultado> {
+  try { await api.put('/produtos/markup', regra); revalidatePath('/produtos/markup'); revalidatePath('/produtos'); return { ok: true } }
+  catch (e) { return { ok: false, erro: msg(e) } }
+}
+
+export async function produtosParaEtiquetas(sel: SelecaoProdutos): Promise<{ ok: true; produtos: import('@/lib/suprimentos').Produto[] } | { ok: false; erro: string }> {
+  try { return { ok: true, produtos: await api.post('/produtos/por-selecao', limpar(sel)) } }
+  catch (e) { return { ok: false, erro: msg(e) } }
+}
